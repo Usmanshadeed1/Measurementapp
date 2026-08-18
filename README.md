@@ -60,3 +60,4 @@ netlify dev
 
 This serves `index.html` and proxies `/api/*` to the local function, using
 a `GHL_API_KEY` you set in a local `.env` file (already gitignored).
+
