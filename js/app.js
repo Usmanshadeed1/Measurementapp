@@ -242,11 +242,57 @@
   });
 
   // ===== ADD CONTACT =====
-  var contactFieldIds = ['mm-ct-first', 'mm-ct-last', 'mm-ct-email', 'mm-ct-phone', 'mm-ct-business', 'mm-ct-tags'];
+  var contactFieldIds = ['mm-ct-first', 'mm-ct-last', 'mm-ct-email', 'mm-ct-phone', 'mm-ct-business'];
+  var selectedTags = [];   // tag names currently chosen (chip picker)
+  var allTagNames = [];    // every known tag name in this location, for de-dupe on "+ Add"
+
+  function renderTagPicker() {
+    var picker = document.getElementById('mm-ct-tags-picker');
+    picker.innerHTML = '';
+    if (!allTagNames.length) { picker.innerHTML = '<div class="mm-empty">No tags yet — add one below.</div>'; return; }
+    allTagNames.forEach(function (name) {
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'mm-tag-chip' + (selectedTags.indexOf(name) > -1 ? ' selected' : '');
+      chip.textContent = name;
+      chip.setAttribute('aria-pressed', selectedTags.indexOf(name) > -1 ? 'true' : 'false');
+      chip.addEventListener('click', function () {
+        var i = selectedTags.indexOf(name);
+        if (i > -1) selectedTags.splice(i, 1); else selectedTags.push(name);
+        renderTagPicker();
+      });
+      picker.appendChild(chip);
+    });
+  }
+
+  document.getElementById('mm-ct-add-tag-btn').addEventListener('click', function () {
+    var input = document.getElementById('mm-ct-new-tag');
+    var name = input.value.trim();
+    if (!name) return;
+    if (allTagNames.indexOf(name) === -1) allTagNames.push(name);
+    if (selectedTags.indexOf(name) === -1) selectedTags.push(name);
+    input.value = '';
+    renderTagPicker();
+  });
+  document.getElementById('mm-ct-new-tag').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('mm-ct-add-tag-btn').click(); }
+  });
+
   document.getElementById('mm-add-contact-btn').addEventListener('click', function () {
     contactFieldIds.forEach(function (id) { document.getElementById(id).value = ''; });
     document.getElementById('mm-ct-type').value = 'lead';
+    document.getElementById('mm-ct-new-tag').value = '';
+    selectedTags = [];
     openModal('mm-modal-contact');
+    var picker = document.getElementById('mm-ct-tags-picker');
+    picker.innerHTML = '<div class="mm-empty">Loading tags...</div>';
+    api.getTags().then(function (tags) {
+      allTagNames = tags.map(function (t) { return t.name; }).filter(Boolean);
+      renderTagPicker();
+    }).catch(function (e) {
+      allTagNames = [];
+      picker.innerHTML = '<div class="mm-empty">Could not load tags — you can still add new ones below.</div>';
+    });
   });
   document.getElementById('mm-cancel-contact-btn').addEventListener('click', function () { closeModal('mm-modal-contact'); });
   document.getElementById('mm-modal-contact').addEventListener('click', function (e) { if (e.target === this) closeModal('mm-modal-contact'); });
@@ -260,8 +306,7 @@
     var phone = document.getElementById('mm-ct-phone').value.trim(); if (phone) p.phone = phone;
     var business = document.getElementById('mm-ct-business').value.trim(); if (business) p.companyName = business;
     p.type = document.getElementById('mm-ct-type').value || 'lead';
-    var tagsRaw = document.getElementById('mm-ct-tags').value.trim();
-    if (tagsRaw) p.tags = tagsRaw.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
+    if (selectedTags.length) p.tags = selectedTags.slice();
 
     btn.textContent = 'Saving...'; btn.disabled = true;
     api.createContact(p).then(function () {

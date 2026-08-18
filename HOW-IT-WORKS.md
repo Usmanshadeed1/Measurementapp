@@ -131,6 +131,24 @@ doesn't surprise anyone. Only First Name is enforced as required by the
 app's own form (the API itself requires nothing, but a nameless contact
 isn't useful).
 
+**Tags are a chip picker, not free text.** The form calls
+`GET /locations/{locationId}/tags` when it opens and shows every
+existing tag in the account as a clickable chip — click to select
+multiple. There's also an "+ Add" row to create a brand-new tag on the
+fly (GHL creates tags implicitly the first time they're applied to a
+contact, so this matches GHL's own behavior). This avoids the
+typo/near-duplicate problem free-text tagging would cause (e.g.
+"follow-up" vs "Follow Up" ending up as two different tags).
+
+**Required GHL scopes:** the Private Integration Token needs
+`contacts.readonly` (for the list + tag picker) and `contacts.write`
+(to create a contact) explicitly enabled — these are not covered by the
+Opportunities/Custom Objects scopes the original app used. If you add
+another new GHL API area later (e.g. Calendars, Conversations), check
+its required scope the same way before assuming the existing token
+covers it — a 401 "token is not authorized for this scope" means go add
+the scope in Settings → Private Integrations and rotate the token.
+
 Two custom fields exist on Contacts in this account (Wall Length,
 Ceiling Height — both FLOAT) that the form deliberately does **not**
 include, since they look like a mismatch with a generic "add contact"

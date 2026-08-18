@@ -118,11 +118,15 @@ window.MM = window.MM || {};
     p.locationId = LOC;
     return apiFetch('POST', '/contacts/', p).then(function (d) { return d.contact; });
   }
+  function getTags() {
+    return apiFetch('GET', '/locations/' + LOC + '/tags').then(function (d) { return d.tags || []; });
+  }
 
   window.MM.api = {
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact, createContact: createContact,
+    getTags: getTags,
   };
 })();

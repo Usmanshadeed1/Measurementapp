@@ -191,6 +191,18 @@ textarea.mm-input{min-height:90px;resize:vertical}
 .mm-radio-row label{display:flex;align-items:center;gap:8px;font-size:.98em;color:var(--text);min-height:44px}
 .mm-radio-row input[type="radio"]{width:20px;height:20px}
 
+/* Tag picker */
+.mm-tag-picker{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;margin-bottom:10px}
+.mm-tag-chip{
+  padding:9px 14px;border-radius:20px;border:1.5px solid var(--input-border);
+  background:var(--input-bg);color:var(--text2);font-size:.9em;font-weight:600;
+  cursor:pointer;min-height:40px;
+}
+.mm-tag-chip.selected{background:var(--accent-strong);border-color:var(--accent-strong);color:#fff}
+.mm-tag-add-row{display:flex;gap:8px;align-items:flex-start}
+.mm-tag-add-row .mm-input{flex:1}
+.mm-tag-add-row .mm-btn-sm{white-space:nowrap;min-height:50px}
+
 .mm-search-bar{position:relative;margin-bottom:16px}
 .mm-search-bar .mm-input{padding-left:44px}
 .mm-search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--empty);font-size:1.15em}
