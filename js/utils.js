@@ -36,6 +36,8 @@ window.MM = window.MM || {};
   }
 
   // ---- Theme (dark / light) control ---------------------------------------
+  // Every screen has its own topbar, so there can be more than one toggle
+  // button in the DOM at once — update all of them, not just one by id.
   function getTheme() {
     var t = localStorage.getItem('mm_theme');
     return (t === 'light' || t === 'dark') ? t : 'dark';
@@ -44,12 +46,11 @@ window.MM = window.MM || {};
     theme = theme === 'light' ? 'light' : 'dark';
     localStorage.setItem('mm_theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
-    var btn = document.getElementById('mm-theme-toggle');
-    if (btn) {
-      var goingTo = theme === 'light' ? 'dark' : 'light';
+    var goingTo = theme === 'light' ? 'dark' : 'light';
+    document.querySelectorAll('.mm-theme-toggle').forEach(function (btn) {
       btn.textContent = theme === 'light' ? '🌙' : '☀️';
       btn.setAttribute('aria-label', 'Switch to ' + goingTo + ' mode');
-    }
+    });
   }
   function toggleTheme() { applyTheme(getTheme() === 'light' ? 'dark' : 'light'); }
 

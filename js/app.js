@@ -3,18 +3,27 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts;
 
-  var job = null, room = null, editRoom = null, searchTimer = null;
+  var job = null, room = null, editRoom = null, searchTimer = null, contactSearchTimer = null;
 
-  // ===== FONT CONTROL =====
+  // ===== FONT CONTROL ===== (one button pair per topbar, same handler for all)
   U.applyFont(U.getFontIndex());
-  document.getElementById('mm-font-up').addEventListener('click', function () { U.applyFont(U.getFontIndex() + 1); });
-  document.getElementById('mm-font-down').addEventListener('click', function () { U.applyFont(U.getFontIndex() - 1); });
+  document.querySelectorAll('.mm-font-up').forEach(function (btn) { btn.addEventListener('click', function () { U.applyFont(U.getFontIndex() + 1); }); });
+  document.querySelectorAll('.mm-font-down').forEach(function (btn) { btn.addEventListener('click', function () { U.applyFont(U.getFontIndex() - 1); }); });
 
   // ===== THEME CONTROL (dark / light) =====
   U.applyTheme(U.getTheme());
-  document.getElementById('mm-theme-toggle').addEventListener('click', function () { U.toggleTheme(); });
+  document.querySelectorAll('.mm-theme-toggle').forEach(function (btn) { btn.addEventListener('click', function () { U.toggleTheme(); }); });
+
+  // ===== TAB BAR (Jobs / Contacts) =====
+  document.querySelectorAll('.mm-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var tab = btn.getAttribute('data-tab');
+      if (tab === 'jobs') { showScreen('jobs'); }
+      else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
+    });
+  });
 
   // Prevent accidental scroll-wheel changes on number inputs
   document.addEventListener('wheel', function (e) { if (document.activeElement && document.activeElement.type === 'number') e.preventDefault(); }, { passive: false });
@@ -198,6 +207,19 @@
   // ===== NAV =====
   document.getElementById('mm-back-to-jobs').addEventListener('click', function () { showScreen('jobs'); });
   document.getElementById('mm-back-to-job').addEventListener('click', function () { showScreen('job'); });
+  document.getElementById('mm-back-to-contacts').addEventListener('click', function () { showScreen('contacts'); });
+
+  // ===== CONTACTS =====
+  function loadContacts(q) { C.loadContacts(q, pickContact); }
+  function pickContact(c) {
+    C.renderContactDetail(c);
+    showScreen('contact');
+  }
+  document.getElementById('mm-contact-search').addEventListener('input', function () {
+    clearTimeout(contactSearchTimer);
+    var q = this.value.trim();
+    contactSearchTimer = setTimeout(function () { loadContacts(q || undefined); }, 400);
+  });
 
   // ===== MEDIA (room/job level) =====
   function loadRoomMedia() {

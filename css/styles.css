@@ -79,6 +79,17 @@ html,body{
 }
 .topbar h1{font-size:1.15em;font-weight:700;flex:1}
 
+.mm-tabbar{
+  display:flex;gap:6px;padding:10px 16px;background:var(--bg);
+  border-bottom:1px solid var(--border);position:sticky;top:56px;z-index:9;
+}
+.mm-tab{
+  flex:1;padding:12px;border:1px solid var(--input-border);border-radius:10px;
+  background:var(--input-bg);color:var(--text2);font-size:.95em;font-weight:700;
+  cursor:pointer;min-height:46px;
+}
+.mm-tab.active{background:var(--accent-strong);border-color:var(--accent-strong);color:#fff}
+
 .back-btn{
   background:none;border:none;color:var(--text);font-size:1.7em;cursor:pointer;
   padding:6px 10px;line-height:1;border-radius:8px;min-width:44px;min-height:44px;

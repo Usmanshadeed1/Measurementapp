@@ -106,10 +106,19 @@ window.MM = window.MM || {};
     return apiFetch('POST', '/opportunities/search', body).then(function (d) { return d.opportunities || []; });
   }
 
+  function searchContacts(query) {
+    var qs = 'locationId=' + LOC + '&limit=50';
+    if (query) qs += '&query=' + encodeURIComponent(query);
+    return apiFetch('GET', '/contacts/?' + qs).then(function (d) { return d.contacts || []; });
+  }
+  function getContact(id) {
+    return apiFetch('GET', '/contacts/' + id).then(function (d) { return d.contact; });
+  }
+
   window.MM.api = {
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
-    deleteMedia: deleteMedia, searchJobs: searchJobs,
+    deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact,
   };
 })();

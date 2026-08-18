@@ -15,11 +15,15 @@
   <div class="topbar">
     <h1>Jobs</h1>
     <div class="font-controls">
-      <button class="font-btn" id="mm-theme-toggle" aria-label="Switch to light mode">☀️</button>
-      <button class="font-btn" id="mm-font-down" aria-label="Decrease text size">A-</button>
-      <button class="font-btn" id="mm-font-up" aria-label="Increase text size">A+</button>
+      <button class="font-btn mm-theme-toggle" aria-label="Switch to light mode">☀️</button>
+      <button class="font-btn mm-font-down" aria-label="Decrease text size">A-</button>
+      <button class="font-btn mm-font-up" aria-label="Increase text size">A+</button>
     </div>
   </div>
+  <nav class="mm-tabbar" aria-label="Main">
+    <button class="mm-tab active" data-tab="jobs">Jobs</button>
+    <button class="mm-tab" data-tab="contacts">Contacts</button>
+  </nav>
   <div class="mm-content">
     <div class="mm-search-bar">
       <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
@@ -27,6 +31,41 @@
       <input class="mm-input" id="mm-job-search" placeholder="Search by name or address...">
     </div>
     <div id="mm-jobs-list"><div class="mm-empty">Loading jobs...</div></div>
+  </div>
+</div>
+
+<!-- CONTACTS -->
+<div class="screen" id="screen-contacts">
+  <div class="topbar">
+    <h1>Contacts</h1>
+    <div class="font-controls">
+      <button class="font-btn mm-theme-toggle" aria-label="Switch to light mode">☀️</button>
+      <button class="font-btn mm-font-down" aria-label="Decrease text size">A-</button>
+      <button class="font-btn mm-font-up" aria-label="Increase text size">A+</button>
+    </div>
+  </div>
+  <nav class="mm-tabbar" aria-label="Main">
+    <button class="mm-tab" data-tab="jobs">Jobs</button>
+    <button class="mm-tab active" data-tab="contacts">Contacts</button>
+  </nav>
+  <div class="mm-content">
+    <div class="mm-search-bar">
+      <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
+      <label for="mm-contact-search" class="sr-only">Search contacts by name, phone, or email</label>
+      <input class="mm-input" id="mm-contact-search" placeholder="Search by name, phone, or email...">
+    </div>
+    <div id="mm-contacts-list"><div class="mm-empty">Loading contacts...</div></div>
+  </div>
+</div>
+
+<!-- CONTACT DETAIL -->
+<div class="screen" id="screen-contact">
+  <div class="topbar">
+    <button class="back-btn" id="mm-back-to-contacts" aria-label="Back to contacts">&#8249;</button>
+    <h1 id="mm-contact-title">Contact</h1>
+  </div>
+  <div class="mm-content">
+    <div class="card" id="mm-contact-info"></div>
   </div>
 </div>
 
@@ -97,6 +136,7 @@
 <script src="js/entities.js"></script>
 <script src="js/walls.js"></script>
 <script src="js/lighting.js"></script>
+<script src="js/contacts.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
