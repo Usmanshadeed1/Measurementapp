@@ -16,14 +16,34 @@
   U.applyTheme(U.getTheme());
   document.querySelectorAll('.mm-theme-toggle').forEach(function (btn) { btn.addEventListener('click', function () { U.toggleTheme(); }); });
 
-  // ===== TAB BAR (Jobs / Contacts) =====
-  document.querySelectorAll('.mm-tab').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var tab = btn.getAttribute('data-tab');
-      if (tab === 'jobs') { showScreen('jobs'); }
-      else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
+  // ===== SITE NAV (header links, desktop + mobile copies, and brand link) =====
+  function goToTab(tab) {
+    if (tab === 'jobs') { showScreen('jobs'); }
+    else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
+    setActiveNavLink(tab);
+    closeMobileNav();
+  }
+  function setActiveNavLink(tab) {
+    document.querySelectorAll('.mm-nav-link').forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('data-tab') === tab);
+    });
+  }
+  document.querySelectorAll('.mm-nav-link, .mm-brand').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      goToTab(a.getAttribute('data-tab') || 'jobs');
     });
   });
+
+  // ===== MOBILE HAMBURGER =====
+  var mobileNav = document.getElementById('mm-mobile-nav');
+  var hamburgerBtn = document.getElementById('mm-hamburger-btn');
+  function closeMobileNav() { mobileNav.classList.remove('open'); hamburgerBtn.setAttribute('aria-expanded', 'false'); }
+  function toggleMobileNav() {
+    var open = mobileNav.classList.toggle('open');
+    hamburgerBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  hamburgerBtn.addEventListener('click', toggleMobileNav);
 
   // Prevent accidental scroll-wheel changes on number inputs
   document.addEventListener('wheel', function (e) { if (document.activeElement && document.activeElement.type === 'number') e.preventDefault(); }, { passive: false });

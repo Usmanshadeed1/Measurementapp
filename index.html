@@ -10,20 +10,31 @@
 
 <div id="mm-app">
 
-<!-- JOBS -->
-<div class="screen active" id="screen-jobs">
-  <div class="topbar">
-    <h1>Jobs</h1>
-    <div class="font-controls">
+<!-- SITE HEADER — shared across every screen -->
+<header class="mm-header">
+  <div class="mm-header-row">
+    <a href="#" class="mm-brand" data-tab="jobs">Measurement App</a>
+    <nav class="mm-nav" aria-label="Main">
+      <a href="#" class="mm-nav-link active" data-tab="jobs">Jobs</a>
+      <a href="#" class="mm-nav-link" data-tab="contacts">Contacts</a>
+    </nav>
+    <div class="mm-header-controls">
       <button class="font-btn mm-theme-toggle" aria-label="Switch to light mode">☀️</button>
       <button class="font-btn mm-font-down" aria-label="Decrease text size">A-</button>
       <button class="font-btn mm-font-up" aria-label="Increase text size">A+</button>
+      <button class="mm-hamburger" id="mm-hamburger-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mm-mobile-nav">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </div>
-  <nav class="mm-tabbar" aria-label="Main">
-    <button class="mm-tab active" data-tab="jobs">Jobs</button>
-    <button class="mm-tab" data-tab="contacts">Contacts</button>
+  <nav class="mm-mobile-nav" id="mm-mobile-nav" aria-label="Main (mobile)">
+    <a href="#" class="mm-nav-link active" data-tab="jobs">Jobs</a>
+    <a href="#" class="mm-nav-link" data-tab="contacts">Contacts</a>
   </nav>
+</header>
+
+<!-- JOBS -->
+<div class="screen active" id="screen-jobs">
   <div class="mm-content">
     <div class="mm-search-bar">
       <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
@@ -36,18 +47,6 @@
 
 <!-- CONTACTS -->
 <div class="screen" id="screen-contacts">
-  <div class="topbar">
-    <h1>Contacts</h1>
-    <div class="font-controls">
-      <button class="font-btn mm-theme-toggle" aria-label="Switch to light mode">☀️</button>
-      <button class="font-btn mm-font-down" aria-label="Decrease text size">A-</button>
-      <button class="font-btn mm-font-up" aria-label="Increase text size">A+</button>
-    </div>
-  </div>
-  <nav class="mm-tabbar" aria-label="Main">
-    <button class="mm-tab" data-tab="jobs">Jobs</button>
-    <button class="mm-tab active" data-tab="contacts">Contacts</button>
-  </nav>
   <div class="mm-content">
     <div class="mm-search-bar">
       <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
