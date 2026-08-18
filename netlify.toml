@@ -1,0 +1,9 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Frontend calls /api/<ghl-path> which is rewritten to the proxy function.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/ghl-proxy/:splat"
+  status = 200
