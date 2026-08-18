@@ -131,14 +131,14 @@ doesn't surprise anyone. Only First Name is enforced as required by the
 app's own form (the API itself requires nothing, but a nameless contact
 isn't useful).
 
-**Tags are a chip picker, not free text.** The form calls
+**Tags are a multi-select dropdown, not free text.** The form calls
 `GET /locations/{locationId}/tags` when it opens and shows every
-existing tag in the account as a clickable chip — click to select
-multiple. There's also an "+ Add" row to create a brand-new tag on the
-fly (GHL creates tags implicitly the first time they're applied to a
-contact, so this matches GHL's own behavior). This avoids the
-typo/near-duplicate problem free-text tagging would cause (e.g.
-"follow-up" vs "Follow Up" ending up as two different tags).
+existing tag in the account as a checkbox list inside a dropdown panel
+— click the button to open it, check any number of tags, click outside
+to close. Selection only, no way to create a new tag from this form
+(deliberately — avoids the typo/near-duplicate problem free-text
+tagging would cause, e.g. "follow-up" vs "Follow Up" ending up as two
+different tags). New tags still need to be created in GHL directly.
 
 **Required GHL scopes:** the Private Integration Token needs
 `contacts.readonly` (for the list + tag picker) and `contacts.write`
@@ -155,11 +155,56 @@ include, since they look like a mismatch with a generic "add contact"
 flow. Worth asking your client what those are actually for before
 wiring them up anywhere.
 
+### Import Contacts (CSV)
+
+"Import CSV" sits next to "+ Add Contact" on the Contacts screen and
+opens a 4-step wizard, similar to GHL's own native Import flow, but
+built by this app talking to the Contacts API directly (GHL exposes no
+bulk-import endpoint — this loops one API call per row):
+
+1. **Upload** — pick a `.csv` file. Parsed entirely client-side
+   (`js/csv.js`, a small dependency-free parser — no library pulled in).
+2. **Map** — each CSV column gets a dropdown to map it to a contact
+   field (First/Last Name, Email, Phone, Business Name, Contact Type,
+   Tags), or "do not import." Common header names are auto-guessed
+   (e.g. a column literally named "Email" auto-maps to Email).
+3. **Review** — shows row counts, a warning that any GHL workflow
+   triggered on "Contact Created" will fire once per row this import
+   creates, and a required consent checkbox (mirrors GHL's own
+   compliance checkbox) that must be checked before Start Import is
+   enabled.
+4. **Import** — runs at a throttled ~4 rows/second (GHL's documented
+   ceiling is ~10 req/sec, and each row can cost 2 calls, so this stays
+   well under it), with a live progress bar. A "Stop Import" button lets
+   you abort mid-run — rows already processed stay processed, nothing
+   in progress is rolled back.
+
+**Duplicate handling:** before creating each row, the app calls
+`GET /contacts/search/duplicate` to check for an existing contact
+matching that email/phone. If one is found, the row is **skipped** —
+this import never updates or overwrites an existing contact, unlike a
+plain `POST /contacts/` call which would silently upsert. This costs
+one extra API call per row but was chosen deliberately for safety.
+
+**Final summary** shows created / skipped / failed counts plus a
+per-row detail list (e.g. "Row 4: skipped — Already exists
+(jane@example.com)"), so nothing about the import is a silent black box.
+
+**Known limitations:** no way to add imported contacts to a Smartlist
+or enroll them in a Workflow yet (GHL's AI confirmed there's no direct
+API for Smartlists — that would need a tag applied at import time, then
+a Smartlist filter built manually in GHL on that tag). No resumable
+import — closing the modal mid-run stops it, and there's no "continue
+where I left off."
+
 ## Known gaps / things not built yet
 
 - No "create a new Job" flow from inside the app (must be done in GHL directly)
 - No filter for Job status (Open/Won/Lost) — shows everything
-- Contacts can be viewed and created, but not edited or deleted from the
-  app, and there's no link from a contact to their Job even if one exists
+- Contacts can be viewed, created, and bulk-imported via CSV, but not
+  edited or deleted from the app, and there's no link from a contact to
+  their Job even if one exists
+- CSV import has no Smartlist/Workflow enrollment options yet, and
+  isn't resumable if interrupted mid-run
 - No leads dashboard, filters, or reporting — this is purely the
   measurement capture tool, unchanged in scope from the original build

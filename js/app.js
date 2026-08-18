@@ -3,7 +3,7 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer;
 
   var job = null, room = null, editRoom = null, searchTimer = null, contactSearchTimer = null;
 
@@ -330,6 +330,18 @@
       btn.textContent = 'Save Contact'; btn.disabled = false;
     });
   });
+
+  // ===== IMPORT CONTACTS (CSV) =====
+  var importWizard = IMP.build(document.getElementById('mm-import-body'));
+  importWizard.setCloseHandler(function (didImport) {
+    closeModal('mm-modal-import');
+    if (didImport) loadContacts();
+  });
+  document.getElementById('mm-import-contacts-btn').addEventListener('click', function () {
+    openModal('mm-modal-import');
+    importWizard.open();
+  });
+  document.getElementById('mm-modal-import').addEventListener('click', function (e) { if (e.target === this) { importWizard.cancelIfRunning(); closeModal('mm-modal-import'); } });
 
   // ===== MEDIA (room/job level) =====
   function loadRoomMedia() {

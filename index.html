@@ -50,7 +50,10 @@
   <div class="mm-content">
     <div class="section-header">
       <span class="section-title">All Contacts</span>
-      <button class="mm-btn-sm mm-btn-primary" id="mm-add-contact-btn">+ Add Contact</button>
+      <div style="display:flex;gap:8px">
+        <button class="mm-btn-sm mm-btn-secondary" id="mm-import-contacts-btn">Import CSV</button>
+        <button class="mm-btn-sm mm-btn-primary" id="mm-add-contact-btn">+ Add Contact</button>
+      </div>
     </div>
     <div class="mm-search-bar">
       <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
@@ -92,6 +95,14 @@
     <p class="mm-hint" id="mm-ct-duplicate-hint">If a contact with this email or phone already exists, GHL will update that contact instead of creating a new one.</p>
     <button class="mm-btn mm-btn-primary" id="mm-save-contact-btn">Save Contact</button>
     <button class="mm-btn mm-btn-secondary" id="mm-cancel-contact-btn">Cancel</button>
+  </div>
+</div>
+
+<!-- Import Contacts modal -->
+<div class="mm-modal-overlay" id="mm-modal-import">
+  <div class="mm-modal mm-modal-lg" role="dialog" aria-modal="true" aria-labelledby="mm-import-modal-title">
+    <div class="mm-modal-title" id="mm-import-modal-title">Import Contacts</div>
+    <div id="mm-import-body"></div>
   </div>
 </div>
 
@@ -174,6 +185,8 @@
 <script src="js/walls.js"></script>
 <script src="js/lighting.js"></script>
 <script src="js/contacts.js"></script>
+<script src="js/csv.js"></script>
+<script src="js/import.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

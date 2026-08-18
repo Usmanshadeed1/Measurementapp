@@ -121,12 +121,30 @@ window.MM = window.MM || {};
   function getTags() {
     return apiFetch('GET', '/locations/' + LOC + '/tags').then(function (d) { return d.tags || []; });
   }
+  // Checks whether a contact already exists matching this email/phone.
+  // Returns the existing contact, or null if no match. Used by CSV import
+  // to skip rows instead of silently overwriting an existing contact.
+  function findDuplicateContact(email, phone) {
+    var qs = 'locationId=' + LOC;
+    if (email) qs += '&email=' + encodeURIComponent(email);
+    if (phone) qs += '&number=' + encodeURIComponent(phone);
+    if (!email && !phone) return Promise.resolve(null);
+    return apiFetch('GET', '/contacts/search/duplicate?' + qs)
+      .then(function (d) { return d.contact || null; })
+      .catch(function () { return null; }); // treat a failed check as "no match found" rather than blocking the row
+  }
+  function enrollContactInWorkflow(contactId, workflowId) {
+    return apiFetch('POST', '/contacts/' + contactId + '/workflow/' + workflowId, {});
+  }
+  function getWorkflows() {
+    return apiFetch('GET', '/workflows/?locationId=' + LOC).then(function (d) { return d.workflows || []; });
+  }
 
   window.MM.api = {
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact, createContact: createContact,
-    getTags: getTags,
+    getTags: getTags, findDuplicateContact: findDuplicateContact, enrollContactInWorkflow: enrollContactInWorkflow, getWorkflows: getWorkflows,
   };
 })();
