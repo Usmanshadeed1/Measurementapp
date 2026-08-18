@@ -79,12 +79,14 @@
     </div>
     <div class="mm-field-group">
       <label class="mm-label" id="mm-ct-tags-label">Tags</label>
-      <div class="mm-tag-picker" id="mm-ct-tags-picker" aria-labelledby="mm-ct-tags-label">
-        <div class="mm-empty">Loading tags...</div>
-      </div>
-      <div class="mm-tag-add-row">
-        <input class="mm-input" id="mm-ct-new-tag" placeholder="Add a new tag..." style="margin-bottom:0">
-        <button class="mm-btn-sm mm-btn-secondary" id="mm-ct-add-tag-btn" type="button">+ Add</button>
+      <div class="mm-tag-select" id="mm-ct-tags-select">
+        <button type="button" class="mm-tag-select-btn" id="mm-ct-tags-btn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="mm-ct-tags-label">
+          <span id="mm-ct-tags-summary">Select tags...</span>
+          <span class="mm-tag-select-arrow" aria-hidden="true">&#9660;</span>
+        </button>
+        <div class="mm-tag-select-panel" id="mm-ct-tags-panel" role="listbox" aria-multiselectable="true">
+          <div class="mm-empty">Loading tags...</div>
+        </div>
       </div>
     </div>
     <p class="mm-hint" id="mm-ct-duplicate-hint">If a contact with this email or phone already exists, GHL will update that contact instead of creating a new one.</p>

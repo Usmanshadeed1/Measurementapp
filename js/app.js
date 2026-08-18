@@ -243,55 +243,67 @@
 
   // ===== ADD CONTACT =====
   var contactFieldIds = ['mm-ct-first', 'mm-ct-last', 'mm-ct-email', 'mm-ct-phone', 'mm-ct-business'];
-  var selectedTags = [];   // tag names currently chosen (chip picker)
-  var allTagNames = [];    // every known tag name in this location, for de-dupe on "+ Add"
+  var selectedTags = [];   // tag names currently checked in the dropdown
+  var allTagNames = [];    // every known tag name in this location (selection only, no creating here)
 
-  function renderTagPicker() {
-    var picker = document.getElementById('mm-ct-tags-picker');
-    picker.innerHTML = '';
-    if (!allTagNames.length) { picker.innerHTML = '<div class="mm-empty">No tags yet — add one below.</div>'; return; }
+  var tagSelectWrap = document.getElementById('mm-ct-tags-select');
+  var tagSelectBtn = document.getElementById('mm-ct-tags-btn');
+  var tagSelectPanel = document.getElementById('mm-ct-tags-panel');
+  var tagSelectSummary = document.getElementById('mm-ct-tags-summary');
+
+  function updateTagSummary() {
+    if (!selectedTags.length) {
+      tagSelectSummary.textContent = 'Select tags...';
+      tagSelectSummary.classList.remove('has-selection');
+    } else {
+      tagSelectSummary.textContent = selectedTags.join(', ');
+      tagSelectSummary.classList.add('has-selection');
+    }
+  }
+  function renderTagPanel() {
+    tagSelectPanel.innerHTML = '';
+    if (!allTagNames.length) { tagSelectPanel.innerHTML = '<div class="mm-empty">No tags exist in GHL yet.</div>'; return; }
     allTagNames.forEach(function (name) {
-      var chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'mm-tag-chip' + (selectedTags.indexOf(name) > -1 ? ' selected' : '');
-      chip.textContent = name;
-      chip.setAttribute('aria-pressed', selectedTags.indexOf(name) > -1 ? 'true' : 'false');
-      chip.addEventListener('click', function () {
+      var opt = document.createElement('label');
+      opt.className = 'mm-tag-option';
+      opt.setAttribute('role', 'option');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = selectedTags.indexOf(name) > -1;
+      cb.addEventListener('change', function () {
         var i = selectedTags.indexOf(name);
-        if (i > -1) selectedTags.splice(i, 1); else selectedTags.push(name);
-        renderTagPicker();
+        if (cb.checked && i === -1) selectedTags.push(name);
+        else if (!cb.checked && i > -1) selectedTags.splice(i, 1);
+        updateTagSummary();
       });
-      picker.appendChild(chip);
+      var span = document.createElement('span'); span.textContent = name;
+      opt.appendChild(cb); opt.appendChild(span);
+      tagSelectPanel.appendChild(opt);
     });
   }
-
-  document.getElementById('mm-ct-add-tag-btn').addEventListener('click', function () {
-    var input = document.getElementById('mm-ct-new-tag');
-    var name = input.value.trim();
-    if (!name) return;
-    if (allTagNames.indexOf(name) === -1) allTagNames.push(name);
-    if (selectedTags.indexOf(name) === -1) selectedTags.push(name);
-    input.value = '';
-    renderTagPicker();
+  function openTagPanel() { tagSelectWrap.classList.add('open'); tagSelectBtn.setAttribute('aria-expanded', 'true'); }
+  function closeTagPanel() { tagSelectWrap.classList.remove('open'); tagSelectBtn.setAttribute('aria-expanded', 'false'); }
+  tagSelectBtn.addEventListener('click', function () {
+    tagSelectWrap.classList.contains('open') ? closeTagPanel() : openTagPanel();
   });
-  document.getElementById('mm-ct-new-tag').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('mm-ct-add-tag-btn').click(); }
+  document.addEventListener('click', function (e) {
+    if (!tagSelectWrap.contains(e.target)) closeTagPanel();
   });
 
   document.getElementById('mm-add-contact-btn').addEventListener('click', function () {
     contactFieldIds.forEach(function (id) { document.getElementById(id).value = ''; });
     document.getElementById('mm-ct-type').value = 'lead';
-    document.getElementById('mm-ct-new-tag').value = '';
     selectedTags = [];
+    updateTagSummary();
+    closeTagPanel();
     openModal('mm-modal-contact');
-    var picker = document.getElementById('mm-ct-tags-picker');
-    picker.innerHTML = '<div class="mm-empty">Loading tags...</div>';
+    tagSelectPanel.innerHTML = '<div class="mm-empty">Loading tags...</div>';
     api.getTags().then(function (tags) {
       allTagNames = tags.map(function (t) { return t.name; }).filter(Boolean);
-      renderTagPicker();
+      renderTagPanel();
     }).catch(function (e) {
       allTagNames = [];
-      picker.innerHTML = '<div class="mm-empty">Could not load tags — you can still add new ones below.</div>';
+      tagSelectPanel.innerHTML = '<div class="mm-empty">Could not load tags.</div>';
     });
   });
   document.getElementById('mm-cancel-contact-btn').addEventListener('click', function () { closeModal('mm-modal-contact'); });
