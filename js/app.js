@@ -12,6 +12,10 @@
   document.getElementById('mm-font-up').addEventListener('click', function () { U.applyFont(U.getFontIndex() + 1); });
   document.getElementById('mm-font-down').addEventListener('click', function () { U.applyFont(U.getFontIndex() - 1); });
 
+  // ===== THEME CONTROL (dark / light) =====
+  U.applyTheme(U.getTheme());
+  document.getElementById('mm-theme-toggle').addEventListener('click', function () { U.toggleTheme(); });
+
   // Prevent accidental scroll-wheel changes on number inputs
   document.addEventListener('wheel', function (e) { if (document.activeElement && document.activeElement.type === 'number') e.preventDefault(); }, { passive: false });
 

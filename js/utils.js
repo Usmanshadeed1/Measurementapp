@@ -35,6 +35,24 @@ window.MM = window.MM || {};
     document.getElementById('mm-app').style.fontSize = FONT_SIZES[i] + 'px';
   }
 
+  // ---- Theme (dark / light) control ---------------------------------------
+  function getTheme() {
+    var t = localStorage.getItem('mm_theme');
+    return (t === 'light' || t === 'dark') ? t : 'dark';
+  }
+  function applyTheme(theme) {
+    theme = theme === 'light' ? 'light' : 'dark';
+    localStorage.setItem('mm_theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    var btn = document.getElementById('mm-theme-toggle');
+    if (btn) {
+      var goingTo = theme === 'light' ? 'dark' : 'light';
+      btn.textContent = theme === 'light' ? '🌙' : '☀️';
+      btn.setAttribute('aria-label', 'Switch to ' + goingTo + ' mode');
+    }
+  }
+  function toggleTheme() { applyTheme(getTheme() === 'light' ? 'dark' : 'light'); }
+
   // ---- Form field builders ------------------------------------------------
   function fld(label, inputHtml) {
     return '<div class="mm-field-group"><label class="mm-label">' + esc(label) + '</label>' + inputHtml + '</div>';
@@ -109,6 +127,7 @@ window.MM = window.MM || {};
   window.MM.utils = {
     esc: esc, pv: pv, uid: uid, fbk: fbk,
     FONT_SIZES: FONT_SIZES, getFontIndex: getFontIndex, applyFont: applyFont,
+    getTheme: getTheme, applyTheme: applyTheme, toggleTheme: toggleTheme,
     fld: fld, radios: radios, sel: sel, gv: gv, sv: sv, gr: gr, sr: sr, clearIfPlaceholder: clearIfPlaceholder,
     markDirty: markDirty, clearDirty: clearDirty, updateFloatBtn: updateFloatBtn, watchDirty: watchDirty, getPendingButtons: getPendingButtons,
     makeAcc: makeAcc, loadSub: loadSub,
