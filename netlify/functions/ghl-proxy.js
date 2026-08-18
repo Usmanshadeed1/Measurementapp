@@ -17,9 +17,19 @@ exports.handler = async function (event) {
     return jsonResponse(500, { error: 'Server misconfigured: GHL_API_KEY is not set.' });
   }
 
-  // Everything after /.netlify/functions/ghl-proxy/ is the GHL path+query.
-  const prefix = '/.netlify/functions/ghl-proxy';
-  let forwardPath = event.path.startsWith(prefix) ? event.path.slice(prefix.length) : event.path;
+  // Netlify's [[redirects]] rewrite means event.path is still the
+  // ORIGINAL browser-facing path (e.g. /api/opportunities/search), not
+  // the rewritten function path — so strip the /api prefix, not the
+  // function's own path. Also handle being hit directly at
+  // /.netlify/functions/ghl-proxy/... for completeness.
+  let forwardPath = event.path;
+  var apiPrefix = '/api';
+  var fnPrefix = '/.netlify/functions/ghl-proxy';
+  if (forwardPath.startsWith(apiPrefix)) {
+    forwardPath = forwardPath.slice(apiPrefix.length);
+  } else if (forwardPath.startsWith(fnPrefix)) {
+    forwardPath = forwardPath.slice(fnPrefix.length);
+  }
   if (!forwardPath.startsWith('/')) forwardPath = '/' + forwardPath;
 
   const qs = event.rawQuery ? '?' + event.rawQuery : '';
