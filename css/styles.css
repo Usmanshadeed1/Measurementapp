@@ -168,22 +168,38 @@ html,body{
 textarea.mm-input{min-height:90px;resize:vertical}
 
 .mm-label{font-size:.92em;font-weight:700;color:var(--text2);margin-bottom:6px;display:block}
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+.section-header .mm-btn-sm{white-space:nowrap}
+.mm-btn-row{display:flex;gap:8px;flex-wrap:wrap}
 .section-title{font-size:.85em;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
 
 .mm-empty{text-align:center;color:var(--empty);font-size:.95em;padding:24px 0}
 
-/* Modal */
+/* Modal — bottom sheet on mobile, centered dialog on wider screens */
 .mm-modal-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;
-  align-items:flex-end;justify-content:center;
+  align-items:flex-end;justify-content:center;padding:0;
 }
 .mm-modal-overlay.open{display:flex}
 .mm-modal{
   background:var(--card2);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;
-  max-height:90vh;overflow-y:auto;border-top:1px solid var(--border);
+  max-height:90vh;overflow-y:auto;border:1px solid var(--border);border-bottom:none;
+  box-shadow:var(--card-shadow);
 }
 .mm-modal-title{font-size:1.2em;font-weight:800;margin-bottom:16px;color:var(--text)}
+
+@media (min-width: 640px){
+  .mm-modal-overlay{align-items:center;padding:24px}
+  .mm-modal{border-radius:16px;border-bottom:1px solid var(--border);max-height:85vh}
+}
+
+/* Larger wizard-style modals (e.g. CSV import) get more room and their
+   own scroll boundary so the step pills + actions stay visible. */
+.mm-modal-lg{
+  max-width:640px;display:flex;flex-direction:column;max-height:90vh;
+}
+@media (min-width: 640px){ .mm-modal-lg{max-height:80vh} }
+.mm-modal-lg #mm-import-body{overflow-y:auto;flex:1;min-height:0}
 
 .mm-field-group{margin-bottom:14px}
 .mm-hint{font-size:.85em;color:var(--text2);margin-bottom:14px;line-height:1.4}
@@ -306,9 +322,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
 }
 
 /* ===== CSV Import wizard ===== */
-.mm-modal-lg{max-width:640px}
-
-.mm-import-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.mm-import-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;position:sticky;top:0;background:var(--card2);padding-bottom:4px;z-index:1}
 .mm-import-step{
   padding:6px 12px;border-radius:20px;font-size:.8em;font-weight:700;
   background:var(--input-bg);color:var(--text2);border:1px solid var(--input-border);
@@ -320,11 +334,14 @@ textarea.mm-input{min-height:90px;resize:vertical}
 
 .mm-import-map{display:flex;flex-direction:column;gap:10px;max-height:50vh;overflow-y:auto;padding-right:4px}
 .mm-import-map-row{
-  display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center;
+  display:flex;flex-direction:column;gap:10px;
   padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;
 }
 .mm-import-map-header{font-weight:700;color:var(--text);font-size:.95em}
 .mm-import-map-sample{font-size:.8em;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+@media (min-width: 560px){
+  .mm-import-map-row{display:grid;grid-template-columns:1fr 1fr;align-items:center}
+}
 
 .mm-import-summary-box{
   display:flex;gap:20px;flex-wrap:wrap;padding:14px 16px;background:var(--card);
