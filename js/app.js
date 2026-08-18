@@ -241,6 +241,39 @@
     contactSearchTimer = setTimeout(function () { loadContacts(q || undefined); }, 400);
   });
 
+  // ===== ADD CONTACT =====
+  var contactFieldIds = ['mm-ct-first', 'mm-ct-last', 'mm-ct-email', 'mm-ct-phone', 'mm-ct-business', 'mm-ct-tags'];
+  document.getElementById('mm-add-contact-btn').addEventListener('click', function () {
+    contactFieldIds.forEach(function (id) { document.getElementById(id).value = ''; });
+    document.getElementById('mm-ct-type').value = 'lead';
+    openModal('mm-modal-contact');
+  });
+  document.getElementById('mm-cancel-contact-btn').addEventListener('click', function () { closeModal('mm-modal-contact'); });
+  document.getElementById('mm-modal-contact').addEventListener('click', function (e) { if (e.target === this) closeModal('mm-modal-contact'); });
+  document.getElementById('mm-save-contact-btn').addEventListener('click', function () {
+    var btn = this;
+    var first = document.getElementById('mm-ct-first').value.trim();
+    if (!first) { alert('First name is required.'); return; }
+    var p = { firstName: first };
+    var last = document.getElementById('mm-ct-last').value.trim(); if (last) p.lastName = last;
+    var email = document.getElementById('mm-ct-email').value.trim(); if (email) p.email = email;
+    var phone = document.getElementById('mm-ct-phone').value.trim(); if (phone) p.phone = phone;
+    var business = document.getElementById('mm-ct-business').value.trim(); if (business) p.companyName = business;
+    p.type = document.getElementById('mm-ct-type').value || 'lead';
+    var tagsRaw = document.getElementById('mm-ct-tags').value.trim();
+    if (tagsRaw) p.tags = tagsRaw.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
+
+    btn.textContent = 'Saving...'; btn.disabled = true;
+    api.createContact(p).then(function () {
+      closeModal('mm-modal-contact');
+      U.fbk(btn, 'Save Contact');
+      loadContacts();
+    }).catch(function (e) {
+      alert(e.message);
+      btn.textContent = 'Save Contact'; btn.disabled = false;
+    });
+  });
+
   // ===== MEDIA (room/job level) =====
   function loadRoomMedia() {
     if (!room || !room.id) return;

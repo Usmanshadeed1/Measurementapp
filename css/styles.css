@@ -186,6 +186,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
 .mm-modal-title{font-size:1.2em;font-weight:800;margin-bottom:16px;color:var(--text)}
 
 .mm-field-group{margin-bottom:14px}
+.mm-hint{font-size:.85em;color:var(--text2);margin-bottom:14px;line-height:1.4}
 .mm-radio-row{display:flex;gap:18px;margin-top:6px;flex-wrap:wrap}
 .mm-radio-row label{display:flex;align-items:center;gap:8px;font-size:.98em;color:var(--text);min-height:44px}
 .mm-radio-row input[type="radio"]{width:20px;height:20px}

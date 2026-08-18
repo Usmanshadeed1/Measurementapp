@@ -48,12 +48,39 @@
 <!-- CONTACTS -->
 <div class="screen" id="screen-contacts">
   <div class="mm-content">
+    <div class="section-header">
+      <span class="section-title">All Contacts</span>
+      <button class="mm-btn-sm mm-btn-primary" id="mm-add-contact-btn">+ Add Contact</button>
+    </div>
     <div class="mm-search-bar">
       <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
       <label for="mm-contact-search" class="sr-only">Search contacts by name, phone, or email</label>
       <input class="mm-input" id="mm-contact-search" placeholder="Search by name, phone, or email...">
     </div>
     <div id="mm-contacts-list"><div class="mm-empty">Loading contacts...</div></div>
+  </div>
+</div>
+
+<!-- Add Contact modal -->
+<div class="mm-modal-overlay" id="mm-modal-contact">
+  <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-contact-modal-title">
+    <div class="mm-modal-title" id="mm-contact-modal-title">Add Contact</div>
+    <div class="mm-field-group"><label class="mm-label" for="mm-ct-first">First Name *</label><input class="mm-input" id="mm-ct-first" placeholder="Enter first name"></div>
+    <div class="mm-field-group"><label class="mm-label" for="mm-ct-last">Last Name</label><input class="mm-input" id="mm-ct-last" placeholder="Enter last name"></div>
+    <div class="mm-field-group"><label class="mm-label" for="mm-ct-email">Email</label><input class="mm-input" type="email" id="mm-ct-email" placeholder="Enter email address"></div>
+    <div class="mm-field-group"><label class="mm-label" for="mm-ct-phone">Phone</label><input class="mm-input" type="tel" id="mm-ct-phone" placeholder="e.g. +14155550101"></div>
+    <div class="mm-field-group"><label class="mm-label" for="mm-ct-business">Business Name</label><input class="mm-input" id="mm-ct-business" placeholder="Enter business name"></div>
+    <div class="mm-field-group">
+      <label class="mm-label" for="mm-ct-type">Contact Type</label>
+      <select class="mm-select" id="mm-ct-type">
+        <option value="lead">Lead</option>
+        <option value="customer">Customer</option>
+      </select>
+    </div>
+    <div class="mm-field-group"><label class="mm-label" for="mm-ct-tags">Tags</label><input class="mm-input" id="mm-ct-tags" placeholder="Comma-separated, e.g. follow-up, high priority"></div>
+    <p class="mm-hint" id="mm-ct-duplicate-hint">If a contact with this email or phone already exists, GHL will update that contact instead of creating a new one.</p>
+    <button class="mm-btn mm-btn-primary" id="mm-save-contact-btn">Save Contact</button>
+    <button class="mm-btn mm-btn-secondary" id="mm-cancel-contact-btn">Cancel</button>
   </div>
 </div>
 

@@ -114,11 +114,15 @@ window.MM = window.MM || {};
   function getContact(id) {
     return apiFetch('GET', '/contacts/' + id).then(function (d) { return d.contact; });
   }
+  function createContact(p) {
+    p.locationId = LOC;
+    return apiFetch('POST', '/contacts/', p).then(function (d) { return d.contact; });
+  }
 
   window.MM.api = {
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
-    deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact,
+    deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact, createContact: createContact,
   };
 })();

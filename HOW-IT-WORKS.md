@@ -108,17 +108,40 @@ A second top-level tab, separate from Jobs. This talks to GHL's
 shows every Contact in the location, including ones with no Opportunity
 attached (unlike the Jobs tab).
 
-- Read-only: view + search only. No create/edit/delete from the app.
+- View + search + **create**. Editing/deleting an existing contact is
+  still not available from the app — only viewing and adding new ones.
 - Search matches name/phone/email (whatever GHL's `query` param covers).
 - Tapping a contact shows a detail view: name, phone, email, business,
   tags, created date. No link to that contact's Job/Opportunity yet —
   possible future addition.
 
+### Add Contact
+
+"+ Add Contact" opens a form (First Name, Last Name, Email, Phone,
+Business Name, Contact Type, Tags) and calls `POST /contacts/` directly
+— this creates a real contact in GHL, same as adding one manually in
+the GHL UI.
+
+Important behavior, confirmed against GHL's own docs: **this call
+upserts, it does not reject duplicates.** If the email or phone you
+submit already matches an existing contact, GHL updates that contact
+with whatever fields you submitted instead of creating a new one — no
+error is raised either way. The form shows a hint about this so it
+doesn't surprise anyone. Only First Name is enforced as required by the
+app's own form (the API itself requires nothing, but a nameless contact
+isn't useful).
+
+Two custom fields exist on Contacts in this account (Wall Length,
+Ceiling Height — both FLOAT) that the form deliberately does **not**
+include, since they look like a mismatch with a generic "add contact"
+flow. Worth asking your client what those are actually for before
+wiring them up anywhere.
+
 ## Known gaps / things not built yet
 
 - No "create a new Job" flow from inside the app (must be done in GHL directly)
 - No filter for Job status (Open/Won/Lost) — shows everything
-- Contacts tab is view-only — no create/edit/delete, and no link from a
-  contact to their Job even if one exists
+- Contacts can be viewed and created, but not edited or deleted from the
+  app, and there's no link from a contact to their Job even if one exists
 - No leads dashboard, filters, or reporting — this is purely the
   measurement capture tool, unchanged in scope from the original build
