@@ -8,6 +8,18 @@ window.MM = window.MM || {};
   var LOC = 'Ga7nrS4d8EFtep9LkHS3';
   var ADDR_FIELD_ID = 'np5Bh2jzG5zvdz3qukWV';
 
+  // The sales pipeline the dashboard reports on. Opportunities in other
+  // pipelines (e.g. the older Marketing Pipeline) are ignored there.
+  var SALES_PIPELINE_ID = 'VILXN1neZNHhQYTo2rf9';
+
+  // Opportunity custom fields come back as { id, fieldValueString } — by id,
+  // never by name — so the three status fields are looked up by id here.
+  var STATUS_FIELD_IDS = {
+    design: 'qoDcsKKATQVI4zKpdFC3',
+    pricing: 'Ixc1x6jfSn9FbzxgrOyr',
+    meeting: 'NJxO5j5YATiusGdRBlZD',
+  };
+
   // Association IDs — one per relationship type in GHL's custom-object schema.
   var A = {
     rO: '6a788d417912156545df96f3',   // Room <-> Opportunity(Job)
@@ -106,6 +118,38 @@ window.MM = window.MM || {};
     return apiFetch('POST', '/opportunities/search', body).then(function (d) { return d.opportunities || []; });
   }
 
+  // Reads one custom field off an opportunity by field id. GHL returns the
+  // dropdown's visible label (e.g. "Pending") in fieldValueString, not an
+  // internal option id — so the value can be compared/displayed directly.
+  function oppField(o, fieldId) {
+    var f = (o.customFields || []).find(function (x) { return x.id === fieldId; });
+    if (!f) return '';
+    return f.fieldValueString || f.fieldValue || '';
+  }
+
+  // Every opportunity, following pagination. searchJobs() caps at 30 for the
+  // quick job picker, but the dashboard has to count the whole pipeline or
+  // its totals would silently be wrong.
+  function fetchAllOpportunities() {
+    var all = [];
+    function page(n) {
+      return apiFetch('POST', '/opportunities/search', { locationId: LOC, limit: 100, page: n })
+        .then(function (d) {
+          var batch = d.opportunities || [];
+          all = all.concat(batch);
+          // Stop on a short page, or if the API ignores `page` and hands back
+          // the same first page forever (guard against an infinite loop).
+          if (batch.length < 100 || n >= 50) return all;
+          return page(n + 1);
+        });
+    }
+    return page(1);
+  }
+
+  function getPipelines() {
+    return apiFetch('GET', '/opportunities/pipelines?locationId=' + LOC).then(function (d) { return d.pipelines || []; });
+  }
+
   function searchContacts(query) {
     var qs = 'locationId=' + LOC + '&limit=50';
     if (query) qs += '&query=' + encodeURIComponent(query);
@@ -142,6 +186,8 @@ window.MM = window.MM || {};
 
   window.MM.api = {
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
+    SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
+    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact, createContact: createContact,
