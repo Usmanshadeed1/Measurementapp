@@ -118,9 +118,16 @@ attached (unlike the Jobs tab).
 ### Add Contact
 
 "+ Add Contact" opens a form (First Name, Last Name, Email, Phone,
-Business Name, Contact Type, Tags) and calls `POST /contacts/` directly
-— this creates a real contact in GHL, same as adding one manually in
-the GHL UI.
+Business Name, Street Address, City, State, Postal Code, Country,
+Contact Type, Tags) and calls `POST /contacts/` directly — this creates
+a real contact in GHL, same as adding one manually in the GHL UI.
+
+**Address is 5 separate fields, not one** — confirmed with GHL: there's
+no combined "address" field and no `address2` (no suite/unit line).
+Field names are `address1`, `city`, `state`, `postalCode`, `country`.
+State and Country are recommended as 2-letter codes (e.g. `NJ`, `US`) —
+the form uppercases whatever's typed and defaults Country to `US`. None
+of the address fields are required by the API.
 
 Important behavior, confirmed against GHL's own docs: **this call
 upserts, it does not reject duplicates.** If the email or phone you
@@ -165,9 +172,10 @@ bulk-import endpoint — this loops one API call per row):
 1. **Upload** — pick a `.csv` file. Parsed entirely client-side
    (`js/csv.js`, a small dependency-free parser — no library pulled in).
 2. **Map** — each CSV column gets a dropdown to map it to a contact
-   field (First/Last Name, Email, Phone, Business Name, Contact Type,
-   Tags), or "do not import." Common header names are auto-guessed
-   (e.g. a column literally named "Email" auto-maps to Email).
+   field (First/Last Name, Email, Phone, Business Name, Street Address,
+   City, State, Postal Code, Country, Contact Type, Tags), or "do not
+   import." Common header names are auto-guessed (e.g. a column
+   literally named "Email" auto-maps to Email, "Zip" maps to Postal Code).
 3. **Review** — shows row counts, a warning that any GHL workflow
    triggered on "Contact Created" will fire once per row this import
    creates, and a required consent checkbox (mirrors GHL's own
@@ -196,6 +204,16 @@ API for Smartlists — that would need a tag applied at import time, then
 a Smartlist filter built manually in GHL on that tag). No resumable
 import — closing the modal mid-run stops it, and there's no "continue
 where I left off."
+
+**Note on GHL's own native CSV import erroring on a file this app
+already imported:** if you import a CSV through this app first, then
+try the *same* file through GHL's own native Import UI, GHL's importer
+will likely reject rows as duplicates (error codes 1010/1011 — "already
+exists" / "duplicate within file") since those contacts already exist
+in the account. This is expected, not a bug in this app — the two
+import paths are hitting the same underlying contact data, so importing
+a file twice (once via each path) will always look like a duplicate
+conflict on the second pass.
 
 ## Known gaps / things not built yet
 

@@ -242,7 +242,7 @@
   });
 
   // ===== ADD CONTACT =====
-  var contactFieldIds = ['mm-ct-first', 'mm-ct-last', 'mm-ct-email', 'mm-ct-phone', 'mm-ct-business'];
+  var contactFieldIds = ['mm-ct-first', 'mm-ct-last', 'mm-ct-email', 'mm-ct-phone', 'mm-ct-business', 'mm-ct-address', 'mm-ct-city', 'mm-ct-state', 'mm-ct-postal'];
   var selectedTags = [];   // tag names currently checked in the dropdown
   var allTagNames = [];    // every known tag name in this location (selection only, no creating here)
 
@@ -293,6 +293,7 @@
   document.getElementById('mm-add-contact-btn').addEventListener('click', function () {
     contactFieldIds.forEach(function (id) { document.getElementById(id).value = ''; });
     document.getElementById('mm-ct-type').value = 'lead';
+    document.getElementById('mm-ct-country').value = 'US';
     selectedTags = [];
     updateTagSummary();
     closeTagPanel();
@@ -317,6 +318,11 @@
     var email = document.getElementById('mm-ct-email').value.trim(); if (email) p.email = email;
     var phone = document.getElementById('mm-ct-phone').value.trim(); if (phone) p.phone = phone;
     var business = document.getElementById('mm-ct-business').value.trim(); if (business) p.companyName = business;
+    var address = document.getElementById('mm-ct-address').value.trim(); if (address) p.address1 = address;
+    var city = document.getElementById('mm-ct-city').value.trim(); if (city) p.city = city;
+    var state = document.getElementById('mm-ct-state').value.trim(); if (state) p.state = state.toUpperCase();
+    var postal = document.getElementById('mm-ct-postal').value.trim(); if (postal) p.postalCode = postal;
+    var country = document.getElementById('mm-ct-country').value.trim(); if (country) p.country = country.toUpperCase();
     p.type = document.getElementById('mm-ct-type').value || 'lead';
     if (selectedTags.length) p.tags = selectedTags.slice();
 

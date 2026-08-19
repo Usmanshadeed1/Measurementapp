@@ -15,6 +15,11 @@ window.MM = window.MM || {};
     { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Phone' },
     { key: 'companyName', label: 'Business Name' },
+    { key: 'address1', label: 'Street Address' },
+    { key: 'city', label: 'City' },
+    { key: 'state', label: 'State' },
+    { key: 'postalCode', label: 'Postal Code' },
+    { key: 'country', label: 'Country' },
     { key: 'type', label: 'Contact Type' },
     { key: 'tags', label: 'Tags' },
   ];
@@ -25,6 +30,11 @@ window.MM = window.MM || {};
     'email': 'email', 'email address': 'email',
     'phone': 'phone', 'phone number': 'phone', 'mobile': 'phone',
     'business name': 'companyName', 'company': 'companyName', 'company name': 'companyName',
+    'address': 'address1', 'address1': 'address1', 'street address': 'address1', 'address line 1': 'address1',
+    'city': 'city',
+    'state': 'state', 'province': 'state',
+    'postal code': 'postalCode', 'zip': 'postalCode', 'zip code': 'postalCode', 'postalcode': 'postalCode',
+    'country': 'country',
     'contact type': 'type', 'type': 'type',
     'tags': 'tags', 'tag': 'tags',
   };
@@ -65,6 +75,7 @@ window.MM = window.MM || {};
       var raw = (row[header] || '').trim();
       if (!raw) return; // "skip empty values" behavior — never overwrite with blank
       if (target === 'phone') raw = normalizePhone(raw);
+      if (target === 'state' || target === 'country') raw = raw.toUpperCase();
       if (target === 'tags') { p.tags = raw.split(',').map(function (t) { return t.trim(); }).filter(Boolean); return; }
       p[target] = raw;
     });

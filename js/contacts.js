@@ -14,6 +14,12 @@ window.MM = window.MM || {};
   function fmtBusiness(c) {
     return c.companyName || (c.businessName) || '';
   }
+  function fmtAddress(c) {
+    var line1 = c.address1 || '';
+    var cityStateZip = [c.city, c.state].filter(Boolean).join(', ') + (c.postalCode ? ' ' + c.postalCode : '');
+    var parts = [line1, cityStateZip.trim(), c.country].filter(Boolean);
+    return parts.join(', ');
+  }
   function fmtDate(iso) {
     if (!iso) return '';
     var d = new Date(iso);
@@ -61,6 +67,7 @@ window.MM = window.MM || {};
       field('Phone', c.phone) +
       field('Email', c.email) +
       field('Business', fmtBusiness(c)) +
+      field('Address', fmtAddress(c)) +
       field('Tags', fmtTags(c.tags)) +
       field('Created', fmtDate(c.dateAdded || c.createdAt)) +
       field('Contact ID', c.id);
