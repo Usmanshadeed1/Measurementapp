@@ -18,6 +18,7 @@ window.MM = window.MM || {};
   var allJobs = [];      // every opportunity in the sales pipeline
   var stageNames = {};   // pipelineStageId -> human stage name
   var newLeadStageId = null;
+  var salesPipeline = null;
   var userNames = {};     // userId -> staff name
   var activeView = 'all';   // 'new' | 'all'
   var activeFilter = 'all';
@@ -93,18 +94,37 @@ window.MM = window.MM || {};
     return '<span class="mm-pill mm-pill-' + cls + '">' + U.esc(val || 'Not set') + '</span>';
   }
 
+  // Filters are named for what the owner is looking for, not for the field
+  // they happen to read. Each carries a count so a filter that would return
+  // nothing is visibly empty before it is clicked.
+  var WORK_FILTERS = [
+    { id: 'all',        label: 'All jobs',            test: function () { return true; } },
+    { id: 'outstanding',label: 'Anything unfinished', test: function (o) { return !allThreeDone(o); } },
+    { id: 'design',     label: 'Needs designs',       test: function (o) { return !isDone(o, 'design'); } },
+    { id: 'pricing',    label: 'Needs pricing',       test: function (o) { return !isDone(o, 'pricing'); } },
+    { id: 'meeting',    label: 'Needs meeting',       test: function (o) { return !isDone(o, 'meeting'); } },
+    { id: 'revision',   label: 'Customer wants changes', test: function (o) {
+        return statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision'; } },
+    { id: 'complete',   label: 'Ready to proceed',    test: allThreeDone },
+    { id: 'unassigned', label: 'No staff assigned',   test: function (o) { return !o.assignedTo; } },
+  ];
+  function workFilter(id) {
+    return WORK_FILTERS.find(function (f) { return f.id === id; });
+  }
+
   function matchesFilter(o) {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'complete') return allThreeDone(o);
-    if (activeFilter === 'outstanding') return !allThreeDone(o);
-    if (activeFilter === 'unassigned') return !o.assignedTo;
-    if (activeFilter === 'revision') {
-      return statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision';
-    }
     if (activeFilter.indexOf('stage:') === 0) {
       return stageNames[o.pipelineStageId] === activeFilter.slice(6);
     }
-    return !isDone(o, activeFilter); // 'design' | 'pricing' | 'meeting'
+    var f = workFilter(activeFilter);
+    return f ? f.test(o) : true;
+  }
+
+  // The label for whatever is currently selected, for the "showing…" line.
+  function activeFilterLabel() {
+    if (activeFilter.indexOf('stage:') === 0) return activeFilter.slice(6);
+    var f = workFilter(activeFilter);
+    return f ? f.label : '';
   }
   function matchesSearch(o) {
     if (!searchTerm) return true;
@@ -200,7 +220,7 @@ window.MM = window.MM || {};
 
   function renderAllTable(rows) {
     if (!rows.length) {
-      return '<div class="mm-empty">No jobs match this filter.</div>';
+      return '<div class="mm-empty">No jobs match &ldquo;' + U.esc(activeFilterLabel()) + '&rdquo;.</div>';
     }
     var head =
       '<div class="mm-dash-row mm-dash-head">' +
@@ -229,8 +249,7 @@ window.MM = window.MM || {};
     var rows = visibleJobs();
     // The status filters only mean something against the three status
     // columns, which the New Lead queue does not show.
-    document.getElementById('mm-dash-filters').style.display = activeView === 'new' ? 'none' : '';
-    document.getElementById('mm-dash-stage-filters').style.display = activeView === 'new' ? 'none' : '';
+    document.querySelector('.mm-filter-bar').style.display = activeView === 'new' ? 'none' : '';
 
     var total = activeView === 'new' ? allJobs.filter(isNewLead).length : allJobs.length;
     var tableHtml = activeView === 'new' ? renderNewLeadTable(rows) : renderAllTable(rows);
@@ -238,6 +257,7 @@ window.MM = window.MM || {};
     el.innerHTML = tableHtml +
       (rows.length ? '<div class="mm-dash-count">Showing ' + rows.length + ' of ' + total + ' jobs</div>' : '');
     bindRows(el);
+    renderActiveFilter(rows.length, total);
   }
 
   var VIEW_NOTES = {
@@ -249,7 +269,11 @@ window.MM = window.MM || {};
     document.getElementById('mm-dash-view-note').textContent = VIEW_NOTES[activeView] || '';
   }
 
-  function render() { renderNote(); renderStats(); renderTable(); }
+  function render() {
+    renderNote(); renderStats();
+    renderWorkFilters(); renderStageFilters();
+    renderTable();
+  }
 
   // ---- Loading ------------------------------------------------------------
 
@@ -276,6 +300,7 @@ window.MM = window.MM || {};
         });
 
         var sales = pipelines.find(function (p) { return p.id === api.SALES_PIPELINE_ID; });
+        salesPipeline = sales;
         stageNames = {};
         newLeadStageId = null;
         if (sales) (sales.stages || []).forEach(function (s) {
@@ -285,7 +310,6 @@ window.MM = window.MM || {};
 
         allJobs = ops.filter(function (o) { return o.pipelineId === api.SALES_PIPELINE_ID; });
 
-        renderStageFilters(sales);
 
         if (!allJobs.length) {
           statsEl.innerHTML = '';
@@ -300,35 +324,66 @@ window.MM = window.MM || {};
       });
   }
 
+  function filterBtn(id, label, count, isZero) {
+    return '<button class="mm-filter' + (activeFilter === id ? ' active' : '') + (isZero ? ' is-empty' : '') + '"' +
+      ' data-filter="' + U.esc(id) + '" aria-pressed="' + (activeFilter === id ? 'true' : 'false') + '">' +
+      U.esc(label) + '<span class="mm-filter-count">' + count + '</span></button>';
+  }
+
+  function renderWorkFilters() {
+    var el = document.getElementById('mm-dash-filters');
+    el.innerHTML = WORK_FILTERS.map(function (f) {
+      var n = allJobs.filter(f.test).length;
+      return filterBtn(f.id, f.label, n, n === 0 && f.id !== 'all');
+    }).join('');
+    el.querySelectorAll('.mm-filter').forEach(bindFilterButton);
+  }
+
   // Stage buttons are generated from the live pipeline rather than hard-coded,
   // so renaming or reordering a stage in GHL cannot leave a stale filter here.
   // Only stages that currently hold jobs get a button.
-  function renderStageFilters(sales) {
+  function renderStageFilters() {
     var el = document.getElementById('mm-dash-stage-filters');
-    if (!sales) { el.innerHTML = ''; return; }
+    var group = document.getElementById('mm-stage-group');
     var counts = {};
     allJobs.forEach(function (o) {
       var n = stageNames[o.pipelineStageId];
       if (n) counts[n] = (counts[n] || 0) + 1;
     });
-    var html = (sales.stages || [])
-      .filter(function (st) { return counts[st.name]; })
-      .map(function (st) {
-        return '<button class="mm-filter mm-filter-stage" data-filter="stage:' + U.esc(st.name) + '" aria-pressed="false">' +
-          U.esc(st.name) + ' <span class="mm-filter-count">' + counts[st.name] + '</span></button>';
-      }).join('');
-    el.innerHTML = html;
+    var stages = (salesPipeline && salesPipeline.stages ? salesPipeline.stages : [])
+      .filter(function (st) { return counts[st.name]; });
+    group.style.display = stages.length ? '' : 'none';
+    el.innerHTML = stages.map(function (st) {
+      return filterBtn('stage:' + st.name, st.name, counts[st.name], false);
+    }).join('');
     el.querySelectorAll('.mm-filter').forEach(bindFilterButton);
+  }
+
+  // One plain sentence naming what is on screen, so the selection is never
+  // ambiguous — the highlighted button alone is easy to miss.
+  function renderActiveFilter(shown, total) {
+    var el = document.getElementById('mm-dash-active-filter');
+    if (activeView === 'new' || activeFilter === 'all') {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = '<span class="mm-active-filter-text">Showing <strong>' + shown +
+      '</strong> of ' + total + ' jobs — ' + U.esc(activeFilterLabel()) + '</span>' +
+      '<button class="mm-clear-filter" type="button">Clear filter</button>';
+    el.querySelector('.mm-clear-filter').addEventListener('click', function () {
+      activeFilter = 'all';
+      renderWorkFilters(); renderStageFilters(); renderTable();
+    });
   }
 
   function bindFilterButton(btn) {
     btn.addEventListener('click', function () {
-      activeFilter = btn.getAttribute('data-filter');
-      document.querySelectorAll('#mm-dash-filters .mm-filter, #mm-dash-stage-filters .mm-filter').forEach(function (b) {
-        var on = b === btn;
-        b.classList.toggle('active', on);
-        b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      });
+      var id = btn.getAttribute('data-filter');
+      // Clicking the selected filter again clears it — the quickest way back
+      // to the full list without hunting for "All jobs".
+      activeFilter = (activeFilter === id && id !== 'all') ? 'all' : id;
+      renderWorkFilters();
+      renderStageFilters();
       renderTable();
     });
   }
@@ -351,7 +406,6 @@ window.MM = window.MM || {};
       btn.addEventListener('click', function () { setView(btn.getAttribute('data-view')); });
     });
 
-    document.querySelectorAll('#mm-dash-filters .mm-filter').forEach(bindFilterButton);
 
     var searchEl = document.getElementById('mm-dash-search');
     var timer = null;

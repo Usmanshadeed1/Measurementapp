@@ -70,18 +70,18 @@
       <input class="mm-input" id="mm-dash-search" placeholder="Search by customer or address...">
     </div>
 
-    <div class="mm-filters" id="mm-dash-filters" role="group" aria-label="Filter jobs by status">
-      <button class="mm-filter active" data-filter="all" aria-pressed="true">All jobs</button>
-      <button class="mm-filter" data-filter="outstanding" aria-pressed="false">Anything outstanding</button>
-      <button class="mm-filter" data-filter="design" aria-pressed="false">Designs pending</button>
-      <button class="mm-filter" data-filter="pricing" aria-pressed="false">Pricing pending</button>
-      <button class="mm-filter" data-filter="meeting" aria-pressed="false">Meeting pending</button>
-      <button class="mm-filter" data-filter="complete" aria-pressed="false">All 3 complete</button>
-      <button class="mm-filter" data-filter="revision" aria-pressed="false">In revision</button>
-      <button class="mm-filter" data-filter="unassigned" aria-pressed="false">Unassigned</button>
+    <div class="mm-filter-bar">
+      <div class="mm-filter-group">
+        <span class="mm-filter-legend" id="mm-lbl-work">Work still to do</span>
+        <div class="mm-filters" id="mm-dash-filters" role="group" aria-labelledby="mm-lbl-work"></div>
+      </div>
+      <div class="mm-filter-group" id="mm-stage-group">
+        <span class="mm-filter-legend" id="mm-lbl-stage">Where the job is</span>
+        <div class="mm-filters mm-filters-stage" id="mm-dash-stage-filters" role="group" aria-labelledby="mm-lbl-stage"></div>
+      </div>
     </div>
 
-    <div class="mm-filters mm-filters-stage" id="mm-dash-stage-filters" role="group" aria-label="Filter jobs by pipeline stage"></div>
+    <div class="mm-active-filter" id="mm-dash-active-filter" role="status" aria-live="polite"></div>
 
     <div id="mm-dash-table"><div class="mm-empty">Loading dashboard...</div></div>
   </div>
