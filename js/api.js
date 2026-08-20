@@ -159,6 +159,13 @@ window.MM = window.MM || {};
     return apiFetch('GET', '/users/?locationId=' + LOC).then(function (d) { return d.users || []; });
   }
 
+  // Sets the opportunity's owner. Pass null to clear it. GHL returns the
+  // updated opportunity, so the caller can trust the echoed value.
+  function assignOpportunity(oppId, userId) {
+    return apiFetch('PUT', '/opportunities/' + oppId, { assignedTo: userId || null })
+      .then(function (d) { return d.opportunity; });
+  }
+
   function getPipelines() {
     return apiFetch('GET', '/opportunities/pipelines?locationId=' + LOC).then(function (d) { return d.pipelines || []; });
   }
@@ -200,7 +207,7 @@ window.MM = window.MM || {};
   window.MM.api = {
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
-    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers,
+    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact, createContact: createContact,

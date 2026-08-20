@@ -60,8 +60,77 @@ window.MM = window.MM || {};
   function staffCell(o) {
     var n = staffName(o);
     var cls = n ? 'mm-staff' : 'mm-staff mm-staff-none';
-    return '<div class="mm-dash-c-staff" data-label="Staff"><span class="' + cls + '">' +
-      U.esc(n || 'Unassigned') + '</span></div>';
+    return '<div class="mm-dash-c-staff" data-label="Staff">' +
+      '<button type="button" class="mm-staff-btn" data-assign="' + U.esc(o.id) + '" ' +
+      'aria-label="Change staff for ' + U.esc(customerName(o)) + '">' +
+      '<span class="' + cls + '">' + U.esc(n || 'Unassigned') + '</span>' +
+      '<span class="mm-staff-edit" aria-hidden="true">Change</span></button></div>';
+  }
+
+  // ---- Assign staff -------------------------------------------------------
+
+  var assigningJob = null;
+
+  function openAssign(o) {
+    assigningJob = o;
+    document.getElementById('mm-assign-job').textContent =
+      customerName(o) + (jobAddress(o) ? ' — ' + jobAddress(o) : '');
+    document.getElementById('mm-assign-error').textContent = '';
+
+    var list = document.getElementById('mm-assign-list');
+    var ids = Object.keys(userNames);
+    if (!ids.length) {
+      list.innerHTML = '<div class="mm-empty">No staff found in this location.</div>';
+    } else {
+      // "Nobody" first so clearing an assignment is as easy as setting one.
+      list.innerHTML =
+        optionHtml('', 'Nobody (unassigned)', !o.assignedTo) +
+        ids.map(function (id) { return optionHtml(id, userNames[id], o.assignedTo === id); }).join('');
+      list.querySelectorAll('.mm-assign-opt').forEach(function (btn) {
+        btn.addEventListener('click', function () { doAssign(btn.getAttribute('data-user')); });
+      });
+    }
+    document.getElementById('mm-modal-assign').classList.add('open');
+    var first = list.querySelector('.mm-assign-opt');
+    if (first) first.focus();
+  }
+
+  function optionHtml(id, label, isCurrent) {
+    return '<button type="button" class="mm-assign-opt' + (isCurrent ? ' is-current' : '') + '"' +
+      ' data-user="' + U.esc(id) + '" role="radio" aria-checked="' + (isCurrent ? 'true' : 'false') + '">' +
+      '<span>' + U.esc(label) + '</span>' +
+      (isCurrent ? '<span class="mm-assign-tick" aria-hidden="true">&#10003;</span>' : '') +
+      '</button>';
+  }
+
+  function closeAssign() {
+    document.getElementById('mm-modal-assign').classList.remove('open');
+    assigningJob = null;
+  }
+
+  function doAssign(userId) {
+    if (!assigningJob) return;
+    var job = assigningJob;
+    var list = document.getElementById('mm-assign-list');
+    list.querySelectorAll('.mm-assign-opt').forEach(function (b) { b.disabled = true; });
+    document.getElementById('mm-assign-error').textContent = '';
+
+    api.assignOpportunity(job.id, userId || null)
+      .then(function () {
+        // Update the row in place rather than refetching everything. This is
+        // also the correct move regardless: GHL's opportunity search index
+        // lags a few seconds behind a write, so an immediate reload can hand
+        // back the old owner and look like the save failed.
+        job.assignedTo = userId || null;
+        closeAssign();
+        renderStats();
+        renderWorkFilters();
+        renderTable();
+      })
+      .catch(function (e) {
+        list.querySelectorAll('.mm-assign-opt').forEach(function (b) { b.disabled = false; });
+        document.getElementById('mm-assign-error').textContent = 'Could not save: ' + e.message;
+      });
   }
 
   function fmtDate(iso) {
@@ -181,6 +250,13 @@ window.MM = window.MM || {};
   // Rows are clickable: this screen is the home page, so it is also the
   // fastest way into a job. Exposed as a button for keyboard users.
   function bindRows(el) {
+    el.querySelectorAll('.mm-staff-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();   // the row itself opens the job
+        var o = allJobs.find(function (j) { return j.id === btn.getAttribute('data-assign'); });
+        if (o) openAssign(o);
+      });
+    });
     el.querySelectorAll('.mm-dash-row[data-job]').forEach(function (row) {
       function open() {
         var o = allJobs.find(function (j) { return j.id === row.getAttribute('data-job'); });
@@ -415,6 +491,14 @@ window.MM = window.MM || {};
     });
 
     document.getElementById('mm-dash-refresh').addEventListener('click', loadDashboard);
+
+    document.getElementById('mm-assign-cancel').addEventListener('click', closeAssign);
+    document.getElementById('mm-modal-assign').addEventListener('click', function (e) {
+      if (e.target === this) closeAssign();   // click the backdrop to dismiss
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && assigningJob) closeAssign();
+    });
   }
 
   window.MM.dashboard = { loadDashboard: loadDashboard, initDashboard: initDashboard };
