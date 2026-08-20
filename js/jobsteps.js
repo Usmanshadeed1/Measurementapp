@@ -2,10 +2,9 @@
 // The job's progress panel: the dates that move a job forward, shown as an
 // ordered chain so it is obvious what has happened and what is next.
 //
-// Entering the measurement date does two things — it stores the date AND
-// moves the job to "1st Client Visit", which is what fires the GHL workflow
-// that creates the design / pricing / meeting tasks. Doing both from one
-// action means nobody has to remember to also move the card.
+// Entering a date can also move the job's stage — that stage move is what
+// fires the GHL workflows, so doing both from one action means nobody has to
+// remember to also drag the card in GoHighLevel.
 window.MM = window.MM || {};
 
 (function () {
@@ -81,9 +80,11 @@ window.MM = window.MM || {};
 
     var appt = dateVal(o, 'appointment');
     var measured = dateVal(o, 'measured');
+    var design = dateVal(o, 'design');
+    var pricing = dateVal(o, 'pricing');
 
-    // Step 1 is always actionable: the visit can be rebooked at any time,
-    // even after measuring.
+    // Step 1 stays informative once set: how soon the visit is, or how long
+    // it has been overdue with nothing recorded.
     var apptNote = '';
     if (appt && !measured) {
       var d = daysUntil(appt);
@@ -91,7 +92,7 @@ window.MM = window.MM || {};
       else if (d === 1) apptNote = '<span class="mm-step-soon">Visit is tomorrow</span>';
       else if (d > 1) apptNote = 'In ' + d + ' days';
       else if (d < 0) apptNote = '<span class="mm-step-late">' + Math.abs(d) + ' day' +
-        (Math.abs(d) === 1 ? '' : 's') + ' ago — not measured yet</span>';
+        (Math.abs(d) === 1 ? '' : 's') + ' ago &mdash; not measured yet</span>';
     }
 
     var html =
@@ -107,34 +108,70 @@ window.MM = window.MM || {};
         inputId: 'mm-step-meas', btnId: 'mm-step-meas-save',
         waitingText: 'Set the appointment date first',
         note: measured ? '' : (appt ? 'Saving this also moves the job to 1st Client Visit.' : ''),
+      }) +
+      stepHtml({
+        num: 3, label: 'Design completed',
+        state: design ? 'done' : (measured ? 'active' : 'waiting'),
+        valueText: fmtLong(design), value: toInputDate(design) || todayInput(),
+        inputId: 'mm-step-design', btnId: 'mm-step-design-save',
+        waitingText: 'Measure the property first',
+      }) +
+      stepHtml({
+        num: 4, label: 'Pricing completed',
+        state: pricing ? 'done' : (design ? 'active' : 'waiting'),
+        valueText: fmtLong(pricing), value: toInputDate(pricing) || todayInput(),
+        inputId: 'mm-step-pricing', btnId: 'mm-step-pricing-save',
+        waitingText: 'Finish the design first',
+        note: pricing ? '' : (design ? 'Saving this also moves the job to Design Meeting Scheduled.' : ''),
       });
+
+    // The badge names the single next thing to do, so the panel answers that
+    // question without the reader working down the list.
+    var badge;
+    if (!measured) badge = { cls: 'todo', text: 'Needs measuring' };
+    else if (!design) badge = { cls: 'todo', text: 'Needs design' };
+    else if (!pricing) badge = { cls: 'todo', text: 'Needs pricing' };
+    else badge = { cls: 'done', text: 'Ready to send' };
 
     el.innerHTML =
       '<div class="mm-steps-head">' +
         '<span class="mm-steps-title">Job progress</span>' +
-        (measured ? '<span class="mm-steps-badge mm-steps-badge-done">Measured</span>'
-                  : '<span class="mm-steps-badge mm-steps-badge-todo">Needs measuring</span>') +
+        '<span class="mm-steps-badge mm-steps-badge-' + badge.cls + '">' + U.esc(badge.text) + '</span>' +
       '</div>' +
       '<div class="mm-steps">' + html + '</div>' +
+      (pricing ? '<div class="mm-step-final">All four steps are done &mdash; send the proposal to the customer.</div>' : '') +
       '<p class="mm-step-error" id="mm-step-error" role="alert"></p>';
 
-    bind(o, appt, measured);
+    bind(o, appt, measured, design, pricing);
   }
 
-  function bind(o, appt, measured) {
+  // Saves the date, then optionally moves the stage. The stage move is what
+  // triggers the GHL workflow, so it must happen only once the date is
+  // safely stored.
+  function saveDateThenStage(o, fieldKey, val, stageId) {
+    return api.setOpportunityField(o.id, api.DATE_FIELD_IDS[fieldKey], val)
+      .then(function () {
+        if (!stageId || o.pipelineStageId === stageId) return null;
+        return api.setOpportunityStage(o.id, stageId);
+      })
+      .then(function () { if (stageId) o.pipelineStageId = stageId; });
+  }
+
+  function bind(o, appt, measured, design, pricing) {
     if (!appt) wire('mm-step-appt-save', 'mm-step-appt', function (val) {
-      return api.setOpportunityField(o.id, api.DATE_FIELD_IDS.appointment, val);
+      return saveDateThenStage(o, 'appointment', val, null);
     });
 
     if (appt && !measured) wire('mm-step-meas-save', 'mm-step-meas', function (val) {
-      // Store the date, then move the stage. The stage move is what triggers
-      // the workflow, so it must happen after the date is safely saved.
-      return api.setOpportunityField(o.id, api.DATE_FIELD_IDS.measured, val)
-        .then(function () {
-          if (o.pipelineStageId === api.STAGE_AFTER_MEASURED) return null;
-          return api.setOpportunityStage(o.id, api.STAGE_AFTER_MEASURED);
-        })
-        .then(function () { o.pipelineStageId = api.STAGE_AFTER_MEASURED; });
+      return saveDateThenStage(o, 'measured', val, api.STAGE_AFTER_MEASURED);
+    });
+
+    if (measured && !design) wire('mm-step-design-save', 'mm-step-design', function (val) {
+      return saveDateThenStage(o, 'design', val, null);
+    });
+
+    if (design && !pricing) wire('mm-step-pricing-save', 'mm-step-pricing', function (val) {
+      return saveDateThenStage(o, 'pricing', val, api.STAGE_AFTER_PRICING);
     });
   }
 

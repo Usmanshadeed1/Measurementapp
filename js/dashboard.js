@@ -46,7 +46,17 @@ window.MM = window.MM || {};
   }
   function apptDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.appointment); }
   function measuredDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.measured); }
+  function designDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.design); }
+  function pricingDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.pricing); }
   function notMeasured(o) { return !measuredDate(o); }
+
+  // Progress is read from the dates the staff actually enter, not from the
+  // status dropdowns — a date is a fact someone recorded, whereas a status
+  // can be left behind by an earlier stage move.
+  function stepsDone(o) {
+    return [measuredDate(o), designDate(o), pricingDate(o)].filter(Boolean).length;
+  }
+  function allStepsDone(o) { return stepsDone(o) === 3; }
 
   function customerName(o) {
     if (o.contact && o.contact.name) return o.contact.name;
@@ -255,6 +265,8 @@ window.MM = window.MM || {};
     { id: 'all',        label: 'All jobs',      test: function () { return true; } },
     { id: 'measure',    label: 'Needs measuring', test: notMeasured },
     { id: 'revision',   label: 'Needs changes', test: inRevision },
+    { id: 'design',     label: 'Needs design',  test: function (o) { return measuredDate(o) && !designDate(o); } },
+    { id: 'pricing',    label: 'Needs pricing', test: function (o) { return designDate(o) && !pricingDate(o); } },
     { id: 'unassigned', label: 'No staff',      test: function (o) { return !o.assignedTo; } },
   ];
   function workFilter(id) {
@@ -319,13 +331,13 @@ window.MM = window.MM || {};
       return d !== null && d < 0;
     }).length;
 
-    var doneCount = allJobs.filter(allThreeDone).length;
+    var doneCount = allJobs.filter(allStepsDone).length;
     el.innerHTML =
       stat('Total jobs', allJobs.length, 'neutral') +
       stat('Needs measuring', needMeasure, needMeasure ? 'warn' : 'good') +
       (overdue ? stat('Visit overdue', overdue, 'bad') : '') +
       (revisionCount ? stat('Needs changes', revisionCount, 'bad') : '') +
-      (doneCount ? stat('All steps done', doneCount, 'good') : '');
+      (doneCount ? stat('Ready to send', doneCount, 'good') : '');
   }
 
   function stageCell(o) {
@@ -437,27 +449,25 @@ window.MM = window.MM || {};
       return { text: 'Visit ' + fmtDate(appt), tone: 'wait' };
     }
     if (inRevision(o)) return { text: 'Customer wants changes', tone: 'urgent' };
-    if (!isDone(o, 'design')) return { text: 'Create the design', tone: 'soon' };
-    if (!isDone(o, 'pricing')) return { text: 'Work out pricing', tone: 'soon' };
-    if (!isDone(o, 'meeting')) return { text: 'Hold the meeting', tone: 'soon' };
-    return { text: 'All steps done', tone: 'done' };
+    if (!designDate(o)) return { text: 'Create the design', tone: 'soon' };
+    if (!pricingDate(o)) return { text: 'Work out pricing', tone: 'soon' };
+    return { text: 'Send the proposal', tone: 'done' };
   }
 
   // Compact progress read-out: measured -> design -> pricing -> meeting.
   function progressDots(o) {
     var steps = [
       { on: !!measuredDate(o), label: 'Measured' },
-      { on: isDone(o, 'design'), label: 'Design' },
-      { on: isDone(o, 'pricing'), label: 'Pricing' },
-      { on: isDone(o, 'meeting'), label: 'Meeting' },
+      { on: !!designDate(o), label: 'Design' },
+      { on: !!pricingDate(o), label: 'Pricing' },
     ];
     var doneCount = steps.filter(function (x) { return x.on; }).length;
-    return '<div class="mm-prog" role="img" aria-label="' + doneCount + ' of 4 steps done: ' +
+    return '<div class="mm-prog" role="img" aria-label="' + doneCount + ' of 3 steps done: ' +
       U.esc(steps.filter(function (x) { return x.on; }).map(function (x) { return x.label; }).join(', ') || 'none') + '">' +
       steps.map(function (x) {
         return '<span class="mm-prog-dot' + (x.on ? ' on' : '') + '" title="' + U.esc(x.label) + '"></span>';
       }).join('') +
-      '<span class="mm-prog-count">' + doneCount + '/4</span></div>';
+      '<span class="mm-prog-count">' + doneCount + '/3</span></div>';
   }
 
   function renderAllTable(rows) {
@@ -474,7 +484,7 @@ window.MM = window.MM || {};
       '</div>';
     var body = rows.map(function (o) {
       var next = nextAction(o);
-      return '<div class="mm-dash-row' + (next.tone === 'done' ? ' is-complete' : '') + '" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
+      return '<div class="mm-dash-row' + (allStepsDone(o) ? ' is-complete' : '') + '" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
         nameCell(o) +
         staffCell(o) +
         stageCell(o) +
@@ -485,7 +495,7 @@ window.MM = window.MM || {};
     }).join('');
     return '<div class="mm-dash-table">' + head + body + '</div>' +
       '<div class="mm-prog-legend"><span class="mm-prog-legend-label">Progress steps:</span>' +
-      ['Measured', 'Design', 'Pricing', 'Meeting'].map(function (n, i) {
+      ['Measured', 'Design', 'Pricing'].map(function (n, i) {
         return '<span class="mm-prog-legend-item"><span class="mm-prog-dot on"></span>' +
           (i + 1) + '. ' + U.esc(n) + '</span>';
       }).join('') + '</div>';

@@ -26,12 +26,17 @@ window.MM = window.MM || {};
   var DATE_FIELD_IDS = {
     appointment: 'MIs9bBh66P2gsXjDNfOQ',   // when the visit is booked for
     measured: 'iM2aDumKi2NctsUP80bd',      // when measuring was finished
+    design: 'nZtlNKXw54QNcDFZLUhc',        // when the design was finished
+    pricing: 'ZwMwQt4rCYOvxzYfTdPu',       // when pricing was finished
     proposalSent: 'wwLRthpRhQLmMcSOLnaH',
   };
 
   // Stage a job moves to once measuring is done. WF-2 fires on arrival here
   // and creates the design / pricing / meeting tasks.
   var STAGE_AFTER_MEASURED = '4c348bc2-30b5-4b41-a7aa-c6e299f4b062'; // 1st Client Visit
+  // Pricing done means the proposal is ready to send, which is the stage
+  // meaning "designs and pricing are finished" — WF-3 fires there.
+  var STAGE_AFTER_PRICING = 'eb7eca8c-db5c-4df7-a766-2366d240d469';  // Design Meeting Scheduled
 
   // Association IDs — one per relationship type in GHL's custom-object schema.
   var A = {
@@ -258,6 +263,7 @@ window.MM = window.MM || {};
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
     DATE_FIELD_IDS: DATE_FIELD_IDS, STAGE_AFTER_MEASURED: STAGE_AFTER_MEASURED,
+    STAGE_AFTER_PRICING: STAGE_AFTER_PRICING,
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,

@@ -687,3 +687,9 @@ textarea.mm-input{min-height:90px;resize:vertical}
 .mm-prog-legend-label{font-weight:700}
 .mm-prog-legend-item{display:inline-flex;align-items:center;gap:6px}
 @media (max-width: 760px){ .mm-prog-legend{gap:10px;padding-top:4px} }
+
+/* Closing line once every step is recorded — the proposal is the one thing
+   the app deliberately does not do for you. */
+.mm-step-final{margin-top:16px;padding:12px 14px;border-radius:10px;
+               background:color-mix(in srgb,var(--success) 12%,transparent);
+               border:1px solid var(--success);color:var(--text);font-size:.88em}
