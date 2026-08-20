@@ -166,6 +166,14 @@ window.MM = window.MM || {};
       .then(function (d) { return d.opportunity; });
   }
 
+  // Moves a job to another pipeline stage. Verified to fire the same GHL
+  // workflows as dragging the card in GHL's own board, so all the stage
+  // automation keeps working when the move is made from this app.
+  function setOpportunityStage(oppId, stageId) {
+    return apiFetch('PUT', '/opportunities/' + oppId, { pipelineStageId: stageId })
+      .then(function (d) { return d.opportunity; });
+  }
+
   function getPipelines() {
     return apiFetch('GET', '/opportunities/pipelines?locationId=' + LOC).then(function (d) { return d.pipelines || []; });
   }
@@ -207,7 +215,7 @@ window.MM = window.MM || {};
   window.MM.api = {
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
-    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity,
+    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact, createContact: createContact,

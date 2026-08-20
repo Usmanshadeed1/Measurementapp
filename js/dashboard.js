@@ -133,6 +133,80 @@ window.MM = window.MM || {};
       });
   }
 
+  // ---- Change stage --------------------------------------------------------
+
+  var stagingJob = null;
+
+  function openStage(o) {
+    // The job screen can open this before the dashboard has ever loaded, so
+    // fetch the pipeline on demand rather than showing an empty list.
+    if (!salesPipeline) {
+      api.getPipelines().then(function (pipelines) {
+        var sales = pipelines.find(function (p) { return p.id === api.SALES_PIPELINE_ID; });
+        salesPipeline = sales;
+        stageNames = {};
+        if (sales) (sales.stages || []).forEach(function (st) { stageNames[st.id] = st.name; });
+        openStage(o);
+      }).catch(function () { /* fall through to the empty-state message */ });
+      return;
+    }
+    stagingJob = o;
+    document.getElementById('mm-stage-job').textContent =
+      customerName(o) + (jobAddress(o) ? ' — ' + jobAddress(o) : '');
+    document.getElementById('mm-stage-error').textContent = '';
+
+    var list = document.getElementById('mm-stage-list');
+    var stages = (salesPipeline && salesPipeline.stages) || [];
+    if (!stages.length) {
+      list.innerHTML = '<div class="mm-empty">No stages found.</div>';
+    } else {
+      list.innerHTML = stages.map(function (st) {
+        var isCurrent = o.pipelineStageId === st.id;
+        return '<button type="button" class="mm-assign-opt' + (isCurrent ? ' is-current' : '') + '"' +
+          ' data-stage="' + U.esc(st.id) + '" role="radio" aria-checked="' + (isCurrent ? 'true' : 'false') + '">' +
+          '<span>' + U.esc(st.name) + '</span>' +
+          (isCurrent ? '<span class="mm-assign-tick" aria-hidden="true">&#10003;</span>' : '') +
+          '</button>';
+      }).join('');
+      list.querySelectorAll('.mm-assign-opt').forEach(function (btn) {
+        btn.addEventListener('click', function () { doStage(btn.getAttribute('data-stage')); });
+      });
+    }
+    document.getElementById('mm-modal-stage').classList.add('open');
+    var first = list.querySelector('.mm-assign-opt');
+    if (first) first.focus();
+  }
+
+  function closeStage() {
+    document.getElementById('mm-modal-stage').classList.remove('open');
+    stagingJob = null;
+  }
+
+  function doStage(stageId) {
+    if (!stagingJob) return;
+    var job = stagingJob;
+    if (job.pipelineStageId === stageId) { closeStage(); return; }
+
+    var list = document.getElementById('mm-stage-list');
+    list.querySelectorAll('.mm-assign-opt').forEach(function (b) { b.disabled = true; });
+    document.getElementById('mm-stage-error').textContent = '';
+
+    api.setOpportunityStage(job.id, stageId)
+      .then(function () {
+        job.pipelineStageId = stageId;
+        closeStage();
+        if (allJobs.length) render();
+        // The stage move fires GHL workflows that write the status fields a
+        // few seconds later, so pull fresh data once rather than leaving the
+        // row showing statuses that are about to change.
+        if (allJobs.length) setTimeout(loadDashboard, 6000);
+      })
+      .catch(function (e) {
+        list.querySelectorAll('.mm-assign-opt').forEach(function (b) { b.disabled = false; });
+        document.getElementById('mm-stage-error').textContent = 'Could not move job: ' + e.message;
+      });
+  }
+
   function fmtDate(iso) {
     if (!iso) return '';
     var d = new Date(iso);
@@ -240,6 +314,14 @@ window.MM = window.MM || {};
     }
   }
 
+  function stageCell(o) {
+    return '<div class="mm-dash-c-stage" data-label="Stage">' +
+      '<button type="button" class="mm-stage-btn" data-stage-job="' + U.esc(o.id) + '" ' +
+      'aria-label="Move ' + U.esc(customerName(o)) + ' to another stage">' +
+      '<span class="mm-stage">' + U.esc(stageNames[o.pipelineStageId] || '—') + '</span>' +
+      '<span class="mm-staff-edit" aria-hidden="true">Move</span></button></div>';
+  }
+
   function nameCell(o) {
     return '<div class="mm-dash-c-name">' +
       '<div class="mm-dash-name">' + U.esc(customerName(o)) + '</div>' +
@@ -250,6 +332,13 @@ window.MM = window.MM || {};
   // Rows are clickable: this screen is the home page, so it is also the
   // fastest way into a job. Exposed as a button for keyboard users.
   function bindRows(el) {
+    el.querySelectorAll('.mm-stage-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var o = allJobs.find(function (j) { return j.id === btn.getAttribute('data-stage-job'); });
+        if (o) openStage(o);
+      });
+    });
     el.querySelectorAll('.mm-staff-btn').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();   // the row itself opens the job
@@ -311,7 +400,7 @@ window.MM = window.MM || {};
       return '<div class="mm-dash-row' + (allThreeDone(o) ? ' is-complete' : '') + '" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
         nameCell(o) +
         staffCell(o) +
-        '<div class="mm-dash-c-stage" data-label="Stage"><span class="mm-stage">' + U.esc(stageNames[o.pipelineStageId] || '—') + '</span></div>' +
+        stageCell(o) +
         '<div class="mm-dash-c-status" data-label="Designs">' + pill(o, 'design') + '</div>' +
         '<div class="mm-dash-c-status" data-label="Pricing">' + pill(o, 'pricing') + '</div>' +
         '<div class="mm-dash-c-status" data-label="Meeting">' + pill(o, 'meeting') + '</div>' +
@@ -492,14 +581,23 @@ window.MM = window.MM || {};
 
     document.getElementById('mm-dash-refresh').addEventListener('click', loadDashboard);
 
+    document.getElementById('mm-stage-cancel').addEventListener('click', closeStage);
+    document.getElementById('mm-modal-stage').addEventListener('click', function (e) {
+      if (e.target === this) closeStage();
+    });
     document.getElementById('mm-assign-cancel').addEventListener('click', closeAssign);
     document.getElementById('mm-modal-assign').addEventListener('click', function (e) {
       if (e.target === this) closeAssign();   // click the backdrop to dismiss
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && assigningJob) closeAssign();
+      if (e.key !== 'Escape') return;
+      if (assigningJob) closeAssign();
+      if (stagingJob) closeStage();
     });
   }
 
-  window.MM.dashboard = { loadDashboard: loadDashboard, initDashboard: initDashboard };
+  window.MM.dashboard = {
+    loadDashboard: loadDashboard, initDashboard: initDashboard,
+    openStage: openStage, stageNameFor: function (o) { return stageNames[o.pipelineStageId] || ''; },
+  };
 })();

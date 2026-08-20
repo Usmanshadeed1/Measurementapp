@@ -94,9 +94,21 @@
     job = o;
     document.getElementById('mm-job-title').textContent = customerName(o);
     showScreen('job');
-    document.getElementById('mm-job-info').innerHTML =
+
+    var stage = DASH.stageNameFor(o);
+    var infoEl = document.getElementById('mm-job-info');
+    infoEl.innerHTML =
       '<div class="mm-field-display"><div class="flabel">Address</div><div class="fvalue">' + U.esc(jobAddress(o) || '—') + '</div></div>' +
+      // The stage is actionable here too: the crew finishes measuring at the
+      // property and can move the job on without opening GHL.
+      '<div class="mm-field-display"><div class="flabel">Stage</div>' +
+        '<div class="fvalue"><button type="button" class="mm-btn-sm mm-btn-secondary" id="mm-job-stage-btn">' +
+        U.esc(stage || 'Set stage') + ' &#9662;</button></div></div>' +
       '<div class="mm-field-display"><div class="flabel">Job ID</div><div class="fvalue mono">' + U.esc(o.id) + '</div></div>';
+
+    var stageBtn = document.getElementById('mm-job-stage-btn');
+    if (stageBtn) stageBtn.addEventListener('click', function () { DASH.openStage(o); });
+
     loadRooms();
     loadJobMedia();
   }

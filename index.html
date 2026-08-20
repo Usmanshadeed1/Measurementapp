@@ -117,6 +117,18 @@
   </div>
 </div>
 
+<!-- Change stage modal — opened from a Stage cell or the job screen -->
+<div class="mm-modal-overlay" id="mm-modal-stage">
+  <div class="mm-modal mm-modal-narrow" role="dialog" aria-modal="true" aria-labelledby="mm-stage-title">
+    <div class="mm-modal-title" id="mm-stage-title">Move job to stage</div>
+    <p class="mm-assign-job" id="mm-stage-job"></p>
+    <div class="mm-assign-list" id="mm-stage-list" role="radiogroup" aria-label="Choose a stage"></div>
+    <p class="mm-stage-note">Moving a job runs the same automatic steps as moving it in GoHighLevel.</p>
+    <p class="mm-assign-error" id="mm-stage-error" role="alert"></p>
+    <button class="mm-btn mm-btn-secondary" id="mm-stage-cancel">Cancel</button>
+  </div>
+</div>
+
 <!-- Add Contact modal -->
 <div class="mm-modal-overlay" id="mm-modal-contact">
   <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-contact-modal-title">
