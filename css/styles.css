@@ -483,3 +483,20 @@ textarea.mm-input{min-height:90px;resize:vertical}
   .mm-dash-c-staff{display:flex;align-items:center;justify-content:space-between;gap:12px}
   .mm-dash-c-staff::before{content:attr(data-label);font-size:.82em;color:var(--text2);font-weight:600}
 }
+
+/* ---- Revision: finished work the customer sent back ----
+   Distinct from Pending (never started) and from Done — it is a step
+   backwards, so it gets its own colour rather than reusing the warning tone. */
+.mm-pill-revision{background:color-mix(in srgb,#c678dd 22%,transparent);
+                  color:#d9a2e8;border-color:#c678dd}
+:root[data-theme="light"] .mm-pill-revision{color:#7d3a91;border-color:#8e44ad;
+                  background:color-mix(in srgb,#8e44ad 14%,transparent)}
+
+/* ---- Stage filters: a second, quieter row under the status filters ---- */
+.mm-filters-stage{margin-top:-6px}
+.mm-filters-stage:empty{display:none}
+.mm-filter-stage{font-weight:600;font-size:.82em}
+.mm-filter-count{display:inline-block;margin-left:6px;padding:1px 7px;
+                 border-radius:999px;background:var(--card2);color:var(--text2);
+                 font-size:.88em;font-variant-numeric:tabular-nums}
+.mm-filter-stage.active .mm-filter-count{background:var(--bg);color:var(--accent)}

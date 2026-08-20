@@ -83,7 +83,13 @@ window.MM = window.MM || {};
   // than showing an empty cell that looks like a loading bug.
   function pill(o, key) {
     var val = statusOf(o, key);
-    var cls = isDone(o, key) ? 'done' : (val ? 'pending' : 'none');
+    var cls;
+    // Revision reads differently from Pending: the customer rejected finished
+    // work, so it is a step backwards rather than work not yet started.
+    if (val === 'Revision') cls = 'revision';
+    else if (isDone(o, key)) cls = 'done';
+    else if (val) cls = 'pending';
+    else cls = 'none';
     return '<span class="mm-pill mm-pill-' + cls + '">' + U.esc(val || 'Not set') + '</span>';
   }
 
@@ -92,6 +98,12 @@ window.MM = window.MM || {};
     if (activeFilter === 'complete') return allThreeDone(o);
     if (activeFilter === 'outstanding') return !allThreeDone(o);
     if (activeFilter === 'unassigned') return !o.assignedTo;
+    if (activeFilter === 'revision') {
+      return statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision';
+    }
+    if (activeFilter.indexOf('stage:') === 0) {
+      return stageNames[o.pipelineStageId] === activeFilter.slice(6);
+    }
     return !isDone(o, activeFilter); // 'design' | 'pricing' | 'meeting'
   }
   function matchesSearch(o) {
@@ -218,6 +230,7 @@ window.MM = window.MM || {};
     // The status filters only mean something against the three status
     // columns, which the New Lead queue does not show.
     document.getElementById('mm-dash-filters').style.display = activeView === 'new' ? 'none' : '';
+    document.getElementById('mm-dash-stage-filters').style.display = activeView === 'new' ? 'none' : '';
 
     var total = activeView === 'new' ? allJobs.filter(isNewLead).length : allJobs.length;
     var tableHtml = activeView === 'new' ? renderNewLeadTable(rows) : renderAllTable(rows);
@@ -272,6 +285,8 @@ window.MM = window.MM || {};
 
         allJobs = ops.filter(function (o) { return o.pipelineId === api.SALES_PIPELINE_ID; });
 
+        renderStageFilters(sales);
+
         if (!allJobs.length) {
           statsEl.innerHTML = '';
           tableEl.innerHTML = '<div class="mm-empty">No jobs yet. Import contacts or add one in GHL to get started.</div>';
@@ -283,6 +298,39 @@ window.MM = window.MM || {};
         statsEl.innerHTML = '';
         tableEl.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
       });
+  }
+
+  // Stage buttons are generated from the live pipeline rather than hard-coded,
+  // so renaming or reordering a stage in GHL cannot leave a stale filter here.
+  // Only stages that currently hold jobs get a button.
+  function renderStageFilters(sales) {
+    var el = document.getElementById('mm-dash-stage-filters');
+    if (!sales) { el.innerHTML = ''; return; }
+    var counts = {};
+    allJobs.forEach(function (o) {
+      var n = stageNames[o.pipelineStageId];
+      if (n) counts[n] = (counts[n] || 0) + 1;
+    });
+    var html = (sales.stages || [])
+      .filter(function (st) { return counts[st.name]; })
+      .map(function (st) {
+        return '<button class="mm-filter mm-filter-stage" data-filter="stage:' + U.esc(st.name) + '" aria-pressed="false">' +
+          U.esc(st.name) + ' <span class="mm-filter-count">' + counts[st.name] + '</span></button>';
+      }).join('');
+    el.innerHTML = html;
+    el.querySelectorAll('.mm-filter').forEach(bindFilterButton);
+  }
+
+  function bindFilterButton(btn) {
+    btn.addEventListener('click', function () {
+      activeFilter = btn.getAttribute('data-filter');
+      document.querySelectorAll('#mm-dash-filters .mm-filter, #mm-dash-stage-filters .mm-filter').forEach(function (b) {
+        var on = b === btn;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      renderTable();
+    });
   }
 
   function setView(view) {
@@ -303,17 +351,7 @@ window.MM = window.MM || {};
       btn.addEventListener('click', function () { setView(btn.getAttribute('data-view')); });
     });
 
-    document.querySelectorAll('#mm-dash-filters .mm-filter').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        activeFilter = btn.getAttribute('data-filter');
-        document.querySelectorAll('#mm-dash-filters .mm-filter').forEach(function (b) {
-          var on = b === btn;
-          b.classList.toggle('active', on);
-          b.setAttribute('aria-pressed', on ? 'true' : 'false');
-        });
-        renderTable();
-      });
-    });
+    document.querySelectorAll('#mm-dash-filters .mm-filter').forEach(bindFilterButton);
 
     var searchEl = document.getElementById('mm-dash-search');
     var timer = null;

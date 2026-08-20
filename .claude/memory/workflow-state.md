@@ -102,6 +102,34 @@ full working day.
 
 ---
 
+## WF-3 — "Design Meeting Scheduled" ✅ BUILT & VERIFIED
+
+**Trigger:** Pipeline stage changed → in pipeline `Remodeling Sales`,
+stage is `Design Meeting Scheduled`
+
+**Actions:**
+1. **Update Opportunity** — "Set Design and Pricing Done, Meeting Scheduled":
+   `Design Status` = Done, `Pricing Status` = Done, `Meeting Status` = Scheduled
+2. **Create Task** — *Prepare for design meeting* → sales rep, due 1 day,
+   5:00 PM, skip weekends ON
+
+### The reasoning behind action 1
+Moving a card to this stage *means* designs and pricing are finished — you
+would not book the design meeting without them. So one drag sets all three
+statuses, rather than three people each remembering to change a dropdown.
+
+This was chosen over the alternative: GHL **does** offer a "Task completed"
+trigger (confirmed present in the trigger list, alongside "Task added" and
+"Task reminder"), which could set each status as its own task is ticked off.
+That path was not taken because it depends on every staff member having their
+own GHL login and actually ticking tasks — the stage move is a single action
+the owner already performs.
+
+Verified end-to-end 2026-08-19: dragging a card to this stage set all three
+statuses and created the task; the dashboard reflected it on refresh.
+
+---
+
 ## Verified GHL limitation — task assignment
 
 **`Create Task` cannot dynamically assign to the Opportunity's owner.**
@@ -119,6 +147,14 @@ This is a platform limitation, not a configuration mistake. Options:
 2. If/Else branch per staff member — dynamic, but must be rebuilt whenever
    staff change.
 3. Assign everything to one default user; a manager redistributes.
+
+**Opportunity owner is set by hand, not by workflow.** WF-1's "Assign User"
+action does not populate `assignedTo` — jobs come out unassigned. Since the
+client wants to choose who takes each job anyway, assignment is done manually
+on the opportunity's Owner dropdown. The dashboard shows an "Unassigned"
+count, a red "Unassigned" label per row, and a filter, so nothing is missed.
+The dead action in WF-1 should be deleted so it cannot later override a
+manual choice.
 
 **Where the client reassigns a task:** open the task on the Opportunity or
 Contact record → change the **Assigned to** dropdown → save. Takes seconds.
@@ -162,8 +198,7 @@ A test contact with a full address was created, and:
 
 | Item | Status |
 |---|---|
-| **The dashboard** — the table showing who passed designs/pricing/meeting | ❌ Not started. This is the client's #1 ask. Needs a new screen in the measurement app reading the 3 fields above |
-| Automation for stages 3–8 (Design Meeting Scheduled → Material Ordering) | ❌ No automation on any of these yet |
+| Automation for stages 4–8 (Need Revision → Material Ordering) | ❌ No automation on any of these yet |
 | Proposal follow-up chasing | ❌ Nothing chases a sent proposal today |
 | The ~20 post-sale project tasks | ❌ **Blocked** — client has not supplied the list, assignees, or timing |
 | Materials tracking | ❌ Undesigned. Recommend a `Material` custom object (consistent with the existing Room/Wall model, and queryable by the app) |
