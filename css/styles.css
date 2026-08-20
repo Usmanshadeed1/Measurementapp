@@ -679,3 +679,11 @@ textarea.mm-input{min-height:90px;resize:vertical}
   .mm-dash-c-next::before,.mm-dash-c-prog::before{
     content:attr(data-label);font-size:.82em;color:var(--text2);font-weight:600}
 }
+
+/* Legend for the progress dots — the order is the order of work, so the
+   numbers matter as much as the names. */
+.mm-prog-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+                padding:12px 4px 0;font-size:.78em;color:var(--text2)}
+.mm-prog-legend-label{font-weight:700}
+.mm-prog-legend-item{display:inline-flex;align-items:center;gap:6px}
+@media (max-width: 760px){ .mm-prog-legend{gap:10px;padding-top:4px} }

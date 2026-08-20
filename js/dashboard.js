@@ -36,6 +36,14 @@ window.MM = window.MM || {};
     return isDone(o, 'design') && isDone(o, 'pricing') && isDone(o, 'meeting');
   }
   function isNewLead(o) { return o.pipelineStageId === newLeadStageId; }
+
+  // Revision only means something once the job has been measured — there is
+  // nothing for a customer to reject before that. Without this guard, a
+  // status left behind from an earlier stage reports work that never happened.
+  function inRevision(o) {
+    if (notMeasured(o)) return false;
+    return statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision';
+  }
   function apptDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.appointment); }
   function measuredDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.measured); }
   function notMeasured(o) { return !measuredDate(o); }
@@ -246,8 +254,7 @@ window.MM = window.MM || {};
   var WORK_FILTERS = [
     { id: 'all',        label: 'All jobs',      test: function () { return true; } },
     { id: 'measure',    label: 'Needs measuring', test: notMeasured },
-    { id: 'revision',   label: 'Needs changes', test: function (o) {
-        return statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision'; } },
+    { id: 'revision',   label: 'Needs changes', test: inRevision },
     { id: 'unassigned', label: 'No staff',      test: function (o) { return !o.assignedTo; } },
   ];
   function workFilter(id) {
@@ -305,21 +312,20 @@ window.MM = window.MM || {};
     }
 
     var needMeasure = allJobs.filter(notMeasured).length;
-    var inRevision = allJobs.filter(function (o) {
-      return statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision';
-    }).length;
+    var revisionCount = allJobs.filter(inRevision).length;
     var overdue = allJobs.filter(function (o) {
       if (!notMeasured(o)) return false;
       var d = daysTo(apptDate(o));
       return d !== null && d < 0;
     }).length;
 
+    var doneCount = allJobs.filter(allThreeDone).length;
     el.innerHTML =
       stat('Total jobs', allJobs.length, 'neutral') +
       stat('Needs measuring', needMeasure, needMeasure ? 'warn' : 'good') +
-      stat('Visit overdue', overdue, overdue ? 'bad' : 'good') +
-      stat('Needs changes', inRevision, inRevision ? 'bad' : 'good') +
-      stat('All steps done', allJobs.filter(allThreeDone).length, 'good');
+      (overdue ? stat('Visit overdue', overdue, 'bad') : '') +
+      (revisionCount ? stat('Needs changes', revisionCount, 'bad') : '') +
+      (doneCount ? stat('All steps done', doneCount, 'good') : '');
   }
 
   function stageCell(o) {
@@ -430,9 +436,7 @@ window.MM = window.MM || {};
       if (d === 0) return { text: 'Visit today — measure', tone: 'soon' };
       return { text: 'Visit ' + fmtDate(appt), tone: 'wait' };
     }
-    if (statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision') {
-      return { text: 'Customer wants changes', tone: 'urgent' };
-    }
+    if (inRevision(o)) return { text: 'Customer wants changes', tone: 'urgent' };
     if (!isDone(o, 'design')) return { text: 'Create the design', tone: 'soon' };
     if (!isDone(o, 'pricing')) return { text: 'Work out pricing', tone: 'soon' };
     if (!isDone(o, 'meeting')) return { text: 'Hold the meeting', tone: 'soon' };
@@ -479,7 +483,12 @@ window.MM = window.MM || {};
         '<div class="mm-dash-c-prog" data-label="Progress">' + progressDots(o) + '</div>' +
       '</div>';
     }).join('');
-    return '<div class="mm-dash-table">' + head + body + '</div>';
+    return '<div class="mm-dash-table">' + head + body + '</div>' +
+      '<div class="mm-prog-legend"><span class="mm-prog-legend-label">Progress steps:</span>' +
+      ['Measured', 'Design', 'Pricing', 'Meeting'].map(function (n, i) {
+        return '<span class="mm-prog-legend-item"><span class="mm-prog-dot on"></span>' +
+          (i + 1) + '. ' + U.esc(n) + '</span>';
+      }).join('') + '</div>';
   }
 
   function renderTable() {
@@ -499,7 +508,7 @@ window.MM = window.MM || {};
   }
 
   var VIEW_NOTES = {
-    all: 'Every job in the pipeline, and how far each one has got through designs, pricing and the meeting.',
+    all: 'Every job, what needs doing next, and how far it has got.',
     new: 'Jobs with no measurement recorded yet — someone still needs to visit the property.',
   };
 
