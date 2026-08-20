@@ -244,15 +244,11 @@ window.MM = window.MM || {};
   // they happen to read. Each carries a count so a filter that would return
   // nothing is visibly empty before it is clicked.
   var WORK_FILTERS = [
-    { id: 'all',        label: 'All jobs',            test: function () { return true; } },
-    { id: 'outstanding',label: 'Anything unfinished', test: function (o) { return !allThreeDone(o); } },
-    { id: 'design',     label: 'Needs designs',       test: function (o) { return !isDone(o, 'design'); } },
-    { id: 'pricing',    label: 'Needs pricing',       test: function (o) { return !isDone(o, 'pricing'); } },
-    { id: 'meeting',    label: 'Needs meeting',       test: function (o) { return !isDone(o, 'meeting'); } },
-    { id: 'revision',   label: 'Customer wants changes', test: function (o) {
+    { id: 'all',        label: 'All jobs',      test: function () { return true; } },
+    { id: 'measure',    label: 'Needs measuring', test: notMeasured },
+    { id: 'revision',   label: 'Needs changes', test: function (o) {
         return statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision'; } },
-    { id: 'complete',   label: 'Ready to proceed',    test: allThreeDone },
-    { id: 'unassigned', label: 'No staff assigned',   test: function (o) { return !o.assignedTo; } },
+    { id: 'unassigned', label: 'No staff',      test: function (o) { return !o.assignedTo; } },
   ];
   function workFilter(id) {
     return WORK_FILTERS.find(function (f) { return f.id === id; });
@@ -308,18 +304,22 @@ window.MM = window.MM || {};
       return;
     }
 
+    var needMeasure = allJobs.filter(notMeasured).length;
+    var inRevision = allJobs.filter(function (o) {
+      return statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision';
+    }).length;
+    var overdue = allJobs.filter(function (o) {
+      if (!notMeasured(o)) return false;
+      var d = daysTo(apptDate(o));
+      return d !== null && d < 0;
+    }).length;
+
     el.innerHTML =
       stat('Total jobs', allJobs.length, 'neutral') +
-      stat('Designs pending', allJobs.filter(function (o) { return !isDone(o, 'design'); }).length, 'warn') +
-      stat('Pricing pending', allJobs.filter(function (o) { return !isDone(o, 'pricing'); }).length, 'warn') +
-      stat('Meetings pending', allJobs.filter(function (o) { return !isDone(o, 'meeting'); }).length, 'warn') +
-      stat('All 3 complete', allJobs.filter(allThreeDone).length, 'good');
-
-    var unassigned = allJobs.filter(function (o) { return !o.assignedTo; }).length;
-    if (unassigned) {
-      el.innerHTML += '<div class="mm-stat mm-stat-bad"><div class="mm-stat-num">' + unassigned +
-        '</div><div class="mm-stat-label">Unassigned</div></div>';
-    }
+      stat('Needs measuring', needMeasure, needMeasure ? 'warn' : 'good') +
+      stat('Visit overdue', overdue, overdue ? 'bad' : 'good') +
+      stat('Needs changes', inRevision, inRevision ? 'bad' : 'good') +
+      stat('All steps done', allJobs.filter(allThreeDone).length, 'good');
   }
 
   function stageCell(o) {
@@ -418,6 +418,44 @@ window.MM = window.MM || {};
     return '<div class="mm-dash-table">' + head + body + '</div>';
   }
 
+  // "What is the next thing anyone has to do on this job?" — one answer per
+  // row, so the table can be scanned rather than decoded. The three status
+  // pills only said what state each step was in; this says what to do.
+  function nextAction(o) {
+    if (!measuredDate(o)) {
+      var appt = apptDate(o);
+      if (!appt) return { text: 'Book the visit', tone: 'urgent' };
+      var d = daysTo(appt);
+      if (d < 0) return { text: 'Visit overdue — measure', tone: 'urgent' };
+      if (d === 0) return { text: 'Visit today — measure', tone: 'soon' };
+      return { text: 'Visit ' + fmtDate(appt), tone: 'wait' };
+    }
+    if (statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision') {
+      return { text: 'Customer wants changes', tone: 'urgent' };
+    }
+    if (!isDone(o, 'design')) return { text: 'Create the design', tone: 'soon' };
+    if (!isDone(o, 'pricing')) return { text: 'Work out pricing', tone: 'soon' };
+    if (!isDone(o, 'meeting')) return { text: 'Hold the meeting', tone: 'soon' };
+    return { text: 'All steps done', tone: 'done' };
+  }
+
+  // Compact progress read-out: measured -> design -> pricing -> meeting.
+  function progressDots(o) {
+    var steps = [
+      { on: !!measuredDate(o), label: 'Measured' },
+      { on: isDone(o, 'design'), label: 'Design' },
+      { on: isDone(o, 'pricing'), label: 'Pricing' },
+      { on: isDone(o, 'meeting'), label: 'Meeting' },
+    ];
+    var doneCount = steps.filter(function (x) { return x.on; }).length;
+    return '<div class="mm-prog" role="img" aria-label="' + doneCount + ' of 4 steps done: ' +
+      U.esc(steps.filter(function (x) { return x.on; }).map(function (x) { return x.label; }).join(', ') || 'none') + '">' +
+      steps.map(function (x) {
+        return '<span class="mm-prog-dot' + (x.on ? ' on' : '') + '" title="' + U.esc(x.label) + '"></span>';
+      }).join('') +
+      '<span class="mm-prog-count">' + doneCount + '/4</span></div>';
+  }
+
   function renderAllTable(rows) {
     if (!rows.length) {
       return '<div class="mm-empty">No jobs match &ldquo;' + U.esc(activeFilterLabel()) + '&rdquo;.</div>';
@@ -427,18 +465,18 @@ window.MM = window.MM || {};
         '<div class="mm-dash-c-name">Customer</div>' +
         '<div class="mm-dash-c-staff">Staff</div>' +
         '<div class="mm-dash-c-stage">Stage</div>' +
-        '<div class="mm-dash-c-status">Designs</div>' +
-        '<div class="mm-dash-c-status">Pricing</div>' +
-        '<div class="mm-dash-c-status">Meeting</div>' +
+        '<div class="mm-dash-c-next">Next step</div>' +
+        '<div class="mm-dash-c-prog">Progress</div>' +
       '</div>';
     var body = rows.map(function (o) {
-      return '<div class="mm-dash-row' + (allThreeDone(o) ? ' is-complete' : '') + '" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
+      var next = nextAction(o);
+      return '<div class="mm-dash-row' + (next.tone === 'done' ? ' is-complete' : '') + '" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
         nameCell(o) +
         staffCell(o) +
         stageCell(o) +
-        '<div class="mm-dash-c-status" data-label="Designs">' + pill(o, 'design') + '</div>' +
-        '<div class="mm-dash-c-status" data-label="Pricing">' + pill(o, 'pricing') + '</div>' +
-        '<div class="mm-dash-c-status" data-label="Meeting">' + pill(o, 'meeting') + '</div>' +
+        '<div class="mm-dash-c-next" data-label="Next step">' +
+          '<span class="mm-next mm-next-' + next.tone + '">' + U.esc(next.text) + '</span></div>' +
+        '<div class="mm-dash-c-prog" data-label="Progress">' + progressDots(o) + '</div>' +
       '</div>';
     }).join('');
     return '<div class="mm-dash-table">' + head + body + '</div>';

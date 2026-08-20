@@ -141,10 +141,22 @@ window.MM = window.MM || {};
   // Reads one custom field off an opportunity by field id. GHL returns the
   // dropdown's visible label (e.g. "Pending") in fieldValueString, not an
   // internal option id — so the value can be compared/displayed directly.
+  // GHL names the value differently depending on the endpoint AND the field
+  // type — dropdowns come back as fieldValueString from search but fieldValue
+  // from a direct GET, and dates come back as fieldValueDate (epoch millis)
+  // from search but an ISO string from GET. All four shapes are normalised
+  // here to a plain string so callers never have to care which call produced
+  // the record.
   function oppField(o, fieldId) {
     var f = (o.customFields || []).find(function (x) { return x.id === fieldId; });
     if (!f) return '';
-    return f.fieldValueString || f.fieldValue || '';
+    if (f.fieldValueDate !== undefined && f.fieldValueDate !== null && f.fieldValueDate !== '') {
+      var d = new Date(typeof f.fieldValueDate === 'number' ? f.fieldValueDate : String(f.fieldValueDate));
+      if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    }
+    var v = f.fieldValueString;
+    if (v === undefined || v === null || v === '') v = f.fieldValue;
+    return (v === undefined || v === null) ? '' : String(v);
   }
 
   // Every opportunity, following pagination past the 100-per-request cap.
