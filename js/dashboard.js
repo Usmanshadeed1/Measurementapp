@@ -20,7 +20,7 @@ window.MM = window.MM || {};
   var newLeadStageId = null;
   var salesPipeline = null;
   var userNames = {};     // userId -> staff name
-  var activeView = 'all';   // 'new' | 'all'
+  var activeView = 'todo';  // 'todo' | 'all' | 'new'
   var activeFilter = 'all';
   var searchTerm = '';
   var onOpenJob = null;     // handed in by app.js so a row can open the job
@@ -292,6 +292,7 @@ window.MM = window.MM || {};
     return (customerName(o) + ' ' + jobAddress(o) + ' ' + staffName(o)).toLowerCase().indexOf(searchTerm.toLowerCase()) > -1;
   }
   function visibleJobs() {
+    if (activeView === 'todo') return allJobs.filter(matchesSearch);
     var base = activeView === 'new' ? allJobs.filter(notMeasured) : allJobs;
     return base.filter(function (o) {
       return matchesSearch(o) && (activeView === 'new' || matchesFilter(o));
@@ -304,6 +305,23 @@ window.MM = window.MM || {};
       return '<div class="mm-stat mm-stat-' + tone + '">' +
         '<div class="mm-stat-num">' + value + '</div>' +
         '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
+    }
+
+    if (activeView === 'todo') {
+      var counts = TASK_GROUPS.map(function (g) { return allJobs.filter(g.test).length; });
+      var overdueVisits = allJobs.filter(function (o) {
+        if (measuredDate(o) || !apptDate(o)) return false;
+        var d = daysTo(apptDate(o));
+        return d !== null && d < 0;
+      }).length;
+      el.innerHTML =
+        stat('To book', counts[0], counts[0] ? 'warn' : 'good') +
+        stat('To measure', counts[1], counts[1] ? 'warn' : 'good') +
+        stat('To design', counts[2], counts[2] ? 'warn' : 'good') +
+        stat('To price', counts[3], counts[3] ? 'warn' : 'good') +
+        stat('To send', counts[4], counts[4] ? 'good' : 'neutral') +
+        (overdueVisits ? stat('Visits overdue', overdueVisits, 'bad') : '');
+      return;
     }
 
     if (activeView === 'new') {
@@ -470,6 +488,96 @@ window.MM = window.MM || {};
       '<span class="mm-prog-count">' + doneCount + '/3</span></div>';
   }
 
+  // ---- To-do view ---------------------------------------------------------
+  //
+  // The same jobs, asked a different question: not "how is this job going"
+  // but "what does the team need to do". Each job appears once, under its
+  // next action, so the list is a day plan rather than a status report.
+  var TASK_GROUPS = [
+    { id: 'book',    title: 'Book a visit',     hint: 'No appointment date set yet',
+      test: function (o) { return !measuredDate(o) && !apptDate(o); } },
+    { id: 'measure', title: 'Go and measure',   hint: 'Visit is booked, measurements not recorded',
+      test: function (o) { return !measuredDate(o) && !!apptDate(o); } },
+    { id: 'design',  title: 'Create the design', hint: 'Measured, design not finished',
+      test: function (o) { return !!measuredDate(o) && !designDate(o); } },
+    { id: 'pricing', title: 'Work out pricing',  hint: 'Design done, pricing not finished',
+      test: function (o) { return !!designDate(o) && !pricingDate(o); } },
+    { id: 'send',    title: 'Send the proposal', hint: 'Everything is ready for the customer',
+      test: function (o) { return !!pricingDate(o); } },
+  ];
+
+  // Within a group, the most pressing job first: an overdue visit outranks
+  // one booked for next week, and an older lead outranks a newer one.
+  function taskSort(a, b) {
+    var da = daysTo(apptDate(a)), db = daysTo(apptDate(b));
+    if (da !== null && db !== null && da !== db) return da - db;
+    if (da !== null && db === null) return -1;
+    if (db !== null && da === null) return 1;
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  }
+
+  // An urgent row is one the owner should act on today.
+  function taskUrgency(o, groupId) {
+    if (groupId === 'measure') {
+      var d = daysTo(apptDate(o));
+      if (d < 0) return { cls: 'urgent', text: Math.abs(d) + 'd overdue' };
+      if (d === 0) return { cls: 'soon', text: 'Today' };
+      if (d === 1) return { cls: 'soon', text: 'Tomorrow' };
+      return { cls: '', text: fmtDate(apptDate(o)) };
+    }
+    if (groupId === 'book') {
+      var age = daysSince(o.createdAt);
+      if (age >= 7) return { cls: 'urgent', text: age + 'd old' };
+      if (age >= 3) return { cls: 'soon', text: age + 'd old' };
+      return { cls: '', text: age === 0 ? 'New today' : age + 'd old' };
+    }
+    if (inRevision(o)) return { cls: 'urgent', text: 'Changes wanted' };
+    return { cls: '', text: '' };
+  }
+
+  function renderTaskView(rows) {
+    var groups = TASK_GROUPS.map(function (g) {
+      return { g: g, jobs: rows.filter(g.test).sort(taskSort) };
+    });
+    var total = groups.reduce(function (n, x) { return n + x.jobs.length; }, 0);
+
+    if (!total) {
+      return '<div class="mm-empty">Nothing to do — every job is up to date.</div>';
+    }
+
+    return groups.map(function (x) {
+      // An empty group still earns its place: it shows the stage is clear
+      // rather than leaving the reader wondering if it was filtered out.
+      if (!x.jobs.length) {
+        return '<section class="mm-tgroup mm-tgroup-empty">' +
+          '<div class="mm-tgroup-head"><h3 class="mm-tgroup-title">' + U.esc(x.g.title) + '</h3>' +
+          '<span class="mm-tgroup-count">0</span></div>' +
+          '<p class="mm-tgroup-none">Nothing waiting</p></section>';
+      }
+      return '<section class="mm-tgroup">' +
+        '<div class="mm-tgroup-head">' +
+          '<h3 class="mm-tgroup-title">' + U.esc(x.g.title) + '</h3>' +
+          '<span class="mm-tgroup-count">' + x.jobs.length + '</span>' +
+          '<span class="mm-tgroup-hint">' + U.esc(x.g.hint) + '</span>' +
+        '</div>' +
+        '<div class="mm-tlist">' + x.jobs.map(function (o) {
+          var u = taskUrgency(o, x.g.id);
+          return '<button type="button" class="mm-titem" data-job="' + U.esc(o.id) + '">' +
+            '<span class="mm-titem-main">' +
+              '<span class="mm-titem-name">' + U.esc(customerName(o)) + '</span>' +
+              '<span class="mm-titem-addr">' + U.esc(jobAddress(o) || 'No address on file') + '</span>' +
+            '</span>' +
+            '<span class="mm-titem-meta">' +
+              '<span class="mm-titem-staff' + (o.assignedTo ? '' : ' mm-staff-none') + '">' +
+                U.esc(staffName(o) || 'Unassigned') + '</span>' +
+              (u.text ? '<span class="mm-titem-flag mm-titem-' + u.cls + '">' + U.esc(u.text) + '</span>' : '') +
+            '</span>' +
+          '</button>';
+        }).join('') + '</div>' +
+      '</section>';
+    }).join('');
+  }
+
   function renderAllTable(rows) {
     if (!rows.length) {
       return '<div class="mm-empty">No jobs match &ldquo;' + U.esc(activeFilterLabel()) + '&rdquo;.</div>';
@@ -504,9 +612,17 @@ window.MM = window.MM || {};
   function renderTable() {
     var el = document.getElementById('mm-dash-table');
     var rows = visibleJobs();
-    // The status filters only mean something against the three status
-    // columns, which the New Lead queue does not show.
-    document.querySelector('.mm-filter-bar').style.display = activeView === 'new' ? 'none' : '';
+    // The work filters only mean something against the All Jobs table; the
+    // other two views carry their own structure.
+    document.querySelector('.mm-filter-bar').style.display =
+      (activeView === 'all') ? '' : 'none';
+
+    if (activeView === 'todo') {
+      el.innerHTML = renderTaskView(rows);
+      bindTaskItems(el);
+      renderActiveFilter(rows.length, allJobs.length);
+      return;
+    }
 
     var total = activeView === 'new' ? allJobs.filter(notMeasured).length : allJobs.length;
     var tableHtml = activeView === 'new' ? renderNewLeadTable(rows) : renderAllTable(rows);
@@ -517,7 +633,17 @@ window.MM = window.MM || {};
     renderActiveFilter(rows.length, total);
   }
 
+  function bindTaskItems(el) {
+    el.querySelectorAll('.mm-titem[data-job]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var o = allJobs.find(function (j) { return j.id === btn.getAttribute('data-job'); });
+        if (o && onOpenJob) onOpenJob(o);
+      });
+    });
+  }
+
   var VIEW_NOTES = {
+    todo: 'Everything the team needs to do right now, grouped by the kind of work.',
     all: 'Every job, what needs doing next, and how far it has got.',
     new: 'Jobs with no measurement recorded yet — someone still needs to visit the property.',
   };
@@ -620,7 +746,7 @@ window.MM = window.MM || {};
   // ambiguous — the highlighted button alone is easy to miss.
   function renderActiveFilter(shown, total) {
     var el = document.getElementById('mm-dash-active-filter');
-    if (activeView === 'new' || activeFilter === 'all') {
+    if (activeView !== 'all' || activeFilter === 'all') {
       el.innerHTML = '';
       return;
     }
