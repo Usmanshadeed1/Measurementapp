@@ -395,9 +395,9 @@ textarea.mm-input{min-height:90px;resize:vertical}
 /* ---- Status table ---- */
 .mm-dash-table{background:var(--card);border:1px solid var(--border);border-radius:12px;
                overflow:hidden;box-shadow:var(--card-shadow)}
-.mm-dash-row{display:grid;grid-template-columns:2.2fr 1.3fr 1fr 1fr 1fr;gap:12px;
+.mm-dash-row{display:grid;grid-template-columns:2fr 1.1fr 1.2fr 1fr 1fr 1fr;gap:12px;
              align-items:center;padding:14px 16px;border-bottom:1px solid var(--divider)}
-.mm-dash-row.mm-dash-new{grid-template-columns:2.4fr 1fr 1fr}
+.mm-dash-row.mm-dash-new{grid-template-columns:2.4fr 1.1fr 1fr 1fr}
 .mm-dash-row:last-child{border-bottom:none}
 .mm-dash-head{background:var(--card2);font-size:.78em;font-weight:700;
               text-transform:uppercase;letter-spacing:.04em;color:var(--text2)}
@@ -471,3 +471,15 @@ textarea.mm-input{min-height:90px;resize:vertical}
 /* One plain sentence saying what the selected view shows, so the tab label
    never has to carry the whole meaning by itself. */
 .mm-view-note{color:var(--text2);font-size:.88em;margin:-8px 0 18px;max-width:62ch}
+
+/* ---- Staff column: who owns this job ---- */
+.mm-dash-c-staff{font-size:.88em;min-width:0}
+.mm-staff{color:var(--text);font-weight:600;overflow-wrap:anywhere}
+/* A job with no owner is a gap in the process, not just a blank cell. */
+.mm-staff-none{color:var(--danger-text);font-weight:700}
+
+@media (max-width: 760px){
+  .mm-dash-row.mm-dash-new{grid-template-columns:1fr}
+  .mm-dash-c-staff{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .mm-dash-c-staff::before{content:attr(data-label);font-size:.82em;color:var(--text2);font-weight:600}
+}

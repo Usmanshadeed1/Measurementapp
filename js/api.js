@@ -153,6 +153,12 @@ window.MM = window.MM || {};
     return page(1);
   }
 
+  // Staff in the location, so an opportunity's assignedTo id can be shown as
+  // a real name. Needs the users.readonly scope on the token.
+  function getUsers() {
+    return apiFetch('GET', '/users/?locationId=' + LOC).then(function (d) { return d.users || []; });
+  }
+
   function getPipelines() {
     return apiFetch('GET', '/opportunities/pipelines?locationId=' + LOC).then(function (d) { return d.pipelines || []; });
   }
@@ -194,7 +200,7 @@ window.MM = window.MM || {};
   window.MM.api = {
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
-    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines,
+    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact, createContact: createContact,

@@ -18,6 +18,7 @@ window.MM = window.MM || {};
   var allJobs = [];      // every opportunity in the sales pipeline
   var stageNames = {};   // pipelineStageId -> human stage name
   var newLeadStageId = null;
+  var userNames = {};     // userId -> staff name
   var activeView = 'all';   // 'new' | 'all'
   var activeFilter = 'all';
   var searchTerm = '';
@@ -49,6 +50,19 @@ window.MM = window.MM || {};
     var n = o.name || '';
     return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ') : '';
   }
+  // The owner set on the job in GHL. Unassigned is worth showing plainly —
+  // a job nobody owns is exactly what the owner needs to spot.
+  function staffName(o) {
+    if (!o.assignedTo) return '';
+    return userNames[o.assignedTo] || 'Unknown user';
+  }
+  function staffCell(o) {
+    var n = staffName(o);
+    var cls = n ? 'mm-staff' : 'mm-staff mm-staff-none';
+    return '<div class="mm-dash-c-staff" data-label="Staff"><span class="' + cls + '">' +
+      U.esc(n || 'Unassigned') + '</span></div>';
+  }
+
   function fmtDate(iso) {
     if (!iso) return '';
     var d = new Date(iso);
@@ -77,11 +91,12 @@ window.MM = window.MM || {};
     if (activeFilter === 'all') return true;
     if (activeFilter === 'complete') return allThreeDone(o);
     if (activeFilter === 'outstanding') return !allThreeDone(o);
+    if (activeFilter === 'unassigned') return !o.assignedTo;
     return !isDone(o, activeFilter); // 'design' | 'pricing' | 'meeting'
   }
   function matchesSearch(o) {
     if (!searchTerm) return true;
-    return (customerName(o) + ' ' + jobAddress(o)).toLowerCase().indexOf(searchTerm.toLowerCase()) > -1;
+    return (customerName(o) + ' ' + jobAddress(o) + ' ' + staffName(o)).toLowerCase().indexOf(searchTerm.toLowerCase()) > -1;
   }
   function visibleJobs() {
     var base = activeView === 'new' ? allJobs.filter(isNewLead) : allJobs;
@@ -116,6 +131,12 @@ window.MM = window.MM || {};
       stat('Pricing pending', allJobs.filter(function (o) { return !isDone(o, 'pricing'); }).length, 'warn') +
       stat('Meetings pending', allJobs.filter(function (o) { return !isDone(o, 'meeting'); }).length, 'warn') +
       stat('All 3 complete', allJobs.filter(allThreeDone).length, 'good');
+
+    var unassigned = allJobs.filter(function (o) { return !o.assignedTo; }).length;
+    if (unassigned) {
+      el.innerHTML += '<div class="mm-stat mm-stat-bad"><div class="mm-stat-num">' + unassigned +
+        '</div><div class="mm-stat-label">Unassigned</div></div>';
+    }
   }
 
   function nameCell(o) {
@@ -147,6 +168,7 @@ window.MM = window.MM || {};
     var head =
       '<div class="mm-dash-row mm-dash-new mm-dash-head">' +
         '<div class="mm-dash-c-name">Customer</div>' +
+        '<div class="mm-dash-c-staff">Staff</div>' +
         '<div class="mm-dash-c-when">Added</div>' +
         '<div class="mm-dash-c-when">Waiting</div>' +
       '</div>';
@@ -156,6 +178,7 @@ window.MM = window.MM || {};
       var waitTxt = days === null ? '—' : (days === 0 ? 'Today' : days === 1 ? '1 day' : days + ' days');
       return '<div class="mm-dash-row mm-dash-new" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
         nameCell(o) +
+        staffCell(o) +
         '<div class="mm-dash-c-when" data-label="Added">' + U.esc(fmtDate(o.createdAt) || '—') + '</div>' +
         '<div class="mm-dash-c-when" data-label="Waiting"><span class="' + waitCls + '">' + U.esc(waitTxt) + '</span></div>' +
       '</div>';
@@ -170,6 +193,7 @@ window.MM = window.MM || {};
     var head =
       '<div class="mm-dash-row mm-dash-head">' +
         '<div class="mm-dash-c-name">Customer</div>' +
+        '<div class="mm-dash-c-staff">Staff</div>' +
         '<div class="mm-dash-c-stage">Stage</div>' +
         '<div class="mm-dash-c-status">Designs</div>' +
         '<div class="mm-dash-c-status">Pricing</div>' +
@@ -178,6 +202,7 @@ window.MM = window.MM || {};
     var body = rows.map(function (o) {
       return '<div class="mm-dash-row' + (allThreeDone(o) ? ' is-complete' : '') + '" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
         nameCell(o) +
+        staffCell(o) +
         '<div class="mm-dash-c-stage" data-label="Stage"><span class="mm-stage">' + U.esc(stageNames[o.pipelineStageId] || '—') + '</span></div>' +
         '<div class="mm-dash-c-status" data-label="Designs">' + pill(o, 'design') + '</div>' +
         '<div class="mm-dash-c-status" data-label="Pricing">' + pill(o, 'pricing') + '</div>' +
@@ -221,9 +246,21 @@ window.MM = window.MM || {};
     statsEl.innerHTML = '';
     tableEl.innerHTML = '<div class="mm-empty">Loading dashboard...</div>';
 
-    Promise.all([api.fetchAllOpportunities(), api.getPipelines()])
+    Promise.all([
+      api.fetchAllOpportunities(),
+      api.getPipelines(),
+      // Staff names are a nice-to-have: if the token lacks users.readonly the
+      // rest of the dashboard should still render.
+      api.getUsers().catch(function () { return []; }),
+    ])
       .then(function (res) {
-        var ops = res[0], pipelines = res[1];
+        var ops = res[0], pipelines = res[1], users = res[2];
+
+        userNames = {};
+        users.forEach(function (u) {
+          var nm = u.name || [u.firstName, u.lastName].filter(Boolean).join(' ');
+          if (u.id) userNames[u.id] = nm || u.email || 'Unknown user';
+        });
 
         var sales = pipelines.find(function (p) { return p.id === api.SALES_PIPELINE_ID; });
         stageNames = {};
