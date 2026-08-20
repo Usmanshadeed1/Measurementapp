@@ -3,7 +3,7 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps;
 
   var job = null, room = null, editRoom = null, searchTimer = null, contactSearchTimer = null;
 
@@ -108,6 +108,8 @@
 
     var stageBtn = document.getElementById('mm-job-stage-btn');
     if (stageBtn) stageBtn.addEventListener('click', function () { DASH.openStage(o); });
+
+    STEPS.render(o);
 
     loadRooms();
     loadJobMedia();
@@ -463,6 +465,12 @@
     }).then(function (rec) { MD.addMediaThumb(rec, isVid); MD.addJobMediaThumb(rec, isVid, room.id, '', room); input.value = ''; })
       .catch(function (e) { alert(e.message); })
       .then(function () { btn.textContent = '📁 Upload'; btn.disabled = false; });
+  });
+
+  // A saved step can move the stage, so the job header has to be redrawn.
+  STEPS.onChange(function (o) {
+    var btn = document.getElementById('mm-job-stage-btn');
+    if (btn) btn.innerHTML = U.esc(DASH.stageNameFor(o) || 'Set stage') + ' &#9662;';
   });
 
   // ===== BOOT =====

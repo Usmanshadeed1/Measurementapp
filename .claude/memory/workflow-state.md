@@ -130,6 +130,50 @@ statuses and created the task; the dashboard reflected it on refresh.
 
 ---
 
+## Date-driven progress (Aug 2026 direction change)
+
+The client clarified he does **not** want to work in GoHighLevel: *"I'm not
+using GoHighLevel, I'm using a dashboard that we're creating."* Work is driven
+by entering **dates** in the app, and each date entered surfaces the next step.
+
+**Date fields on Opportunity** (all Date picker):
+
+| Field | Key | Id |
+|---|---|---|
+| Appointment Date | `opportunity.appointment_date` | `MIs9bBh66P2gsXjDNfOQ` |
+| Measurement Completed Date | `opportunity.measurement_completed_date` | `iM2aDumKi2NctsUP80bd` |
+| Proposal Sent Date | `opportunity.proposal_sent_date` | `wwLRthpRhQLmMcSOLnaH` |
+
+**No workflow drives these.** GHL has no "opportunity custom field changed"
+trigger, so a workflow cannot see a date typed in the app. Instead the app
+writes the date *and* moves the stage in one action; the stage move is what
+fires the existing workflow. Saving Measurement Completed moves the job to
+**1st Client Visit**, which fires WF-2.
+
+**API asymmetry to remember:** writes take `customFields: [{id, value}]`, but
+reads return `fieldValue` for dates and `fieldValueString` for dropdowns.
+`api.oppField()` handles both.
+
+**Stage changes from the API fire workflows exactly like a drag in GHL** —
+verified 2026-08-20 by moving a job via PUT and watching WF-3 set all three
+statuses. This is what makes the app able to replace the GHL board.
+
+---
+
+## Confirmed impossible without extra infrastructure
+
+- **Staff logging in with GoHighLevel credentials.** No SSO, and no API that
+  verifies a GHL email/password. Individual logins need their own auth.
+- **A full history of who changed what.** The app writes with one shared
+  Private Integration Token, so every change looks identical to GHL. GHL's
+  own audit log is also only retained 60 days. Full history needs its own
+  database.
+
+Everything else the client described — date chain, task list, stage control
+from the app — is buildable with what exists.
+
+---
+
 ## Verified GHL limitation — task assignment
 
 **`Create Task` cannot dynamically assign to the Opportunity's owner.**

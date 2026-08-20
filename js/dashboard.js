@@ -36,6 +36,9 @@ window.MM = window.MM || {};
     return isDone(o, 'design') && isDone(o, 'pricing') && isDone(o, 'meeting');
   }
   function isNewLead(o) { return o.pipelineStageId === newLeadStageId; }
+  function apptDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.appointment); }
+  function measuredDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.measured); }
+  function notMeasured(o) { return !measuredDate(o); }
 
   function customerName(o) {
     if (o.contact && o.contact.name) return o.contact.name;
@@ -274,7 +277,7 @@ window.MM = window.MM || {};
     return (customerName(o) + ' ' + jobAddress(o) + ' ' + staffName(o)).toLowerCase().indexOf(searchTerm.toLowerCase()) > -1;
   }
   function visibleJobs() {
-    var base = activeView === 'new' ? allJobs.filter(isNewLead) : allJobs;
+    var base = activeView === 'new' ? allJobs.filter(notMeasured) : allJobs;
     return base.filter(function (o) {
       return matchesSearch(o) && (activeView === 'new' || matchesFilter(o));
     });
@@ -289,13 +292,18 @@ window.MM = window.MM || {};
     }
 
     if (activeView === 'new') {
-      var queue = allJobs.filter(isNewLead);
+      var queue = allJobs.filter(notMeasured);
       // "Waiting over a week" is the number worth acting on — a lead sitting
       // untouched that long is the one at risk of going cold.
-      var stale = queue.filter(function (o) { return (daysSince(o.createdAt) || 0) >= 7; }).length;
+      var noDate = queue.filter(function (o) { return !apptDate(o); }).length;
+      var overdue = queue.filter(function (o) {
+        var d = daysTo(apptDate(o));
+        return d !== null && d < 0;
+      }).length;
       el.innerHTML =
-        stat('Awaiting first visit', queue.length, 'warn') +
-        stat('Waiting over a week', stale, stale ? 'bad' : 'good') +
+        stat('Not measured yet', queue.length, 'warn') +
+        stat('No visit booked', noDate, noDate ? 'bad' : 'good') +
+        stat('Visit date passed', overdue, overdue ? 'bad' : 'good') +
         stat('Total jobs', allJobs.length, 'neutral');
       return;
     }
@@ -358,16 +366,43 @@ window.MM = window.MM || {};
     });
   }
 
+  // Days from today to a date string: negative means it has passed.
+  function daysTo(v) {
+    if (!v) return null;
+    var d = new Date(String(v).slice(0, 10) + 'T00:00:00');
+    if (isNaN(d.getTime())) return null;
+    var t = new Date();
+    t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    return Math.round((d - t) / 86400000);
+  }
+
+  // The visit column tells the owner the one thing he needs: is a visit
+  // booked, is it due, or has the date passed with nothing recorded?
+  function visitCell(o) {
+    var appt = apptDate(o);
+    if (!appt) {
+      return '<div class="mm-dash-c-when" data-label="Visit">' +
+        '<span class="mm-wait-bad">No date set</span></div>';
+    }
+    var d = daysTo(appt);
+    var cls = '', suffix = '';
+    if (d < 0) { cls = 'mm-wait-bad'; suffix = ' · ' + Math.abs(d) + 'd overdue'; }
+    else if (d === 0) { cls = 'mm-wait-warn'; suffix = ' · today'; }
+    else if (d === 1) { suffix = ' · tomorrow'; }
+    return '<div class="mm-dash-c-when" data-label="Visit"><span class="' + cls + '">' +
+      U.esc(fmtDate(appt)) + U.esc(suffix) + '</span></div>';
+  }
+
   function renderNewLeadTable(rows) {
     if (!rows.length) {
-      return '<div class="mm-empty">No leads waiting — every job has had its first visit.</div>';
+      return '<div class="mm-empty">Every job has been measured.</div>';
     }
     var head =
       '<div class="mm-dash-row mm-dash-new mm-dash-head">' +
         '<div class="mm-dash-c-name">Customer</div>' +
         '<div class="mm-dash-c-staff">Staff</div>' +
-        '<div class="mm-dash-c-when">Added</div>' +
-        '<div class="mm-dash-c-when">Waiting</div>' +
+        '<div class="mm-dash-c-when">Visit booked</div>' +
+        '<div class="mm-dash-c-when">Lead age</div>' +
       '</div>';
     var body = rows.map(function (o) {
       var days = daysSince(o.createdAt);
@@ -376,8 +411,8 @@ window.MM = window.MM || {};
       return '<div class="mm-dash-row mm-dash-new" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
         nameCell(o) +
         staffCell(o) +
-        '<div class="mm-dash-c-when" data-label="Added">' + U.esc(fmtDate(o.createdAt) || '—') + '</div>' +
-        '<div class="mm-dash-c-when" data-label="Waiting"><span class="' + waitCls + '">' + U.esc(waitTxt) + '</span></div>' +
+        visitCell(o) +
+        '<div class="mm-dash-c-when" data-label="Lead age"><span class="' + waitCls + '">' + U.esc(waitTxt) + '</span></div>' +
       '</div>';
     }).join('');
     return '<div class="mm-dash-table">' + head + body + '</div>';
@@ -416,7 +451,7 @@ window.MM = window.MM || {};
     // columns, which the New Lead queue does not show.
     document.querySelector('.mm-filter-bar').style.display = activeView === 'new' ? 'none' : '';
 
-    var total = activeView === 'new' ? allJobs.filter(isNewLead).length : allJobs.length;
+    var total = activeView === 'new' ? allJobs.filter(notMeasured).length : allJobs.length;
     var tableHtml = activeView === 'new' ? renderNewLeadTable(rows) : renderAllTable(rows);
 
     el.innerHTML = tableHtml +
@@ -427,7 +462,7 @@ window.MM = window.MM || {};
 
   var VIEW_NOTES = {
     all: 'Every job in the pipeline, and how far each one has got through designs, pricing and the meeting.',
-    new: 'Jobs still sitting in the New Lead stage — nobody has been out to the property yet.',
+    new: 'Jobs with no measurement recorded yet — someone still needs to visit the property.',
   };
 
   function renderNote() {

@@ -20,6 +20,19 @@ window.MM = window.MM || {};
     meeting: 'NJxO5j5YATiusGdRBlZD',
   };
 
+  // Date fields that drive the job's progress. Entering one is what moves
+  // the work forward, so they are read and written the same way as the
+  // status dropdowns.
+  var DATE_FIELD_IDS = {
+    appointment: 'MIs9bBh66P2gsXjDNfOQ',   // when the visit is booked for
+    measured: 'iM2aDumKi2NctsUP80bd',      // when measuring was finished
+    proposalSent: 'wwLRthpRhQLmMcSOLnaH',
+  };
+
+  // Stage a job moves to once measuring is done. WF-2 fires on arrival here
+  // and creates the design / pricing / meeting tasks.
+  var STAGE_AFTER_MEASURED = '4c348bc2-30b5-4b41-a7aa-c6e299f4b062'; // 1st Client Visit
+
   // Association IDs — one per relationship type in GHL's custom-object schema.
   var A = {
     rO: '6a788d417912156545df96f3',   // Room <-> Opportunity(Job)
@@ -174,6 +187,23 @@ window.MM = window.MM || {};
       .then(function (d) { return d.opportunity; });
   }
 
+  // Writes one custom field on an opportunity. GHL expects customFields as an
+  // array of { id, value }; other fields on the record are left untouched.
+  // Note the asymmetry: writes take `value`, but reads come back as
+  // `fieldValue` (dates) or `fieldValueString` (dropdowns) — oppField()
+  // handles both.
+  function setOpportunityField(oppId, fieldId, value) {
+    return apiFetch('PUT', '/opportunities/' + oppId, {
+      customFields: [{ id: fieldId, value: value || '' }],
+    }).then(function (d) { return d.opportunity; });
+  }
+
+  // A single opportunity, read directly. Unlike /opportunities/search this
+  // is not behind an index, so it reflects a write immediately.
+  function getOpportunity(oppId) {
+    return apiFetch('GET', '/opportunities/' + oppId).then(function (d) { return d.opportunity; });
+  }
+
   function getPipelines() {
     return apiFetch('GET', '/opportunities/pipelines?locationId=' + LOC).then(function (d) { return d.pipelines || []; });
   }
@@ -215,7 +245,8 @@ window.MM = window.MM || {};
   window.MM.api = {
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
-    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage,
+    DATE_FIELD_IDS: DATE_FIELD_IDS, STAGE_AFTER_MEASURED: STAGE_AFTER_MEASURED,
+    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact, createContact: createContact,

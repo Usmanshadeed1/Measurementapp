@@ -58,7 +58,7 @@
 
     <div class="mm-views" id="mm-dash-views" role="tablist" aria-label="Dashboard views">
       <button class="mm-view-tab active" data-view="all" role="tab" aria-selected="true">All Jobs</button>
-      <button class="mm-view-tab" data-view="new" role="tab" aria-selected="false">Waiting for First Visit</button>
+      <button class="mm-view-tab" data-view="new" role="tab" aria-selected="false">Needs Measuring</button>
     </div>
     <p class="mm-view-note" id="mm-dash-view-note"></p>
 
@@ -195,6 +195,7 @@
   </div>
   <div class="mm-content">
     <div class="card" id="mm-job-info"></div>
+    <div class="card mm-steps-card" id="mm-job-steps"></div>
     <div class="mm-divider"></div>
     <div class="section-header"><span class="section-title">Rooms</span><button class="mm-btn-sm mm-btn-primary" id="mm-add-room-btn">+ Add Room</button></div>
     <div id="mm-rooms-list"></div>
@@ -256,6 +257,7 @@
 <script src="js/lighting.js"></script>
 <script src="js/contacts.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/jobsteps.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/import.js"></script>
 <script src="js/app.js"></script>

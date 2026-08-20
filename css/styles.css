@@ -602,3 +602,56 @@ textarea.mm-input{min-height:90px;resize:vertical}
 /* Moving a job has side effects (tasks created, statuses set), so the modal
    says so rather than letting it be a surprise. */
 .mm-stage-note{color:var(--text2);font-size:.82em;margin-bottom:12px}
+
+/* ==========================================================================
+   JOB PROGRESS — the dates that move a job forward, drawn as a chain.
+   The connector line and the state of each marker carry the sequence, so a
+   glance answers "what has happened, and what is next" without reading.
+   ========================================================================== */
+.mm-steps-card{padding:18px 20px}
+.mm-steps-head{display:flex;align-items:center;justify-content:space-between;
+               gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.mm-steps-title{font-size:1.02em;font-weight:700;color:var(--text)}
+.mm-steps-badge{font-size:.76em;font-weight:700;border-radius:999px;
+                padding:5px 12px;border:1px solid transparent;white-space:nowrap}
+.mm-steps-badge-todo{background:color-mix(in srgb,#e8a33d 18%,transparent);
+                     color:#e8a33d;border-color:#e8a33d}
+.mm-steps-badge-done{background:color-mix(in srgb,var(--success) 20%,transparent);
+                     color:var(--success);border-color:var(--success)}
+
+.mm-steps{display:flex;flex-direction:column}
+.mm-step{display:grid;grid-template-columns:34px 1fr;gap:14px;
+         padding-bottom:20px;position:relative}
+.mm-step:last-child{padding-bottom:0}
+/* The connector runs from each marker to the next, drawing the sequence. */
+.mm-step:not(:last-child)::before{content:'';position:absolute;
+         left:17px;top:34px;bottom:6px;width:2px;background:var(--divider)}
+.mm-step-done:not(:last-child)::before{background:var(--success)}
+
+.mm-step-mark{width:34px;height:34px;border-radius:50%;
+              display:flex;align-items:center;justify-content:center;
+              font-weight:800;font-size:.9em;border:2px solid var(--control-border);
+              background:var(--card2);color:var(--text2);z-index:1}
+.mm-step-done .mm-step-mark{background:var(--success);border-color:var(--success);color:#04220f}
+.mm-step-active .mm-step-mark{border-color:var(--accent);color:var(--accent);
+                              background:color-mix(in srgb,var(--accent) 15%,transparent)}
+
+.mm-step-body{min-width:0;padding-top:4px}
+.mm-step-label{font-weight:700;color:var(--text);margin-bottom:6px}
+.mm-step-waiting .mm-step-label,.mm-step-waiting{color:var(--text2)}
+.mm-step-value{color:var(--success);font-weight:600}
+.mm-step-waiting{color:var(--empty);font-size:.88em}
+.mm-step-note{font-size:.82em;color:var(--text2);margin-top:6px}
+.mm-step-soon{color:var(--accent);font-weight:700}
+.mm-step-late{color:var(--danger-text);font-weight:700}
+
+.mm-step-action{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.mm-step-date{width:auto;min-width:170px;flex:0 1 auto}
+.mm-step-error{color:var(--danger-text);font-size:.86em;margin-top:12px}
+.mm-step-error:empty{display:none}
+
+@media (max-width: 620px){
+  .mm-step-action{flex-direction:column;align-items:stretch}
+  .mm-step-date{width:100%;min-width:0}
+  .mm-step-action .mm-btn-sm{width:100%}
+}
