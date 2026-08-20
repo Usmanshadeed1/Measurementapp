@@ -112,10 +112,17 @@ window.MM = window.MM || {};
 
   function deleteMedia(type, id) { return deleteRec(type, id); }
 
+  // Jobs the field crew can measure: the sales pipeline only. Other
+  // pipelines (and GHL's sample records) are not remodeling jobs and would
+  // only be noise on a screen used at the property.
   function searchJobs(query) {
-    var body = { locationId: LOC, limit: 30 };
+    // The search endpoint rejects pipelineId in the body (422), so the
+    // pipeline is filtered client-side on the way out.
+    var body = { locationId: LOC, limit: 100 };
     if (query) body.query = query;
-    return apiFetch('POST', '/opportunities/search', body).then(function (d) { return d.opportunities || []; });
+    return apiFetch('POST', '/opportunities/search', body).then(function (d) {
+      return (d.opportunities || []).filter(function (o) { return o.pipelineId === SALES_PIPELINE_ID; });
+    });
   }
 
   // Reads one custom field off an opportunity by field id. GHL returns the
@@ -127,9 +134,9 @@ window.MM = window.MM || {};
     return f.fieldValueString || f.fieldValue || '';
   }
 
-  // Every opportunity, following pagination. searchJobs() caps at 30 for the
-  // quick job picker, but the dashboard has to count the whole pipeline or
-  // its totals would silently be wrong.
+  // Every opportunity, following pagination past the 100-per-request cap.
+  // The dashboard has to count the whole pipeline or its totals would
+  // silently be wrong once the business passes 100 jobs.
   function fetchAllOpportunities() {
     var all = [];
     function page(n) {

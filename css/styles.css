@@ -395,6 +395,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
                overflow:hidden;box-shadow:var(--card-shadow)}
 .mm-dash-row{display:grid;grid-template-columns:2.2fr 1.3fr 1fr 1fr 1fr;gap:12px;
              align-items:center;padding:14px 16px;border-bottom:1px solid var(--divider)}
+.mm-dash-row.mm-dash-new{grid-template-columns:2.4fr 1fr 1fr}
 .mm-dash-row:last-child{border-bottom:none}
 .mm-dash-head{background:var(--card2);font-size:.78em;font-weight:700;
               text-transform:uppercase;letter-spacing:.04em;color:var(--text2)}
@@ -426,4 +427,35 @@ textarea.mm-input{min-height:90px;resize:vertical}
   .mm-dash-c-status{display:flex;align-items:center;justify-content:space-between;gap:12px}
   /* The column header is hidden on phones, so each cell carries its own label */
   .mm-dash-c-status::before{content:attr(data-label);font-size:.82em;color:var(--text2);font-weight:600}
+}
+
+/* ---- View tabs: New Lead / All Leads ---- */
+.mm-views{display:flex;gap:4px;margin-bottom:18px;background:var(--card2);
+          border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;max-width:100%}
+.mm-view-tab{flex:1;background:transparent;color:var(--text2);border:none;border-radius:7px;
+             padding:10px 22px;font-size:.9em;font-weight:700;cursor:pointer;
+             font-family:inherit;min-height:44px;white-space:nowrap}
+.mm-view-tab:hover{color:var(--text)}
+.mm-view-tab.active{background:var(--card);color:var(--text);box-shadow:var(--card-shadow)}
+.mm-view-tab:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* ---- Rows are clickable: they open the job ---- */
+.mm-dash-row[data-job]{cursor:pointer}
+.mm-dash-row[data-job]:hover{background:var(--card2)}
+.mm-dash-row[data-job]:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+
+/* ---- New Lead queue: how long a lead has been waiting ---- */
+.mm-dash-c-when{font-size:.88em;color:var(--text2);font-variant-numeric:tabular-nums}
+.mm-wait-warn{color:#e8a33d;font-weight:700}
+.mm-wait-bad{color:var(--danger-text);font-weight:700}
+.mm-stat-bad{border-left-color:var(--danger-text)}
+
+@media (max-width: 760px){
+  .mm-views{width:100%}
+  .mm-dash-row.mm-dash-new{grid-template-columns:1fr}
+  .mm-dash-c-when{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .mm-dash-c-when::before{content:attr(data-label);font-size:.82em;color:var(--text2);font-weight:600}
+  .mm-dash-c-stage{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .mm-dash-c-stage::before{content:attr(data-label);font-size:.82em;color:var(--text2);font-weight:600}
+  .mm-dash-head{display:none}
 }

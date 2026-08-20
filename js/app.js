@@ -454,7 +454,11 @@
   });
 
   // ===== BOOT =====
-  DASH.initDashboard();   // bind filters/search once; data loads on first visit
-  showScreen('jobs');
+  // The dashboard is the home screen: the owner opens this app to see where
+  // every job stands, and the crew can tap straight through to a job from it.
+  DASH.initDashboard(pickJob);
+  setActiveNavLink('dashboard');
+  showScreen('dashboard');
+  DASH.loadDashboard();
   loadJobs();
 })();
