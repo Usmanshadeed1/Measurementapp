@@ -13,10 +13,10 @@
 <!-- SITE HEADER — shared across every screen -->
 <header class="mm-header">
   <div class="mm-header-row">
-    <a href="#" class="mm-brand" data-tab="jobs">Measurement App</a>
+    <a href="#" class="mm-brand" data-tab="dashboard">Measurement App</a>
     <nav class="mm-nav" aria-label="Main">
-      <a href="#" class="mm-nav-link active" data-tab="jobs">Jobs</a>
-      <a href="#" class="mm-nav-link" data-tab="dashboard">Dashboard</a>
+      <a href="#" class="mm-nav-link active" data-tab="dashboard">Dashboard</a>
+      <a href="#" class="mm-nav-link" data-tab="jobs">Jobs</a>
       <a href="#" class="mm-nav-link" data-tab="contacts">Contacts</a>
     </nav>
     <div class="mm-header-controls">
@@ -29,14 +29,14 @@
     </div>
   </div>
   <nav class="mm-mobile-nav" id="mm-mobile-nav" aria-label="Main (mobile)">
-    <a href="#" class="mm-nav-link active" data-tab="jobs">Jobs</a>
-    <a href="#" class="mm-nav-link" data-tab="dashboard">Dashboard</a>
+    <a href="#" class="mm-nav-link active" data-tab="dashboard">Dashboard</a>
+    <a href="#" class="mm-nav-link" data-tab="jobs">Jobs</a>
     <a href="#" class="mm-nav-link" data-tab="contacts">Contacts</a>
   </nav>
 </header>
 
 <!-- JOBS -->
-<div class="screen active" id="screen-jobs">
+<div class="screen" id="screen-jobs">
   <div class="mm-content">
     <div class="mm-search-bar">
       <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
@@ -48,7 +48,7 @@
 </div>
 
 <!-- DASHBOARD -->
-<div class="screen" id="screen-dashboard">
+<div class="screen active" id="screen-dashboard">
   <div class="mm-content">
     <div class="section-header">
       <span class="section-title">Job Status Dashboard</span>
@@ -57,9 +57,10 @@
     <p class="mm-dash-intro">Every remodeling job, and where each one stands.</p>
 
     <div class="mm-views" id="mm-dash-views" role="tablist" aria-label="Dashboard views">
-      <button class="mm-view-tab" data-view="new" role="tab" aria-selected="false">New Lead</button>
-      <button class="mm-view-tab active" data-view="all" role="tab" aria-selected="true">All Leads</button>
+      <button class="mm-view-tab active" data-view="all" role="tab" aria-selected="true">All Jobs</button>
+      <button class="mm-view-tab" data-view="new" role="tab" aria-selected="false">Waiting for First Visit</button>
     </div>
+    <p class="mm-view-note" id="mm-dash-view-note"></p>
 
     <div class="mm-stats" id="mm-dash-stats"></div>
 

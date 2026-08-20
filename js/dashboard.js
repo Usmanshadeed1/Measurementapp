@@ -1,9 +1,10 @@
 // js/dashboard.js
 // Dashboard — the app's home screen. Two views over the same set of jobs:
 //
-//   New Lead   — jobs still sitting in the New Lead stage, i.e. nobody has
-//                been out to the property yet. This is the work queue.
-//   All Leads  — every job, with the three first-visit steps as columns.
+//   All Jobs                — every job, with the three first-visit steps
+//                             as columns. The default.
+//   Waiting for First Visit — jobs still in the New Lead stage: nobody has
+//                             been out to the property yet. The work queue.
 //
 // This is the view GHL itself cannot give you: its Kanban board shows which
 // STAGE a job sits in, but a stage says nothing about which of the three
@@ -201,7 +202,16 @@ window.MM = window.MM || {};
     bindRows(el);
   }
 
-  function render() { renderStats(); renderTable(); }
+  var VIEW_NOTES = {
+    all: 'Every job in the pipeline, and how far each one has got through designs, pricing and the meeting.',
+    new: 'Jobs still sitting in the New Lead stage — nobody has been out to the property yet.',
+  };
+
+  function renderNote() {
+    document.getElementById('mm-dash-view-note').textContent = VIEW_NOTES[activeView] || '';
+  }
+
+  function render() { renderNote(); renderStats(); renderTable(); }
 
   // ---- Loading ------------------------------------------------------------
 
@@ -250,6 +260,7 @@ window.MM = window.MM || {};
 
   function initDashboard(openJobFn) {
     onOpenJob = openJobFn;
+    renderNote();
 
     document.querySelectorAll('#mm-dash-views .mm-view-tab').forEach(function (btn) {
       btn.addEventListener('click', function () { setView(btn.getAttribute('data-view')); });

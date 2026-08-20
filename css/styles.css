@@ -18,6 +18,7 @@
   --input-border:#46617d;
   --empty:#8fabc2;         /* placeholder / empty-state text: ~7.7:1 on --bg (AAA) */
   --divider:#324a63;
+  --control-border:#7d99b5;   /* button outlines: 3:1+ against --bg, unlike --border */
   --accent:#7cb8ff;        /* links/accents: ~9.7:1 on --bg (AAA) */
   --accent-strong:#1a56db;
   --card-shadow:0 4px 14px rgba(0,0,0,.55);
@@ -49,6 +50,7 @@
   --input-border:#8a99a8;
   --empty:#5b7085;         /* placeholder / empty-state text: ~5.7:1 on --bg (AA) */
   --divider:#cbd4de;
+  --control-border:#6b7c8f;   /* button outlines: 3:1+ against --bg, unlike --border */
   --accent:#0d5bd6;        /* links/accents: ~6.1:1 on --bg (AA) */
   --accent-strong:#0d5bd6;
   --card-shadow:0 2px 10px rgba(15,30,50,.12);
@@ -383,10 +385,10 @@ textarea.mm-input{min-height:90px;resize:vertical}
 
 /* ---- Filter buttons ---- */
 .mm-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-.mm-filter{background:var(--card);color:var(--text2);border:1px solid var(--border);
+.mm-filter{background:var(--card);color:var(--text);border:2px solid var(--control-border);
            border-radius:999px;padding:9px 16px;font-size:.86em;font-weight:600;
-           cursor:pointer;min-height:40px;font-family:inherit}
-.mm-filter:hover{color:var(--text);border-color:var(--accent)}
+           cursor:pointer;min-height:44px;font-family:inherit}
+.mm-filter:hover{color:var(--accent);border-color:var(--accent)}
 .mm-filter.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 .mm-filter:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
@@ -429,15 +431,21 @@ textarea.mm-input{min-height:90px;resize:vertical}
   .mm-dash-c-status::before{content:attr(data-label);font-size:.82em;color:var(--text2);font-weight:600}
 }
 
-/* ---- View tabs: New Lead / All Leads ---- */
-.mm-views{display:flex;gap:4px;margin-bottom:18px;background:var(--card2);
-          border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;max-width:100%}
-.mm-view-tab{flex:1;background:transparent;color:var(--text2);border:none;border-radius:7px;
-             padding:10px 22px;font-size:.9em;font-weight:700;cursor:pointer;
-             font-family:inherit;min-height:44px;white-space:nowrap}
-.mm-view-tab:hover{color:var(--text)}
-.mm-view-tab.active{background:var(--card);color:var(--text);box-shadow:var(--card-shadow)}
-.mm-view-tab:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+/* ---- View tabs ----
+   Both tabs must read as buttons at rest, not just the selected one: a
+   transparent inactive tab disappears into the page and the control stops
+   looking clickable. Each carries its own surface and border; the active
+   one is filled with the accent so the selection is unmistakable. */
+.mm-views{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.mm-view-tab{background:var(--card);color:var(--text);
+             border:2px solid var(--control-border);border-radius:10px;
+             padding:12px 26px;font-size:.95em;font-weight:700;cursor:pointer;
+             font-family:inherit;min-height:48px;white-space:nowrap;
+             box-shadow:var(--card-shadow)}
+.mm-view-tab:hover{border-color:var(--accent);color:var(--accent)}
+.mm-view-tab.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.mm-view-tab.active:hover{color:var(--bg)}
+.mm-view-tab:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 
 /* ---- Rows are clickable: they open the job ---- */
 .mm-dash-row[data-job]{cursor:pointer}
@@ -459,3 +467,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
   .mm-dash-c-stage::before{content:attr(data-label);font-size:.82em;color:var(--text2);font-weight:600}
   .mm-dash-head{display:none}
 }
+
+/* One plain sentence saying what the selected view shows, so the tab label
+   never has to carry the whole meaning by itself. */
+.mm-view-note{color:var(--text2);font-size:.88em;margin:-8px 0 18px;max-width:62ch}
