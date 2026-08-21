@@ -6,10 +6,56 @@
 <title>Measurement App</title>
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
 
-<div id="mm-app">
+<!-- SIGN IN / SIGN UP — shown until someone is signed in -->
+<div id="mm-auth">
+  <div class="mm-auth-box">
+    <div class="mm-auth-brand">Measurement App</div>
+
+    <div class="mm-auth-panel active" data-panel="signin">
+      <h1 class="mm-auth-title">Sign in</h1>
+      <div class="mm-field-group">
+        <label class="mm-label" for="mm-in-email">Email</label>
+        <input class="mm-input" type="email" id="mm-in-email" autocomplete="username" placeholder="you@example.com">
+      </div>
+      <div class="mm-field-group">
+        <label class="mm-label" for="mm-in-pass">Password</label>
+        <input class="mm-input" type="password" id="mm-in-pass" autocomplete="current-password" placeholder="Your password">
+      </div>
+      <button class="mm-btn mm-btn-primary" id="mm-signin-btn">Sign in</button>
+      <p class="mm-auth-alt">New here? <a href="#" data-goto="signup">Create an account</a></p>
+    </div>
+
+    <div class="mm-auth-panel" data-panel="signup">
+      <h1 class="mm-auth-title">Create your account</h1>
+      <div class="mm-field-group">
+        <label class="mm-label" for="mm-up-name">Your name</label>
+        <input class="mm-input" id="mm-up-name" autocomplete="name" placeholder="e.g. Ahmed Khan">
+      </div>
+      <div class="mm-field-group">
+        <label class="mm-label" for="mm-up-email">Email</label>
+        <input class="mm-input" type="email" id="mm-up-email" autocomplete="username" placeholder="you@example.com">
+      </div>
+      <div class="mm-field-group">
+        <label class="mm-label" for="mm-up-pass">Password</label>
+        <input class="mm-input" type="password" id="mm-up-pass" autocomplete="new-password" placeholder="At least 6 characters">
+      </div>
+      <div class="mm-field-group">
+        <label class="mm-label" for="mm-up-code">Team code</label>
+        <input class="mm-input" id="mm-up-code" placeholder="Ask your manager">
+      </div>
+      <button class="mm-btn mm-btn-primary" id="mm-signup-btn">Create my account</button>
+      <p class="mm-auth-alt">Already have an account? <a href="#" data-goto="signin">Sign in</a></p>
+    </div>
+
+    <p class="mm-auth-error" id="mm-auth-error" role="alert"></p>
+  </div>
+</div>
+
+<div id="mm-app" style="display:none">
 
 <!-- SITE HEADER — shared across every screen -->
 <header class="mm-header">
@@ -23,6 +69,8 @@
       <button class="font-btn mm-theme-toggle" aria-label="Switch to light mode">☀️</button>
       <button class="font-btn mm-font-down" aria-label="Decrease text size">A-</button>
       <button class="font-btn mm-font-up" aria-label="Increase text size">A+</button>
+      <span class="mm-whoami" id="mm-whoami"></span>
+      <button class="font-btn mm-signout" id="mm-signout" title="Sign out" aria-label="Sign out">&#8631;</button>
       <button class="mm-hamburger" id="mm-hamburger-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mm-mobile-nav">
         <span></span><span></span><span></span>
       </button>
@@ -226,6 +274,7 @@
 
 </div><!-- #mm-app -->
 
+<script src="js/auth.js"></script>
 <script src="js/api.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/media.js"></script>

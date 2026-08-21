@@ -1,0 +1,50 @@
+/* ==========================================================================
+   SIGN IN / SIGN UP
+   A single centred card. This is the first thing anyone sees, including a
+   worker on a phone at a job site, so it stays deliberately plain: one
+   column, large fields, nothing to read past.
+   ========================================================================== */
+
+#mm-auth{display:none;position:fixed;inset:0;z-index:100;
+         align-items:center;justify-content:center;padding:24px;
+         background:var(--bg);overflow-y:auto}
+
+.mm-auth-box{width:100%;max-width:420px;background:var(--card);
+             border:1px solid var(--border);border-radius:16px;
+             padding:32px 28px;box-shadow:var(--card-shadow)}
+
+.mm-auth-brand{font-size:.78em;font-weight:800;letter-spacing:.14em;
+               text-transform:uppercase;color:var(--accent);margin-bottom:22px}
+.mm-auth-title{font-size:1.5em;font-weight:800;color:var(--text);margin-bottom:22px}
+
+/* Only one panel exists on screen at a time; the other is not rendered, so
+   browser autofill cannot fill the wrong form. */
+.mm-auth-panel{display:none;flex-direction:column}
+.mm-auth-panel.active{display:flex}
+
+.mm-auth-box .mm-btn{width:100%;margin-top:6px}
+.mm-auth-alt{margin-top:18px;font-size:.88em;color:var(--text2);text-align:center}
+.mm-auth-alt a{color:var(--accent);font-weight:700;text-decoration:none}
+.mm-auth-alt a:hover{text-decoration:underline}
+.mm-auth-alt a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+.mm-auth-error{margin-top:18px;padding:12px 14px;border-radius:10px;
+               background:var(--danger-bg);color:var(--danger-text);
+               font-size:.88em;font-weight:600;text-align:center}
+.mm-auth-error:empty{display:none}
+
+/* ---- Who is signed in, in the header ---- */
+.mm-whoami{display:flex;flex-direction:column;line-height:1.2;text-align:right;
+           margin-right:4px;min-width:0}
+.mm-whoami-name{font-size:.82em;font-weight:700;color:var(--text);
+                overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.mm-whoami-role{font-size:.68em;font-weight:700;letter-spacing:.06em;
+                text-transform:uppercase;color:var(--accent)}
+.mm-signout{font-size:1.2em;line-height:1}
+
+@media (max-width: 720px){
+  .mm-auth-box{padding:26px 20px}
+  /* On a phone the header is tight; the name goes and the role stays, which
+     is the part that changes what the person can do. */
+  .mm-whoami-name{display:none}
+}

@@ -462,10 +462,12 @@
   });
 
   // ===== BOOT =====
-  // The dashboard is the home screen: the owner opens this app to see where
-  // every job stands, and the crew can tap straight through to a job from it.
-  DASH.initDashboard(function (o) { pickJob(o, 'dashboard'); });
-  setActiveNavLink('dashboard');
-  showScreen('dashboard');
-  DASH.loadDashboard();
+  // Nothing loads until someone is signed in: no job data should be fetched
+  // for a visitor who has not proved who they are.
+  DASH.initDashboard(function (o) { pickJob(o); });
+  window.MM.auth.init(function () {
+    setActiveNavLink('dashboard');
+    showScreen('dashboard');
+    DASH.loadDashboard();
+  });
 })();
