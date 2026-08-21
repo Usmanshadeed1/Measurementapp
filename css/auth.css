@@ -48,3 +48,10 @@
      is the part that changes what the person can do. */
   .mm-whoami-name{display:none}
 }
+
+/* Role-based visibility. Driven by a class on <body> so the rule lives with
+   the container's own display logic — the mobile nav stays hidden on desktop
+   whatever its children say. */
+.mm-admin-only,.mm-worker-only{display:none}
+body.is-admin .mm-admin-only{display:revert}
+body.is-worker .mm-worker-only{display:revert}

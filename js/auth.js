@@ -45,13 +45,19 @@ window.MM = window.MM || {};
 
   // Reads rows as the signed-in user, so the database's own row-level rules
   // decide what comes back rather than the browser being trusted.
-  function dbFetch(method, path, body) {
+  // `quiet` skips asking PostgREST to return the inserted row. That read-back
+  // needs a SELECT policy, so on a table where a person may write but not
+  // read — the activity log — asking for it turns a successful insert into a
+  // failed request.
+  function dbFetch(method, path, body, quiet) {
     var headers = {
       apikey: ANON_KEY,
       Authorization: 'Bearer ' + (session ? session.access_token : ANON_KEY),
       'Content-Type': 'application/json',
     };
-    if (method === 'POST' || method === 'PATCH') headers.Prefer = 'return=representation';
+    if (method === 'POST' || method === 'PATCH') {
+      headers.Prefer = quiet ? 'return=minimal' : 'return=representation';
+    }
     return fetch(URL_BASE + '/rest/v1' + path, {
       method: method, headers: headers,
       body: body ? JSON.stringify(body) : undefined,

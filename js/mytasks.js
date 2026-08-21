@@ -34,14 +34,17 @@ window.MM = window.MM || {};
 
   // Buckets in the order a person cares about them.
   var BUCKETS = [
-    { id: 'late',  title: 'Overdue',        hint: 'These were due before today',
-      test: function (t) { var d = daysTo(t.end_date); return d !== null && d < 0; } },
-    { id: 'today', title: 'Due today',      hint: 'Finish these today',
-      test: function (t) { return daysTo(t.end_date) === 0; } },
-    { id: 'soon',  title: 'Coming up',      hint: 'Due in the next week',
-      test: function (t) { var d = daysTo(t.end_date); return d !== null && d > 0 && d <= 7; } },
-    { id: 'later', title: 'Later',          hint: 'Further ahead, or no date set',
-      test: function (t) { var d = daysTo(t.end_date); return d === null || d > 7; } },
+    { id: 'late',  title: 'Overdue',
+      test: function (t) { var d = daysTo(t.end_date); return !t.done_at && d !== null && d < 0; } },
+    { id: 'today', title: 'Due today',
+      test: function (t) { return !t.done_at && daysTo(t.end_date) === 0; } },
+    { id: 'soon',  title: 'Coming up',
+      test: function (t) { var d = daysTo(t.end_date); return !t.done_at && d !== null && d > 0 && d <= 7; } },
+    { id: 'later', title: 'Later',
+      test: function (t) { var d = daysTo(t.end_date); return !t.done_at && (d === null || d > 7); } },
+    // Finished work stays on screen: a worker who ticked the wrong task needs
+    // a way back, and seeing what they got through is worth something.
+    { id: 'done',  title: 'Finished', test: function (t) { return !!t.done_at; } },
   ];
 
   function load() {
@@ -52,7 +55,7 @@ window.MM = window.MM || {};
 
     return TASKS.loadMyTasks(me.id)
       .then(function (r) {
-        rows = (r || []).filter(function (t) { return !t.done_at; });
+        rows = r || [];
         render();
       })
       .catch(function (e) { el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>'; });
@@ -65,18 +68,19 @@ window.MM = window.MM || {};
     var greet = document.getElementById('mm-my-greet');
     if (greet && me) greet.textContent = 'Hello ' + (me.name || '').split(' ')[0];
 
-    if (!rows.length) {
+    var openRows = rows.filter(function (t) { return !t.done_at; });
+    if (!openRows.length && !rows.length) {
       el.innerHTML = '<div class="mm-my-clear">' +
         '<div class="mm-my-clear-tick" aria-hidden="true">&#10003;</div>' +
         '<h2>Nothing to do right now</h2>' +
         '<p>When your manager gives you a task it will show up here.</p></div>';
-      renderCounts(0, 0);
+      renderCounts(0, 0, 0);
       return;
     }
 
     var late = rows.filter(BUCKETS[0].test).length;
     var today = rows.filter(BUCKETS[1].test).length;
-    renderCounts(late, today);
+    renderCounts(late, today, openRows.length);
 
     var used = {};
     el.innerHTML = BUCKETS.map(function (b) {
@@ -96,7 +100,7 @@ window.MM = window.MM || {};
     bind(el);
   }
 
-  function renderCounts(late, today) {
+  function renderCounts(late, today, open) {
     var el = document.getElementById('mm-my-stats');
     if (!el) return;
     function stat(label, n, tone) {
@@ -105,7 +109,7 @@ window.MM = window.MM || {};
         '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
     }
     el.innerHTML =
-      stat('To do', rows.length, rows.length ? 'neutral' : 'good') +
+      stat('To do', open, open ? 'neutral' : 'good') +
       stat('Due today', today, today ? 'warn' : 'good') +
       stat('Overdue', late, late ? 'bad' : 'good');
   }
@@ -128,9 +132,10 @@ window.MM = window.MM || {};
       : t.start_date ? 'From ' + fmt(t.start_date)
       : 'No dates set';
 
-    return '<div class="mm-mytask">' +
+    return '<div class="mm-mytask' + (t.done_at ? ' is-done' : '') + '">' +
       '<button type="button" class="mm-task-tick" data-tick="' + U.esc(t.id) + '" ' +
-        'aria-label="Mark ' + U.esc(t.title) + ' done"></button>' +
+        'aria-label="' + (t.done_at ? 'Reopen ' : 'Mark ') + U.esc(t.title) +
+        (t.done_at ? '' : ' done') + '">' + (t.done_at ? '&#10003;' : '') + '</button>' +
       '<div class="mm-mytask-main">' +
         '<div class="mm-mytask-title">' + U.esc(t.title) + '</div>' +
         '<div class="mm-mytask-jobrow">' +
@@ -151,14 +156,16 @@ window.MM = window.MM || {};
       b.addEventListener('click', function () {
         var id = b.getAttribute('data-tick');
         var t = rows.find(function (x) { return x.id === id; });
+        var undo = !!(t && t.done_at);
         b.disabled = true;
-        db('PATCH', '/tasks?id=eq.' + id, {
-          done_at: new Date().toISOString(), done_by: (auth.user() || {}).id,
-        })
+        db('PATCH', '/tasks?id=eq.' + id, undo
+          ? { done_at: null, done_by: null }
+          : { done_at: new Date().toISOString(), done_by: (auth.user() || {}).id })
           .then(function () {
-            window.MM.activity.log('task_done', 'Finished "' + (t ? t.title : 'a task') + '"', {
-              jobId: t && t.job_id, jobName: t && t.job_name,
-            });
+            window.MM.activity.log(undo ? 'task_undone' : 'task_done',
+              (undo ? 'Reopened "' : 'Finished "') + (t ? t.title : 'a task') + '"', {
+                jobId: t && t.job_id, jobName: t && t.job_name,
+              });
             return load();
           })
           .catch(function (e) {

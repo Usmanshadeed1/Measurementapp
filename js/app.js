@@ -487,11 +487,15 @@
     // every job's address and the whole pipeline are not theirs to browse —
     // and the database enforces the same split, so hiding the nav is the
     // presentation of a rule rather than the rule itself.
-    document.querySelectorAll('.mm-admin-only').forEach(function (el) {
-      el.style.display = admin ? '' : 'none';
-    });
-    document.querySelectorAll('.mm-worker-only').forEach(function (el) {
-      el.style.display = admin ? 'none' : '';
+    // Toggle a class rather than the inline display property. Setting
+    // display:'' on a link inside the mobile nav made it visible on desktop
+    // too, because the mobile nav is hidden by its own container rule and an
+    // inline style on the child overrides nothing — the link simply appeared
+    // twice.
+    document.body.classList.toggle('is-admin', admin);
+    document.body.classList.toggle('is-worker', !admin);
+    document.querySelectorAll('.mm-admin-only, .mm-worker-only').forEach(function (el) {
+      el.style.display = '';
     });
 
     if (admin) {

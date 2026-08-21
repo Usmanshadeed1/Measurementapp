@@ -19,7 +19,7 @@ window.MM = window.MM || {};
   var filterActor = '';
   var jobFilter = null;   // set when viewing one job's history
 
-  function db(method, path, body) { return auth.dbFetch(method, path, body); }
+  function db(method, path, body, quiet) { return auth.dbFetch(method, path, body, quiet); }
 
   // ---- Writing ------------------------------------------------------------
 
@@ -36,7 +36,7 @@ window.MM = window.MM || {};
       action: action,
       label: label,
       detail: opts.detail || null,
-    }).catch(function (e) {
+    }, true).catch(function (e) {
       // Never surface this: the user's actual action already succeeded, and
       // an error here would make a working change look broken.
       if (window.console) console.warn('activity log failed:', e.message);

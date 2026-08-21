@@ -25,6 +25,14 @@
 .mm-mygroup-late .mm-mytask{border-left-color:var(--danger-text)}
 .mm-mygroup-today .mm-mytask{border-left-color:#e8a33d}
 
+/* Finished work stays on screen but recedes, so it reads as a record rather
+   than as something still waiting to be done. */
+.mm-mygroup-done{opacity:.72}
+.mm-mygroup-done .mm-mytask{border-left-color:var(--success)}
+.mm-mytask.is-done .mm-mytask-title{text-decoration:line-through;color:var(--text2)}
+.mm-mytask.is-done .mm-task-tick{background:var(--success);
+                                 border-color:var(--success);color:#04220f}
+
 /* Bigger than the admin tick: this is the one thing a worker taps all day. */
 .mm-mytask .mm-task-tick{width:40px;height:40px;font-size:1.3em}
 
