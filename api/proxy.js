@@ -1,4 +1,4 @@
-// api/[...path].js
+// api/proxy.js
 //
 // Vercel version of the GHL proxy. Same job as netlify/functions/ghl-proxy.js:
 // the browser calls /api/<ghl path> on this domain, and the real Private
@@ -6,8 +6,8 @@
 // browser.
 //
 // Both proxies are kept in the repo so the project can be hosted on either
-// platform without a rewrite. Vercel routes /api/* to this file by filename
-// convention, so no redirect rule is needed for the proxy itself.
+// platform. A rewrite in vercel.json sends every /api/* path here, so one
+// function covers the whole GHL surface.
 //
 // Set GHL_API_KEY in Vercel: Project Settings -> Environment Variables.
 
@@ -29,11 +29,22 @@ export default async function handler(req, res) {
     return;
   }
 
-  // req.url arrives as "/api/opportunities/search?foo=bar" — strip the /api
-  // prefix to get the GHL path, keeping any query string intact.
-  let forwardPath = req.url || '/';
+  // The rewrite in vercel.json points every /api/* request at this one file,
+  // which means req.url has already been rewritten to "/api/proxy" and the
+  // real path is gone. Vercel preserves the original in x-forwarded-uri /
+  // x-vercel-original-path, so read the path from there and only fall back
+  // to req.url when running somewhere without a rewrite.
+  let original = req.headers['x-forwarded-uri'] ||
+                 req.headers['x-vercel-original-path'] ||
+                 req.url || '/';
+  let forwardPath = String(original);
   if (forwardPath.startsWith('/api')) forwardPath = forwardPath.slice(4);
   if (!forwardPath.startsWith('/')) forwardPath = '/' + forwardPath;
+  // Guard against the rewrite target leaking through as a literal path.
+  if (forwardPath === '/proxy' || forwardPath.startsWith('/proxy?')) {
+    res.status(400).json({ error: 'Proxy could not read the original request path.' });
+    return;
+  }
 
   const headers = {
     Authorization: 'Bearer ' + apiKey,
