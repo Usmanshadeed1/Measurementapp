@@ -3,7 +3,7 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks;
 
   var job = null, room = null, editRoom = null, contactSearchTimer = null;
 
@@ -87,6 +87,7 @@
     if (stageBtn) stageBtn.addEventListener('click', function () { DASH.openStage(o); });
 
     STEPS.render(o);
+    TASKS.showForJob(o);
 
     loadRooms();
     loadJobMedia();
@@ -465,6 +466,7 @@
   // Nothing loads until someone is signed in: no job data should be fetched
   // for a visitor who has not proved who they are.
   DASH.initDashboard(function (o) { pickJob(o); });
+  TASKS.init();
   window.MM.auth.init(function () {
     setActiveNavLink('dashboard');
     showScreen('dashboard');
