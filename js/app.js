@@ -5,8 +5,7 @@
 (function () {
   var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps;
 
-  var job = null, room = null, editRoom = null, searchTimer = null, contactSearchTimer = null;
-  var jobCameFrom = 'jobs';   // which screen the current job was opened from
+  var job = null, room = null, editRoom = null, contactSearchTimer = null;
 
   // ===== FONT CONTROL ===== (one button pair per topbar, same handler for all)
   U.applyFont(U.getFontIndex());
@@ -19,8 +18,7 @@
 
   // ===== SITE NAV (header links, desktop + mobile copies, and brand link) =====
   function goToTab(tab) {
-    if (tab === 'jobs') { showScreen('jobs'); }
-    else if (tab === 'dashboard') { showScreen('dashboard'); DASH.loadDashboard(); }
+    if (tab === 'dashboard') { showScreen('dashboard'); DASH.loadDashboard(); }
     else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
     setActiveNavLink(tab);
     closeMobileNav();
@@ -33,7 +31,7 @@
   document.querySelectorAll('.mm-nav-link, .mm-brand').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();
-      goToTab(a.getAttribute('data-tab') || 'jobs');
+      goToTab(a.getAttribute('data-tab') || 'dashboard');
     });
   });
 
@@ -68,35 +66,9 @@
     return api.oppField(o, api.ADDR_FIELD_ID);
   }
 
-  // ===== JOBS =====
-  function loadJobs(q) {
-    var el = document.getElementById('mm-jobs-list'); el.innerHTML = '<div class="mm-empty">Loading jobs...</div>';
-    api.searchJobs(q).then(function (ops) {
-      if (!ops.length) { el.innerHTML = '<div class="mm-empty">No jobs found.</div>'; return; }
-      el.innerHTML = '';
-      ops.forEach(function (o) {
-        var item = document.createElement('div'); item.className = 'mm-acc';
-        var hdr = document.createElement('div'); hdr.className = 'mm-acc-hdr';
-        hdr.setAttribute('role', 'button'); hdr.setAttribute('tabindex', '0');
-        hdr.innerHTML = '<div class="mm-acc-hdr-text"><div class="mm-acc-title">' + U.esc(customerName(o)) + '</div><div class="mm-acc-sub">' + U.esc(jobAddress(o) || 'No address on file') + '</div></div><span class="mm-acc-arrow" aria-hidden="true">&#8250;</span>';
-        hdr.addEventListener('click', function () { pickJob(o, 'jobs'); });
-        hdr.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickJob(o, 'jobs'); } });
-        item.appendChild(hdr); el.appendChild(item);
-      });
-    }).catch(function (e) { el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>'; });
-  }
-  document.getElementById('mm-job-search').addEventListener('input', function () {
-    clearTimeout(searchTimer);
-    var q = this.value.trim();
-    searchTimer = setTimeout(function () { loadJobs(q || undefined); }, 400);
-  });
-
-  function pickJob(o, from) {
+  // ===== JOB =====
+  function pickJob(o) {
     job = o;
-    jobCameFrom = from || 'jobs';
-    var backBtn = document.getElementById('mm-back-to-jobs');
-    if (backBtn) backBtn.setAttribute('aria-label',
-      jobCameFrom === 'dashboard' ? 'Back to dashboard' : 'Back to jobs');
     document.getElementById('mm-job-title').textContent = customerName(o);
     showScreen('job');
 
@@ -245,8 +217,8 @@
 
   // ===== NAV =====
   document.getElementById('mm-back-to-jobs').addEventListener('click', function () {
-    showScreen(jobCameFrom);
-    setActiveNavLink(jobCameFrom);
+    showScreen('dashboard');
+    setActiveNavLink('dashboard');
   });
   document.getElementById('mm-back-to-job').addEventListener('click', function () { showScreen('job'); });
   document.getElementById('mm-back-to-contacts').addEventListener('click', function () { showScreen('contacts'); });
@@ -496,5 +468,4 @@
   setActiveNavLink('dashboard');
   showScreen('dashboard');
   DASH.loadDashboard();
-  loadJobs();
 })();

@@ -136,19 +136,6 @@ window.MM = window.MM || {};
 
   function deleteMedia(type, id) { return deleteRec(type, id); }
 
-  // Jobs the field crew can measure: the sales pipeline only. Other
-  // pipelines (and GHL's sample records) are not remodeling jobs and would
-  // only be noise on a screen used at the property.
-  function searchJobs(query) {
-    // The search endpoint rejects pipelineId in the body (422), so the
-    // pipeline is filtered client-side on the way out.
-    var body = { locationId: LOC, limit: 100 };
-    if (query) body.query = query;
-    return apiFetch('POST', '/opportunities/search', body).then(function (d) {
-      return (d.opportunities || []).filter(function (o) { return o.pipelineId === SALES_PIPELINE_ID; });
-    });
-  }
-
   // Reads one custom field off an opportunity by field id. GHL returns the
   // dropdown's visible label (e.g. "Pending") in fieldValueString, not an
   // internal option id — so the value can be compared/displayed directly.
@@ -274,7 +261,7 @@ window.MM = window.MM || {};
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
-    deleteMedia: deleteMedia, searchJobs: searchJobs, searchContacts: searchContacts, getContact: getContact, createContact: createContact,
+    deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact,
     getTags: getTags, findDuplicateContact: findDuplicateContact, enrollContactInWorkflow: enrollContactInWorkflow, getWorkflows: getWorkflows,
   };
 })();
