@@ -42,6 +42,7 @@ window.MM = window.MM || {};
   var STAGE_PROPOSAL_SENT = 'a3e8f945-415a-442f-bf60-050a62d4dc54';  // Proposal Sent
   var STAGE_MATERIAL_ORDERING = 'c0c28c4a-599c-4f38-86cc-9accd2a6f199'; // Material Ordering
   var STAGE_WON = '846384b2-f083-4189-9736-4a9de34ba4d0';            // Hired Maximus
+  var STAGE_DEAD = 'a94ddd00-0d94-4eab-9c86-f52b1be45157';           // Dead Lead
 
   // Association IDs — one per relationship type in GHL's custom-object schema.
   var A = {
@@ -269,7 +270,7 @@ window.MM = window.MM || {};
     SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
     DATE_FIELD_IDS: DATE_FIELD_IDS, STAGE_AFTER_MEASURED: STAGE_AFTER_MEASURED,
     STAGE_AFTER_PRICING: STAGE_AFTER_PRICING, STAGE_PROPOSAL_SENT: STAGE_PROPOSAL_SENT,
-    STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON,
+    STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,

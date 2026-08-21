@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
 <title>Measurement App</title>
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
 
@@ -51,41 +52,29 @@
 <div class="screen active" id="screen-dashboard">
   <div class="mm-content">
     <div class="section-header">
-      <span class="section-title">Job Status Dashboard</span>
+      <span class="section-title">Jobs</span>
       <button class="mm-btn-sm mm-btn-secondary" id="mm-dash-refresh">Refresh</button>
     </div>
-    
-
-    <div class="mm-views" id="mm-dash-views" role="tablist" aria-label="Dashboard views">
-      <button class="mm-view-tab active" data-view="todo" role="tab" aria-selected="true">What To Do</button>
-      <button class="mm-view-tab" data-view="all" role="tab" aria-selected="false">All Active Jobs</button>
-      <button class="mm-view-tab" data-view="new" role="tab" aria-selected="false">Needs Measuring</button>
-      <button class="mm-view-tab" data-view="done" role="tab" aria-selected="false">Finished Jobs</button>
-    </div>
-    <p class="mm-view-note" id="mm-dash-view-note"></p>
 
     <div class="mm-stats" id="mm-dash-stats"></div>
 
+    <div class="mm-views" id="mm-dash-views" role="tablist" aria-label="Dashboard views">
+      <button class="mm-view-tab active" data-view="work" role="tab" aria-selected="true">Work list</button>
+      <button class="mm-view-tab" data-view="all" role="tab" aria-selected="false">All jobs</button>
+    </div>
+    <p class="mm-view-note" id="mm-dash-view-note"></p>
+
     <div class="mm-search-bar">
       <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
-      <label for="mm-dash-search" class="sr-only">Search jobs by customer or address</label>
-      <input class="mm-input" id="mm-dash-search" placeholder="Search by customer or address...">
+      <label for="mm-dash-search" class="sr-only">Search jobs by customer, address or staff</label>
+      <input class="mm-input" id="mm-dash-search" placeholder="Search by customer, address or staff...">
     </div>
 
-    <div class="mm-filter-bar">
-      <div class="mm-filter-group">
-        <span class="mm-filter-legend" id="mm-lbl-work">Work still to do</span>
-        <div class="mm-filters" id="mm-dash-filters" role="group" aria-labelledby="mm-lbl-work"></div>
-      </div>
-      <div class="mm-filter-group" id="mm-stage-group">
-        <span class="mm-filter-legend" id="mm-lbl-stage">Where the job is</span>
-        <div class="mm-filters mm-filters-stage" id="mm-dash-stage-filters" role="group" aria-labelledby="mm-lbl-stage"></div>
-      </div>
+    <div class="mm-filter-wrap" id="mm-filter-wrap">
+      <div class="mm-filters" id="mm-dash-filters" role="group" aria-label="Filter jobs"></div>
     </div>
 
-    <div class="mm-active-filter" id="mm-dash-active-filter" role="status" aria-live="polite"></div>
-
-    <div id="mm-dash-table"><div class="mm-empty">Loading dashboard...</div></div>
+    <div id="mm-dash-table"><div class="mm-empty">Loading...</div></div>
   </div>
 </div>
 

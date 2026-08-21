@@ -6,6 +6,7 @@
   var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps;
 
   var job = null, room = null, editRoom = null, searchTimer = null, contactSearchTimer = null;
+  var jobCameFrom = 'jobs';   // which screen the current job was opened from
 
   // ===== FONT CONTROL ===== (one button pair per topbar, same handler for all)
   U.applyFont(U.getFontIndex());
@@ -78,8 +79,8 @@
         var hdr = document.createElement('div'); hdr.className = 'mm-acc-hdr';
         hdr.setAttribute('role', 'button'); hdr.setAttribute('tabindex', '0');
         hdr.innerHTML = '<div class="mm-acc-hdr-text"><div class="mm-acc-title">' + U.esc(customerName(o)) + '</div><div class="mm-acc-sub">' + U.esc(jobAddress(o) || 'No address on file') + '</div></div><span class="mm-acc-arrow" aria-hidden="true">&#8250;</span>';
-        hdr.addEventListener('click', function () { pickJob(o); });
-        hdr.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickJob(o); } });
+        hdr.addEventListener('click', function () { pickJob(o, 'jobs'); });
+        hdr.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickJob(o, 'jobs'); } });
         item.appendChild(hdr); el.appendChild(item);
       });
     }).catch(function (e) { el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>'; });
@@ -90,8 +91,12 @@
     searchTimer = setTimeout(function () { loadJobs(q || undefined); }, 400);
   });
 
-  function pickJob(o) {
+  function pickJob(o, from) {
     job = o;
+    jobCameFrom = from || 'jobs';
+    var backBtn = document.getElementById('mm-back-to-jobs');
+    if (backBtn) backBtn.setAttribute('aria-label',
+      jobCameFrom === 'dashboard' ? 'Back to dashboard' : 'Back to jobs');
     document.getElementById('mm-job-title').textContent = customerName(o);
     showScreen('job');
 
@@ -239,7 +244,10 @@
   });
 
   // ===== NAV =====
-  document.getElementById('mm-back-to-jobs').addEventListener('click', function () { showScreen('jobs'); });
+  document.getElementById('mm-back-to-jobs').addEventListener('click', function () {
+    showScreen(jobCameFrom);
+    setActiveNavLink(jobCameFrom);
+  });
   document.getElementById('mm-back-to-job').addEventListener('click', function () { showScreen('job'); });
   document.getElementById('mm-back-to-contacts').addEventListener('click', function () { showScreen('contacts'); });
 
@@ -476,7 +484,7 @@
   // ===== BOOT =====
   // The dashboard is the home screen: the owner opens this app to see where
   // every job stands, and the crew can tap straight through to a job from it.
-  DASH.initDashboard(pickJob);
+  DASH.initDashboard(function (o) { pickJob(o, 'dashboard'); });
   setActiveNavLink('dashboard');
   showScreen('dashboard');
   DASH.loadDashboard();

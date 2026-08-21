@@ -1,73 +1,52 @@
 // js/dashboard.js
-// Dashboard — the app's home screen. Two views over the same set of jobs:
+// The dashboard: two ways to look at the same jobs.
 //
-//   All Jobs                — every job, with the three first-visit steps
-//                             as columns. The default.
-//   Waiting for First Visit — jobs still in the New Lead stage: nobody has
-//                             been out to the property yet. The work queue.
+//   Work list  — every job grouped by the ONE next thing that has to happen
+//                to it. This is the day plan, and the default.
+//   All jobs   — one flat list of everything, for searching and filtering.
 //
-// This is the view GHL itself cannot give you: its Kanban board shows which
-// STAGE a job sits in, but a stage says nothing about which of the three
-// first-visit steps are finished. The three Opportunity custom fields carry
-// that, and this screen reads them across every job at once.
+// Both read the same data and share the same job card, so switching tabs
+// never looks like switching apps. Progress is taken from the DATES staff
+// enter (appointment -> measured -> design -> pricing -> proposal sent ->
+// cabinets -> completed), never from the older status dropdowns: a date is a
+// fact someone recorded, whereas a status can be left behind by an earlier
+// stage move.
 window.MM = window.MM || {};
 
 (function () {
   var U = window.MM.utils, api = window.MM.api;
 
-  var allJobs = [];      // every opportunity in the sales pipeline
-  var stageNames = {};   // pipelineStageId -> human stage name
-  var newLeadStageId = null;
+  var allJobs = [];
+  var stageNames = {};
   var salesPipeline = null;
-  var userNames = {};     // userId -> staff name
-  var activeView = 'todo';  // 'todo' | 'all' | 'new'
+  var userNames = {};
+  var activeView = 'work';   // 'work' | 'all'
   var activeFilter = 'all';
   var searchTerm = '';
-  var onOpenJob = null;     // handed in by app.js so a row can open the job
+  var onOpenJob = null;
+  var openGroups = null;
 
-  // Which dropdown values count as "finished" for each step. Anything else
-  // (including a blank field on jobs that never reached 1st Client Visit)
-  // is treated as outstanding.
-  var DONE_VALUES = { design: ['Done'], pricing: ['Done'], meeting: ['Held'] };
+  // ---- Reading a job ------------------------------------------------------
 
-  function statusOf(o, key) { return api.oppField(o, api.STATUS_FIELD_IDS[key]); }
-  function isDone(o, key) { return DONE_VALUES[key].indexOf(statusOf(o, key)) > -1; }
-  function allThreeDone(o) {
-    return isDone(o, 'design') && isDone(o, 'pricing') && isDone(o, 'meeting');
-  }
-  function isNewLead(o) { return o.pipelineStageId === newLeadStageId; }
+  function dv(o, key) { return api.oppField(o, api.DATE_FIELD_IDS[key]); }
+  function apptDate(o) { return dv(o, 'appointment'); }
+  function measuredDate(o) { return dv(o, 'measured'); }
+  function designDate(o) { return dv(o, 'design'); }
+  function pricingDate(o) { return dv(o, 'pricing'); }
+  function sentDate(o) { return dv(o, 'proposalSent'); }
+  function cabinetsDate(o) { return dv(o, 'cabinets'); }
+  function completedDate(o) { return dv(o, 'completed'); }
 
-  // Revision only means something once the job has been measured — there is
-  // nothing for a customer to reject before that. Without this guard, a
-  // status left behind from an earlier stage reports work that never happened.
-  function inRevision(o) {
-    if (notMeasured(o)) return false;
-    return statusOf(o, 'design') === 'Revision' || statusOf(o, 'pricing') === 'Revision';
-  }
-  function apptDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.appointment); }
-  function measuredDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.measured); }
-  function designDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.design); }
-  function pricingDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.pricing); }
-  function notMeasured(o) { return !measuredDate(o); }
-  function sentDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.proposalSent); }
-  function cabinetsDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.cabinets); }
-  function completedDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.completed); }
   function isCompleted(o) { return !!completedDate(o); }
+  function isDead(o) { return o.pipelineStageId === api.STAGE_DEAD; }
   function isWon(o) {
     return o.pipelineStageId === api.STAGE_WON ||
            o.pipelineStageId === api.STAGE_MATERIAL_ORDERING || !!cabinetsDate(o);
   }
-  // Every active view works from this list, so a completed job disappears
-  // everywhere at once rather than each view remembering to exclude it.
-  function activeJobs() { return allJobs.filter(function (o) { return !isCompleted(o); }); }
-
-  // Progress is read from the dates the staff actually enter, not from the
-  // status dropdowns — a date is a fact someone recorded, whereas a status
-  // can be left behind by an earlier stage move.
-  function stepsDone(o) {
-    return [measuredDate(o), designDate(o), pricingDate(o)].filter(Boolean).length;
-  }
-  function allStepsDone(o) { return stepsDone(o) === 3; }
+  // Finished or lost jobs need no more work, so they stay out of the day plan
+  // and out of the active counts — but remain findable in their own group.
+  function isClosed(o) { return isCompleted(o) || isDead(o); }
+  function openJobs() { return allJobs.filter(function (o) { return !isClosed(o); }); }
 
   function customerName(o) {
     if (o.contact && o.contact.name) return o.contact.name;
@@ -75,28 +54,292 @@ window.MM = window.MM || {};
     return n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n;
   }
   function jobAddress(o) {
-    // Fall back to the tail of the opportunity name: WF-1 builds the name as
-    // "First Last - Address", so cards created before the Property Address
-    // action was fixed still carry their address there.
+    // Cards created before the Property Address action was fixed keep their
+    // address inside the opportunity name instead.
     var addr = api.oppField(o, api.ADDR_FIELD_ID);
     if (addr) return addr;
     var n = o.name || '';
     return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ') : '';
   }
-  // The owner set on the job in GHL. Unassigned is worth showing plainly —
-  // a job nobody owns is exactly what the owner needs to spot.
   function staffName(o) {
     if (!o.assignedTo) return '';
     return userNames[o.assignedTo] || 'Unknown user';
   }
-  function staffCell(o) {
-    var n = staffName(o);
-    var cls = n ? 'mm-staff' : 'mm-staff mm-staff-none';
-    return '<div class="mm-dash-c-staff" data-label="Staff">' +
-      '<button type="button" class="mm-staff-btn" data-assign="' + U.esc(o.id) + '" ' +
-      'aria-label="Change staff for ' + U.esc(customerName(o)) + '">' +
-      '<span class="' + cls + '">' + U.esc(n || 'Unassigned') + '</span>' +
-      '<span class="mm-staff-edit" aria-hidden="true">Change</span></button></div>';
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function daysSince(iso) {
+    if (!iso) return null;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    return Math.floor((Date.now() - d.getTime()) / 86400000);
+  }
+  // Days from today to a date: negative means it has already passed.
+  function daysTo(v) {
+    if (!v) return null;
+    var d = new Date(String(v).slice(0, 10) + 'T00:00:00');
+    if (isNaN(d.getTime())) return null;
+    var t = new Date();
+    t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    return Math.round((d - t) / 86400000);
+  }
+
+  // ---- The one thing each job needs next ----------------------------------
+  //
+  // Every job belongs to exactly one group. The order is the order the work
+  // actually happens, so the page reads top-to-bottom like the process does.
+  var GROUPS = [
+    { id: 'book', title: 'Book a visit', hint: 'No appointment date set yet',
+      test: function (o) { return !measuredDate(o) && !apptDate(o); } },
+    { id: 'measure', title: 'Go and measure', hint: 'Visit booked, measurements not recorded',
+      test: function (o) { return !measuredDate(o) && !!apptDate(o); } },
+    { id: 'design', title: 'Create the design', hint: 'Measured, design not finished',
+      test: function (o) { return !!measuredDate(o) && !designDate(o); } },
+    { id: 'pricing', title: 'Work out the pricing', hint: 'Design done, pricing not finished',
+      test: function (o) { return !!designDate(o) && !pricingDate(o); } },
+    { id: 'send', title: 'Send the proposal', hint: 'Ready to go to the customer',
+      test: function (o) { return !!pricingDate(o) && !sentDate(o); } },
+    { id: 'wait', title: 'Waiting for the customer', hint: 'Proposal sent, no answer yet',
+      test: function (o) { return !!sentDate(o) && !isWon(o); } },
+    { id: 'cabinets', title: 'Order the cabinets', hint: 'Job won, cabinets not ordered',
+      test: function (o) { return isWon(o) && !cabinetsDate(o); } },
+    { id: 'finish', title: 'Finish the job', hint: 'Cabinets ordered, work in progress',
+      test: function (o) { return !!cabinetsDate(o); } },
+  ];
+  // Closed jobs get their own groups, so "which ones are finished?" is
+  // answered in the same place as everything else.
+  var CLOSED_GROUPS = [
+    { id: 'done', title: 'Finished jobs', hint: 'Completed — no more work needed',
+      test: isCompleted, closed: true },
+    { id: 'lost', title: 'Lost jobs', hint: 'Marked as a dead lead',
+      test: function (o) { return isDead(o) && !isCompleted(o); }, closed: true },
+  ];
+  var ALL_GROUPS = GROUPS.concat(CLOSED_GROUPS);
+
+  // A short label for the job's state, shown on the All jobs list.
+  function nextStep(o) {
+    if (isCompleted(o)) return { text: 'Finished', tone: 'done' };
+    if (isDead(o)) return { text: 'Lost', tone: 'wait' };
+    if (!measuredDate(o)) {
+      var appt = apptDate(o);
+      if (!appt) return { text: 'Book a visit', tone: 'urgent' };
+      var dd = daysTo(appt);
+      if (dd < 0) return { text: 'Visit overdue', tone: 'urgent' };
+      if (dd === 0) return { text: 'Visit today', tone: 'soon' };
+      return { text: 'Visit ' + fmtDate(appt), tone: 'wait' };
+    }
+    if (!designDate(o)) return { text: 'Create the design', tone: 'soon' };
+    if (!pricingDate(o)) return { text: 'Work out pricing', tone: 'soon' };
+    if (!sentDate(o)) return { text: 'Send the proposal', tone: 'soon' };
+    if (!isWon(o)) {
+      var w = daysSince(sentDate(o));
+      if (w >= 7) return { text: 'Chase customer (' + w + 'd)', tone: 'urgent' };
+      return { text: 'Waiting for customer', tone: 'wait' };
+    }
+    if (!cabinetsDate(o)) return { text: 'Order the cabinets', tone: 'soon' };
+    return { text: 'Finish the job', tone: 'soon' };
+  }
+
+  // The fact worth showing beside a job in its group — the thing that
+  // explains why it is sitting there and whether it is slipping.
+  function groupFlag(o, groupId) {
+    if (groupId === 'measure') {
+      var dd = daysTo(apptDate(o));
+      if (dd < 0) return { cls: 'urgent', text: Math.abs(dd) + 'd overdue' };
+      if (dd === 0) return { cls: 'soon', text: 'Today' };
+      if (dd === 1) return { cls: 'soon', text: 'Tomorrow' };
+      return { cls: '', text: fmtDate(apptDate(o)) };
+    }
+    if (groupId === 'book') {
+      var age = daysSince(o.createdAt);
+      if (age >= 7) return { cls: 'urgent', text: age + 'd old' };
+      if (age >= 3) return { cls: 'soon', text: age + 'd old' };
+      return { cls: '', text: age === 0 ? 'New today' : age + 'd old' };
+    }
+    if (groupId === 'wait') {
+      var w = daysSince(sentDate(o));
+      if (w === null) return { cls: '', text: '' };
+      if (w >= 7) return { cls: 'urgent', text: w + 'd — chase' };
+      if (w >= 3) return { cls: 'soon', text: w + 'd waiting' };
+      return { cls: '', text: w === 0 ? 'Sent today' : w + 'd waiting' };
+    }
+    if (groupId === 'done') return { cls: 'done', text: fmtDate(completedDate(o)) };
+    return { cls: '', text: '' };
+  }
+
+  // Most pressing first: overdue visits, then soonest dates, then oldest job.
+  function sortJobs(a, b) {
+    var da = daysTo(apptDate(a)), db = daysTo(apptDate(b));
+    if (da !== null && db !== null && da !== db) return da - db;
+    if (da !== null && db === null) return -1;
+    if (db !== null && da === null) return 1;
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  }
+
+  function matchesSearch(o) {
+    if (!searchTerm) return true;
+    var hay = (customerName(o) + ' ' + jobAddress(o) + ' ' + staffName(o)).toLowerCase();
+    return hay.indexOf(searchTerm.toLowerCase()) > -1;
+  }
+
+  // ---- The shared job card ------------------------------------------------
+  //
+  // One design for a job, used by both views. The progress bar is six steps
+  // because that is how many dates a job collects on its way through.
+  function jobCard(o, opts) {
+    opts = opts || {};
+    var flag = opts.flag || { cls: '', text: '' };
+    var step = opts.showStep ? nextStep(o) : null;
+    var done = [measuredDate(o), designDate(o), pricingDate(o),
+                sentDate(o), cabinetsDate(o), completedDate(o)].filter(Boolean).length;
+
+    return '<button type="button" class="mm-jcard' + (isClosed(o) ? ' is-closed' : '') +
+        '" data-job="' + U.esc(o.id) + '">' +
+      '<span class="mm-jcard-main">' +
+        '<span class="mm-jcard-name">' + U.esc(customerName(o)) + '</span>' +
+        '<span class="mm-jcard-addr">' + U.esc(jobAddress(o) || 'No address on file') + '</span>' +
+        '<span class="mm-jbar" role="img" aria-label="' + done + ' of 6 steps done">' +
+          '<span class="mm-jbar-fill" style="width:' + Math.round((done / 6) * 100) + '%"></span>' +
+        '</span>' +
+      '</span>' +
+      '<span class="mm-jcard-side">' +
+        (step ? '<span class="mm-next mm-next-' + step.tone + '">' + U.esc(step.text) + '</span>' : '') +
+        '<span class="mm-jcard-staff' + (o.assignedTo ? '' : ' mm-staff-none') + '">' +
+          U.esc(staffName(o) || 'Unassigned') + '</span>' +
+        (flag.text ? '<span class="mm-jflag mm-jflag-' + flag.cls + '">' + U.esc(flag.text) + '</span>' : '') +
+      '</span>' +
+      '<span class="mm-jcard-arrow" aria-hidden="true">&#8250;</span>' +
+    '</button>';
+  }
+
+  // ---- Work list ----------------------------------------------------------
+
+  function loadOpenGroups() {
+    if (openGroups) return openGroups;
+    try {
+      var raw = localStorage.getItem('mm_open_groups');
+      openGroups = raw ? JSON.parse(raw) : {};
+    } catch (e) { openGroups = {}; }
+    return openGroups;
+  }
+  function saveOpenGroups() {
+    try { localStorage.setItem('mm_open_groups', JSON.stringify(openGroups)); } catch (e) { /* private mode */ }
+  }
+
+  function renderWorkList() {
+    var open = loadOpenGroups();
+    var searching = !!searchTerm;
+
+    var sections = ALL_GROUPS.map(function (g) {
+      var jobs = allJobs.filter(function (o) { return g.test(o) && matchesSearch(o); }).sort(sortJobs);
+      return { g: g, jobs: jobs };
+    });
+
+    if (searching && !sections.some(function (s) { return s.jobs.length; })) {
+      return '<div class="mm-empty">Nothing matches &ldquo;' + U.esc(searchTerm) + '&rdquo;.</div>';
+    }
+
+    return '<div class="mm-acclist">' + sections.map(function (s) {
+      var empty = !s.jobs.length;
+      // A search reveals its matches without the user hunting for the right
+      // section to open.
+      var isOpen = !empty && (searching || !!open[s.g.id]);
+      return '<section class="mm-agroup' + (empty ? ' is-empty' : '') + (isOpen ? ' is-open' : '') +
+             (s.g.closed ? ' is-closedgroup' : '') + '">' +
+        '<button type="button" class="mm-agroup-head" data-group="' + U.esc(s.g.id) + '"' +
+          ' aria-expanded="' + (isOpen ? 'true' : 'false') + '"' + (empty ? ' disabled' : '') + '>' +
+          '<span class="mm-agroup-arrow" aria-hidden="true">&#9662;</span>' +
+          '<span class="mm-agroup-text">' +
+            '<span class="mm-agroup-title">' + U.esc(s.g.title) + '</span>' +
+            '<span class="mm-agroup-hint">' + U.esc(empty ? 'Nothing here' : s.g.hint) + '</span>' +
+          '</span>' +
+          '<span class="mm-agroup-count">' + s.jobs.length + '</span>' +
+        '</button>' +
+        (empty ? '' : '<div class="mm-agroup-body">' +
+          s.jobs.map(function (o) { return jobCard(o, { flag: groupFlag(o, s.g.id) }); }).join('') +
+          '</div>') +
+      '</section>';
+    }).join('') + '</div>';
+  }
+
+  // ---- All jobs -----------------------------------------------------------
+  //
+  // Filters mirror the work-list groups exactly, so the two views can never
+  // disagree about what state a job is in.
+  var FILTERS = [
+    { id: 'all', label: 'All active', test: function (o) { return !isClosed(o); } },
+    { id: 'book', label: 'Book a visit', test: GROUPS[0].test },
+    { id: 'measure', label: 'To measure', test: GROUPS[1].test },
+    { id: 'design', label: 'To design', test: GROUPS[2].test },
+    { id: 'pricing', label: 'To price', test: GROUPS[3].test },
+    { id: 'send', label: 'To send', test: GROUPS[4].test },
+    { id: 'wait', label: 'Awaiting reply', test: GROUPS[5].test },
+    { id: 'cabinets', label: 'Order cabinets', test: GROUPS[6].test },
+    { id: 'finish', label: 'In production', test: GROUPS[7].test },
+    { id: 'unassigned', label: 'No staff', test: function (o) { return !isClosed(o) && !o.assignedTo; } },
+    { id: 'done', label: 'Finished', test: isCompleted },
+    { id: 'lost', label: 'Lost', test: function (o) { return isDead(o) && !isCompleted(o); } },
+  ];
+  function filterById(id) { return FILTERS.find(function (f) { return f.id === id; }); }
+
+  function renderAllList() {
+    var f = filterById(activeFilter) || FILTERS[0];
+    var rows = allJobs.filter(function (o) { return f.test(o) && matchesSearch(o); }).sort(sortJobs);
+
+    if (!rows.length) {
+      return '<div class="mm-empty">No jobs under &ldquo;' + U.esc(f.label) + '&rdquo;.</div>';
+    }
+    return '<div class="mm-jlist">' +
+      rows.map(function (o) { return jobCard(o, { showStep: true }); }).join('') +
+      '</div><div class="mm-dash-count">' + rows.length + ' job' + (rows.length === 1 ? '' : 's') + '</div>';
+  }
+
+  function renderFilters() {
+    var el = document.getElementById('mm-dash-filters');
+    if (activeView !== 'all') { el.innerHTML = ''; return; }
+    el.innerHTML = FILTERS.map(function (f) {
+      var n = allJobs.filter(f.test).length;
+      var on = activeFilter === f.id;
+      return '<button type="button" class="mm-filter' + (on ? ' active' : '') + (n ? '' : ' is-empty') + '"' +
+        ' data-filter="' + U.esc(f.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+        U.esc(f.label) + '<span class="mm-filter-count">' + n + '</span></button>';
+    }).join('');
+    el.querySelectorAll('.mm-filter').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activeFilter = btn.getAttribute('data-filter');
+        renderFilters();
+        renderBody();
+      });
+    });
+  }
+
+  // ---- Summary ------------------------------------------------------------
+  //
+  // Four numbers, always the same four, so the header never reshuffles as the
+  // data changes. Only counts that need action are coloured.
+  function renderStats() {
+    var el = document.getElementById('mm-dash-stats');
+    var open = openJobs();
+    var urgent = open.filter(function (o) { return nextStep(o).tone === 'urgent'; }).length;
+    var needAction = open.filter(function (o) {
+      var t = nextStep(o).tone;
+      return t === 'urgent' || t === 'soon';
+    }).length;
+
+    function stat(label, value, tone) {
+      return '<div class="mm-stat mm-stat-' + tone + '">' +
+        '<div class="mm-stat-num">' + value + '</div>' +
+        '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
+    }
+    el.innerHTML =
+      stat('Active jobs', open.length, 'neutral') +
+      stat('Need action', needAction, needAction ? 'warn' : 'good') +
+      stat('Urgent', urgent, urgent ? 'bad' : 'good') +
+      stat('Finished', allJobs.filter(isCompleted).length, 'good');
   }
 
   // ---- Assign staff -------------------------------------------------------
@@ -149,15 +392,12 @@ window.MM = window.MM || {};
 
     api.assignOpportunity(job.id, userId || null)
       .then(function () {
-        // Update the row in place rather than refetching everything. This is
-        // also the correct move regardless: GHL's opportunity search index
-        // lags a few seconds behind a write, so an immediate reload can hand
-        // back the old owner and look like the save failed.
+        // Update in place: GHL's opportunity search index lags a few seconds
+        // behind a write, so an immediate reload can hand back the old owner
+        // and look like the save failed.
         job.assignedTo = userId || null;
         closeAssign();
-        renderStats();
-        renderWorkFilters();
-        renderTable();
+        if (allJobs.length) render();
       })
       .catch(function (e) {
         list.querySelectorAll('.mm-assign-opt').forEach(function (b) { b.disabled = false; });
@@ -165,13 +405,12 @@ window.MM = window.MM || {};
       });
   }
 
-  // ---- Change stage --------------------------------------------------------
+  // ---- Change stage -------------------------------------------------------
 
   var stagingJob = null;
 
   function openStage(o) {
-    // The job screen can open this before the dashboard has ever loaded, so
-    // fetch the pipeline on demand rather than showing an empty list.
+    // The job screen can open this before the dashboard has ever loaded.
     if (!salesPipeline) {
       api.getPipelines().then(function (pipelines) {
         var sales = pipelines.find(function (p) { return p.id === api.SALES_PIPELINE_ID; });
@@ -227,11 +466,13 @@ window.MM = window.MM || {};
       .then(function () {
         job.pipelineStageId = stageId;
         closeStage();
-        if (allJobs.length) render();
-        // The stage move fires GHL workflows that write the status fields a
-        // few seconds later, so pull fresh data once rather than leaving the
-        // row showing statuses that are about to change.
-        if (allJobs.length) setTimeout(loadDashboard, 6000);
+        if (allJobs.length) {
+          render();
+          // The stage move fires GHL workflows that write fields a few
+          // seconds later, so pull fresh data once rather than leaving the
+          // card showing values that are about to change.
+          setTimeout(loadDashboard, 6000);
+        }
       })
       .catch(function (e) {
         list.querySelectorAll('.mm-assign-opt').forEach(function (b) { b.disabled = false; });
@@ -239,526 +480,29 @@ window.MM = window.MM || {};
       });
   }
 
-  function fmtDate(iso) {
-    if (!iso) return '';
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-  // Whole days since the job was created — how long a new lead has been waiting.
-  function daysSince(iso) {
-    if (!iso) return null;
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return null;
-    return Math.floor((Date.now() - d.getTime()) / 86400000);
-  }
-
   // ---- Rendering ----------------------------------------------------------
 
-  // Blank means the workflow never stamped this job — say so plainly rather
-  // than showing an empty cell that looks like a loading bug.
-  function pill(o, key) {
-    var val = statusOf(o, key);
-    var cls;
-    // Revision reads differently from Pending: the customer rejected finished
-    // work, so it is a step backwards rather than work not yet started.
-    if (val === 'Revision') cls = 'revision';
-    else if (isDone(o, key)) cls = 'done';
-    else if (val) cls = 'pending';
-    else cls = 'none';
-    return '<span class="mm-pill mm-pill-' + cls + '">' + U.esc(val || 'Not set') + '</span>';
-  }
+  var VIEW_NOTES = {
+    work: 'Your day, grouped by what needs doing. Tap a section to open it.',
+    all: 'Every job in one list. Use the filters or search to narrow it down.',
+  };
 
-  // Filters are named for what the owner is looking for, not for the field
-  // they happen to read. Each carries a count so a filter that would return
-  // nothing is visibly empty before it is clicked.
-  var WORK_FILTERS = [
-    { id: 'all',        label: 'All jobs',      test: function () { return true; } },
-    { id: 'measure',    label: 'Needs measuring', test: notMeasured },
-    { id: 'revision',   label: 'Needs changes', test: inRevision },
-    { id: 'design',     label: 'Needs design',  test: function (o) { return measuredDate(o) && !designDate(o); } },
-    { id: 'pricing',    label: 'Needs pricing', test: function (o) { return designDate(o) && !pricingDate(o); } },
-    { id: 'unassigned', label: 'No staff',      test: function (o) { return !o.assignedTo; } },
-  ];
-  function workFilter(id) {
-    return WORK_FILTERS.find(function (f) { return f.id === id; });
-  }
-
-  function matchesFilter(o) {
-    if (activeFilter.indexOf('stage:') === 0) {
-      return stageNames[o.pipelineStageId] === activeFilter.slice(6);
-    }
-    var f = workFilter(activeFilter);
-    return f ? f.test(o) : true;
-  }
-
-  // The label for whatever is currently selected, for the "showing…" line.
-  function activeFilterLabel() {
-    if (activeFilter.indexOf('stage:') === 0) return activeFilter.slice(6);
-    var f = workFilter(activeFilter);
-    return f ? f.label : '';
-  }
-  function matchesSearch(o) {
-    if (!searchTerm) return true;
-    return (customerName(o) + ' ' + jobAddress(o) + ' ' + staffName(o)).toLowerCase().indexOf(searchTerm.toLowerCase()) > -1;
-  }
-  function visibleJobs() {
-    if (activeView === 'done') return allJobs.filter(isCompleted).filter(matchesSearch);
-    if (activeView === 'todo') return activeJobs().filter(matchesSearch);
-    var base = activeView === 'new' ? activeJobs().filter(notMeasured) : activeJobs();
-    return base.filter(function (o) {
-      return matchesSearch(o) && (activeView === 'new' || matchesFilter(o));
-    });
-  }
-
-  function renderStats() {
-    var el = document.getElementById('mm-dash-stats');
-    function stat(label, value, tone) {
-      return '<div class="mm-stat mm-stat-' + tone + '">' +
-        '<div class="mm-stat-num">' + value + '</div>' +
-        '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
-    }
-
-    if (activeView === 'done') {
-      var doneJobs = allJobs.filter(isCompleted);
-      var last30 = doneJobs.filter(function (o) {
-        var d = daysSince(completedDate(o));
-        return d !== null && d <= 30;
-      }).length;
-      el.innerHTML =
-        stat('Completed jobs', doneJobs.length, 'good') +
-        stat('In the last 30 days', last30, 'neutral') +
-        stat('Still active', activeJobs().length, 'neutral');
-      return;
-    }
-
-    if (activeView === 'todo') {
-      var act = activeJobs();
-      var counts = TASK_GROUPS.map(function (g) { return act.filter(g.test).length; });
-      var overdueVisits = act.filter(function (o) {
-        if (measuredDate(o) || !apptDate(o)) return false;
-        var d = daysTo(apptDate(o));
-        return d !== null && d < 0;
-      }).length;
-      el.innerHTML =
-        stat('To book', counts[0], counts[0] ? 'warn' : 'good') +
-        stat('To measure', counts[1], counts[1] ? 'warn' : 'good') +
-        stat('To design', counts[2], counts[2] ? 'warn' : 'good') +
-        stat('To price', counts[3], counts[3] ? 'warn' : 'good') +
-        stat('To send', counts[4], counts[4] ? 'good' : 'neutral') +
-        (counts[5] ? stat('Awaiting reply', counts[5], 'neutral') : '') +
-        (counts[6] ? stat('Order cabinets', counts[6], 'warn') : '') +
-        (counts[7] ? stat('In production', counts[7], 'neutral') : '') +
-        (overdueVisits ? stat('Visits overdue', overdueVisits, 'bad') : '');
-      return;
-    }
-
-    if (activeView === 'new') {
-      var queue = allJobs.filter(notMeasured);
-      // "Waiting over a week" is the number worth acting on — a lead sitting
-      // untouched that long is the one at risk of going cold.
-      var noDate = queue.filter(function (o) { return !apptDate(o); }).length;
-      var overdue = queue.filter(function (o) {
-        var d = daysTo(apptDate(o));
-        return d !== null && d < 0;
-      }).length;
-      el.innerHTML =
-        stat('Not measured yet', queue.length, 'warn') +
-        stat('No visit booked', noDate, noDate ? 'bad' : 'good') +
-        stat('Visit date passed', overdue, overdue ? 'bad' : 'good') +
-        stat('Total jobs', allJobs.length, 'neutral');
-      return;
-    }
-
-    var act2 = activeJobs();
-    var needMeasure = act2.filter(notMeasured).length;
-    var revisionCount = act2.filter(inRevision).length;
-    var overdue = act2.filter(function (o) {
-      if (!notMeasured(o)) return false;
-      var d = daysTo(apptDate(o));
-      return d !== null && d < 0;
-    }).length;
-
-    var doneCount = act2.filter(allStepsDone).length;
-    el.innerHTML =
-      stat('Active jobs', act2.length, 'neutral') +
-      stat('Needs measuring', needMeasure, needMeasure ? 'warn' : 'good') +
-      (overdue ? stat('Visit overdue', overdue, 'bad') : '') +
-      (revisionCount ? stat('Needs changes', revisionCount, 'bad') : '') +
-      (doneCount ? stat('Ready to send', doneCount, 'good') : '');
-  }
-
-  function stageCell(o) {
-    return '<div class="mm-dash-c-stage" data-label="Stage">' +
-      '<button type="button" class="mm-stage-btn" data-stage-job="' + U.esc(o.id) + '" ' +
-      'aria-label="Move ' + U.esc(customerName(o)) + ' to another stage">' +
-      '<span class="mm-stage">' + U.esc(stageNames[o.pipelineStageId] || '—') + '</span>' +
-      '<span class="mm-staff-edit" aria-hidden="true">Move</span></button></div>';
-  }
-
-  function nameCell(o) {
-    return '<div class="mm-dash-c-name">' +
-      '<div class="mm-dash-name">' + U.esc(customerName(o)) + '</div>' +
-      '<div class="mm-dash-addr">' + U.esc(jobAddress(o) || 'No address on file') + '</div>' +
-    '</div>';
-  }
-
-  // Rows are clickable: this screen is the home page, so it is also the
-  // fastest way into a job. Exposed as a button for keyboard users.
-  function bindRows(el) {
-    el.querySelectorAll('.mm-stage-btn').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var o = allJobs.find(function (j) { return j.id === btn.getAttribute('data-stage-job'); });
-        if (o) openStage(o);
-      });
-    });
-    el.querySelectorAll('.mm-staff-btn').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();   // the row itself opens the job
-        var o = allJobs.find(function (j) { return j.id === btn.getAttribute('data-assign'); });
-        if (o) openAssign(o);
-      });
-    });
-    el.querySelectorAll('.mm-dash-row[data-job]').forEach(function (row) {
-      function open() {
-        var o = allJobs.find(function (j) { return j.id === row.getAttribute('data-job'); });
-        if (o && onOpenJob) onOpenJob(o);
-      }
-      row.addEventListener('click', open);
-      row.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
-      });
-    });
-  }
-
-  // Days from today to a date string: negative means it has passed.
-  function daysTo(v) {
-    if (!v) return null;
-    var d = new Date(String(v).slice(0, 10) + 'T00:00:00');
-    if (isNaN(d.getTime())) return null;
-    var t = new Date();
-    t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
-    return Math.round((d - t) / 86400000);
-  }
-
-  // The visit column tells the owner the one thing he needs: is a visit
-  // booked, is it due, or has the date passed with nothing recorded?
-  function visitCell(o) {
-    var appt = apptDate(o);
-    if (!appt) {
-      return '<div class="mm-dash-c-when" data-label="Visit">' +
-        '<span class="mm-wait-bad">No date set</span></div>';
-    }
-    var d = daysTo(appt);
-    var cls = '', suffix = '';
-    if (d < 0) { cls = 'mm-wait-bad'; suffix = ' · ' + Math.abs(d) + 'd overdue'; }
-    else if (d === 0) { cls = 'mm-wait-warn'; suffix = ' · today'; }
-    else if (d === 1) { suffix = ' · tomorrow'; }
-    return '<div class="mm-dash-c-when" data-label="Visit"><span class="' + cls + '">' +
-      U.esc(fmtDate(appt)) + U.esc(suffix) + '</span></div>';
-  }
-
-  function renderNewLeadTable(rows) {
-    if (!rows.length) {
-      return '<div class="mm-empty">Every job has been measured.</div>';
-    }
-    var head =
-      '<div class="mm-dash-row mm-dash-new mm-dash-head">' +
-        '<div class="mm-dash-c-name">Customer</div>' +
-        '<div class="mm-dash-c-staff">Staff</div>' +
-        '<div class="mm-dash-c-when">Visit booked</div>' +
-        '<div class="mm-dash-c-when">Lead age</div>' +
-      '</div>';
-    var body = rows.map(function (o) {
-      var days = daysSince(o.createdAt);
-      var waitCls = days >= 7 ? 'mm-wait-bad' : (days >= 3 ? 'mm-wait-warn' : '');
-      var waitTxt = days === null ? '—' : (days === 0 ? 'Today' : days === 1 ? '1 day' : days + ' days');
-      return '<div class="mm-dash-row mm-dash-new" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
-        nameCell(o) +
-        staffCell(o) +
-        visitCell(o) +
-        '<div class="mm-dash-c-when" data-label="Lead age"><span class="' + waitCls + '">' + U.esc(waitTxt) + '</span></div>' +
-      '</div>';
-    }).join('');
-    return '<div class="mm-dash-table">' + head + body + '</div>';
-  }
-
-  // "What is the next thing anyone has to do on this job?" — one answer per
-  // row, so the table can be scanned rather than decoded. The three status
-  // pills only said what state each step was in; this says what to do.
-  function nextAction(o) {
-    if (!measuredDate(o)) {
-      var appt = apptDate(o);
-      if (!appt) return { text: 'Book the visit', tone: 'urgent' };
-      var d = daysTo(appt);
-      if (d < 0) return { text: 'Visit overdue — measure', tone: 'urgent' };
-      if (d === 0) return { text: 'Visit today — measure', tone: 'soon' };
-      return { text: 'Visit ' + fmtDate(appt), tone: 'wait' };
-    }
-    if (inRevision(o)) return { text: 'Customer wants changes', tone: 'urgent' };
-    if (!designDate(o)) return { text: 'Create the design', tone: 'soon' };
-    if (!pricingDate(o)) return { text: 'Work out pricing', tone: 'soon' };
-    if (!sentDate(o)) return { text: 'Send the proposal', tone: 'soon' };
-    if (!isWon(o)) {
-      var w = daysSince(sentDate(o));
-      if (w >= 7) return { text: 'Chase the customer — ' + w + 'd', tone: 'urgent' };
-      return { text: 'Waiting for the customer', tone: 'wait' };
-    }
-    if (!cabinetsDate(o)) return { text: 'Order the cabinets', tone: 'soon' };
-    if (!completedDate(o)) return { text: 'Finish the job', tone: 'soon' };
-    return { text: 'Completed', tone: 'done' };
-  }
-
-  // Compact progress read-out: measured -> design -> pricing -> meeting.
-  function progressDots(o) {
-    var steps = [
-      { on: !!measuredDate(o), label: 'Measured' },
-      { on: !!designDate(o), label: 'Design' },
-      { on: !!pricingDate(o), label: 'Pricing' },
-    ];
-    var doneCount = steps.filter(function (x) { return x.on; }).length;
-    return '<div class="mm-prog" role="img" aria-label="' + doneCount + ' of 3 steps done: ' +
-      U.esc(steps.filter(function (x) { return x.on; }).map(function (x) { return x.label; }).join(', ') || 'none') + '">' +
-      steps.map(function (x) {
-        return '<span class="mm-prog-dot' + (x.on ? ' on' : '') + '" title="' + U.esc(x.label) + '"></span>';
-      }).join('') +
-      '<span class="mm-prog-count">' + doneCount + '/3</span></div>';
-  }
-
-  // ---- To-do view ---------------------------------------------------------
-  //
-  // The same jobs, asked a different question: not "how is this job going"
-  // but "what does the team need to do". Each job appears once, under its
-  // next action, so the list is a day plan rather than a status report.
-  var TASK_GROUPS = [
-    { id: 'book',    title: 'Book a visit',     hint: 'No appointment date set yet',
-      test: function (o) { return !measuredDate(o) && !apptDate(o); } },
-    { id: 'measure', title: 'Go and measure',   hint: 'Visit is booked, measurements not recorded',
-      test: function (o) { return !measuredDate(o) && !!apptDate(o); } },
-    { id: 'design',  title: 'Create the design', hint: 'Measured, design not finished',
-      test: function (o) { return !!measuredDate(o) && !designDate(o); } },
-    { id: 'pricing', title: 'Work out pricing',  hint: 'Design done, pricing not finished',
-      test: function (o) { return !!designDate(o) && !pricingDate(o); } },
-    { id: 'send',    title: 'Send the proposal', hint: 'Everything is ready for the customer',
-      test: function (o) { return !!pricingDate(o) && !sentDate(o); } },
-    { id: 'wait',    title: 'Waiting for the customer', hint: 'Proposal sent, no answer yet',
-      test: function (o) { return !!sentDate(o) && !isWon(o); } },
-    { id: 'cabinets', title: 'Order the cabinets', hint: 'Job won, cabinets not ordered',
-      test: function (o) { return isWon(o) && !cabinetsDate(o); } },
-    { id: 'finish',  title: 'Finish the job', hint: 'Cabinets ordered, job not marked complete',
-      test: function (o) { return !!cabinetsDate(o); } },
-  ];
-
-  // Within a group, the most pressing job first: an overdue visit outranks
-  // one booked for next week, and an older lead outranks a newer one.
-  function taskSort(a, b) {
-    var da = daysTo(apptDate(a)), db = daysTo(apptDate(b));
-    if (da !== null && db !== null && da !== db) return da - db;
-    if (da !== null && db === null) return -1;
-    if (db !== null && da === null) return 1;
-    return new Date(a.createdAt) - new Date(b.createdAt);
-  }
-
-  // An urgent row is one the owner should act on today.
-  function taskUrgency(o, groupId) {
-    if (groupId === 'measure') {
-      var d = daysTo(apptDate(o));
-      if (d < 0) return { cls: 'urgent', text: Math.abs(d) + 'd overdue' };
-      if (d === 0) return { cls: 'soon', text: 'Today' };
-      if (d === 1) return { cls: 'soon', text: 'Tomorrow' };
-      return { cls: '', text: fmtDate(apptDate(o)) };
-    }
-    if (groupId === 'book') {
-      var age = daysSince(o.createdAt);
-      if (age >= 7) return { cls: 'urgent', text: age + 'd old' };
-      if (age >= 3) return { cls: 'soon', text: age + 'd old' };
-      return { cls: '', text: age === 0 ? 'New today' : age + 'd old' };
-    }
-    if (groupId === 'wait') {
-      var w = daysSince(sentDate(o));
-      if (w === null) return { cls: '', text: '' };
-      if (w >= 7) return { cls: 'urgent', text: w + 'd — chase' };
-      if (w >= 3) return { cls: 'soon', text: w + 'd waiting' };
-      return { cls: '', text: w === 0 ? 'Sent today' : w + 'd waiting' };
-    }
-    if (inRevision(o)) return { cls: 'urgent', text: 'Changes wanted' };
-    return { cls: '', text: '' };
-  }
-
-  // Which groups the user has opened. Remembered across refreshes so a
-  // reload does not undo where someone was working.
-  var openGroups = null;
-  function loadOpenGroups() {
-    if (openGroups) return openGroups;
-    try {
-      var raw = localStorage.getItem('mm_open_groups');
-      openGroups = raw ? JSON.parse(raw) : null;
-    } catch (e) { openGroups = null; }
-    // First visit: open the first group that actually has work in it, so the
-    // screen is never a wall of closed bars.
-    if (!openGroups) openGroups = {};
-    return openGroups;
-  }
-  function saveOpenGroups() {
-    try { localStorage.setItem('mm_open_groups', JSON.stringify(openGroups)); } catch (e) { /* private mode */ }
-  }
-
-  function renderTaskView(rows) {
-    var groups = TASK_GROUPS.map(function (g) {
-      return { g: g, jobs: rows.filter(g.test).sort(taskSort) };
-    });
-    var total = groups.reduce(function (n, x) { return n + x.jobs.length; }, 0);
-
-    if (!total) {
-      return '<div class="mm-empty">Nothing to do — every job is up to date.</div>';
-    }
-
-    var open = loadOpenGroups();
-    // Nothing opened yet: open the first group with work so the page opens
-    // showing something useful.
-    if (!Object.keys(open).length) {
-      var first = groups.find(function (x) { return x.jobs.length; });
-      if (first) open[first.g.id] = true;
-    }
-
-    return '<div class="mm-tacc">' + groups.map(function (x) {
-      var isOpen = !!open[x.g.id] && x.jobs.length > 0;
-      var empty = !x.jobs.length;
-      return '<section class="mm-tgroup' + (empty ? ' mm-tgroup-empty' : '') + (isOpen ? ' is-open' : '') + '">' +
-        '<button type="button" class="mm-tgroup-head" data-group="' + U.esc(x.g.id) + '"' +
-          ' aria-expanded="' + (isOpen ? 'true' : 'false') + '"' + (empty ? ' disabled' : '') + '>' +
-          '<span class="mm-tgroup-arrow" aria-hidden="true">&#9656;</span>' +
-          '<span class="mm-tgroup-text">' +
-            '<span class="mm-tgroup-title">' + U.esc(x.g.title) + '</span>' +
-            '<span class="mm-tgroup-hint">' + U.esc(empty ? 'Nothing waiting' : x.g.hint) + '</span>' +
-          '</span>' +
-          '<span class="mm-tgroup-count">' + x.jobs.length + '</span>' +
-        '</button>' +
-        (empty ? '' :
-        '<div class="mm-tlist">' + x.jobs.map(function (o) {
-          var u = taskUrgency(o, x.g.id);
-          return '<button type="button" class="mm-titem" data-job="' + U.esc(o.id) + '">' +
-            '<span class="mm-titem-main">' +
-              '<span class="mm-titem-name">' + U.esc(customerName(o)) + '</span>' +
-              '<span class="mm-titem-addr">' + U.esc(jobAddress(o) || 'No address on file') + '</span>' +
-            '</span>' +
-            '<span class="mm-titem-meta">' +
-              '<span class="mm-titem-staff' + (o.assignedTo ? '' : ' mm-staff-none') + '">' +
-                U.esc(staffName(o) || 'Unassigned') + '</span>' +
-              (u.text ? '<span class="mm-titem-flag mm-titem-' + u.cls + '">' + U.esc(u.text) + '</span>' : '') +
-            '</span>' +
-          '</button>';
-        }).join('') + '</div>') +
-      '</section>';
-    }).join('') + '</div>';
-  }
-
-  function renderCompletedTable(rows) {
-    if (!rows.length) {
-      return '<div class="mm-empty">No completed jobs yet.</div>';
-    }
-    var sorted = rows.slice().sort(function (a, b) {
-      return new Date(completedDate(b)) - new Date(completedDate(a));
-    });
-    var head =
-      '<div class="mm-dash-row mm-dash-new mm-dash-head">' +
-        '<div class="mm-dash-c-name">Customer</div>' +
-        '<div class="mm-dash-c-staff">Staff</div>' +
-        '<div class="mm-dash-c-when">Cabinets ordered</div>' +
-        '<div class="mm-dash-c-when">Completed</div>' +
-      '</div>';
-    var body = sorted.map(function (o) {
-      return '<div class="mm-dash-row mm-dash-new is-complete" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
-        nameCell(o) + staffCell(o) +
-        '<div class="mm-dash-c-when" data-label="Cabinets ordered">' + U.esc(fmtDate(cabinetsDate(o)) || '—') + '</div>' +
-        '<div class="mm-dash-c-when" data-label="Completed">' + U.esc(fmtDate(completedDate(o)) || '—') + '</div>' +
-      '</div>';
-    }).join('');
-    return '<div class="mm-dash-table">' + head + body + '</div>';
-  }
-
-  function renderAllTable(rows) {
-    if (!rows.length) {
-      return '<div class="mm-empty">No jobs match &ldquo;' + U.esc(activeFilterLabel()) + '&rdquo;.</div>';
-    }
-    var head =
-      '<div class="mm-dash-row mm-dash-head">' +
-        '<div class="mm-dash-c-name">Customer</div>' +
-        '<div class="mm-dash-c-staff">Staff</div>' +
-        '<div class="mm-dash-c-stage">Stage</div>' +
-        '<div class="mm-dash-c-next">Next step</div>' +
-        '<div class="mm-dash-c-prog">Progress</div>' +
-      '</div>';
-    var body = rows.map(function (o) {
-      var next = nextAction(o);
-      return '<div class="mm-dash-row' + (allStepsDone(o) ? ' is-complete' : '') + '" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
-        nameCell(o) +
-        staffCell(o) +
-        stageCell(o) +
-        '<div class="mm-dash-c-next" data-label="Next step">' +
-          '<span class="mm-next mm-next-' + next.tone + '">' + U.esc(next.text) + '</span></div>' +
-        '<div class="mm-dash-c-prog" data-label="Progress">' + progressDots(o) + '</div>' +
-      '</div>';
-    }).join('');
-    return '<div class="mm-dash-table">' + head + body + '</div>' +
-      '<div class="mm-prog-legend"><span class="mm-prog-legend-label">Progress steps:</span>' +
-      ['Measured', 'Design', 'Pricing'].map(function (n, i) {
-        return '<span class="mm-prog-legend-item"><span class="mm-prog-dot on"></span>' +
-          (i + 1) + '. ' + U.esc(n) + '</span>';
-      }).join('') + '</div>';
-  }
-
-  function renderTable() {
+  function renderBody() {
     var el = document.getElementById('mm-dash-table');
-    var rows = visibleJobs();
-    // The work filters only mean something against the All Jobs table; the
-    // other two views carry their own structure.
-    document.querySelector('.mm-filter-bar').style.display =
-      (activeView === 'all') ? '' : 'none';
-
-    if (activeView === 'done') {
-      var doneJobs = allJobs.filter(isCompleted);
-      var last30 = doneJobs.filter(function (o) {
-        var d = daysSince(completedDate(o));
-        return d !== null && d <= 30;
-      }).length;
-      el.innerHTML =
-        stat('Completed jobs', doneJobs.length, 'good') +
-        stat('In the last 30 days', last30, 'neutral') +
-        stat('Still active', activeJobs().length, 'neutral');
-      return;
-    }
-
-    if (activeView === 'todo') {
-      el.innerHTML = renderTaskView(rows);
-      bindTaskItems(el);
-      renderActiveFilter(rows.length, allJobs.length);
-      return;
-    }
-
-    var act = activeJobs();
-    var total = activeView === 'done' ? allJobs.filter(isCompleted).length
-              : activeView === 'new' ? act.filter(notMeasured).length : act.length;
-    var tableHtml = activeView === 'done' ? renderCompletedTable(rows)
-                  : activeView === 'new' ? renderNewLeadTable(rows) : renderAllTable(rows);
-
-    el.innerHTML = tableHtml +
-      (rows.length ? '<div class="mm-dash-count">Showing ' + rows.length + ' of ' + total + ' jobs</div>' : '');
-    bindRows(el);
-    renderActiveFilter(rows.length, total);
+    el.innerHTML = activeView === 'work' ? renderWorkList() : renderAllList();
+    bindBody(el);
   }
 
-  function bindTaskItems(el) {
-    el.querySelectorAll('.mm-tgroup-head[data-group]').forEach(function (btn) {
+  function bindBody(el) {
+    el.querySelectorAll('.mm-agroup-head[data-group]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var id = btn.getAttribute('data-group');
         openGroups[id] = !openGroups[id];
         saveOpenGroups();
-        renderTable();
+        renderBody();
       });
     });
-    el.querySelectorAll('.mm-titem[data-job]').forEach(function (btn) {
+    el.querySelectorAll('.mm-jcard[data-job]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var o = allJobs.find(function (j) { return j.id === btn.getAttribute('data-job'); });
         if (o && onOpenJob) onOpenJob(o);
@@ -766,21 +510,12 @@ window.MM = window.MM || {};
     });
   }
 
-  var VIEW_NOTES = {
-    todo: 'Your work list. Open a section to see the jobs waiting at that step.',
-    all: 'Every job that is still running, with its next step and how far it has got.',
-    new: 'Jobs nobody has been out to measure yet.',
-    done: 'Jobs marked complete. These are kept as a record and do not show anywhere else.',
-  };
-
-  function renderNote() {
-    document.getElementById('mm-dash-view-note').textContent = VIEW_NOTES[activeView] || '';
-  }
-
   function render() {
-    renderNote(); renderStats();
-    renderWorkFilters(); renderStageFilters();
-    renderTable();
+    document.getElementById('mm-dash-view-note').textContent = VIEW_NOTES[activeView] || '';
+    document.getElementById('mm-filter-wrap').style.display = activeView === 'all' ? '' : 'none';
+    renderStats();
+    renderFilters();
+    renderBody();
   }
 
   // ---- Loading ------------------------------------------------------------
@@ -789,17 +524,22 @@ window.MM = window.MM || {};
     var tableEl = document.getElementById('mm-dash-table');
     var statsEl = document.getElementById('mm-dash-stats');
     statsEl.innerHTML = '';
-    tableEl.innerHTML = '<div class="mm-empty">Loading dashboard...</div>';
+    tableEl.innerHTML = '<div class="mm-empty">Loading...</div>';
 
     Promise.all([
       api.fetchAllOpportunities(),
       api.getPipelines(),
-      // Staff names are a nice-to-have: if the token lacks users.readonly the
-      // rest of the dashboard should still render.
+      // Staff names are a nice-to-have: without the users scope the rest of
+      // the dashboard should still render.
       api.getUsers().catch(function () { return []; }),
     ])
       .then(function (res) {
         var ops = res[0], pipelines = res[1], users = res[2];
+
+        var sales = pipelines.find(function (p) { return p.id === api.SALES_PIPELINE_ID; });
+        salesPipeline = sales;
+        stageNames = {};
+        if (sales) (sales.stages || []).forEach(function (st) { stageNames[st.id] = st.name; });
 
         userNames = {};
         users.forEach(function (u) {
@@ -807,21 +547,11 @@ window.MM = window.MM || {};
           if (u.id) userNames[u.id] = nm || u.email || 'Unknown user';
         });
 
-        var sales = pipelines.find(function (p) { return p.id === api.SALES_PIPELINE_ID; });
-        salesPipeline = sales;
-        stageNames = {};
-        newLeadStageId = null;
-        if (sales) (sales.stages || []).forEach(function (s) {
-          stageNames[s.id] = s.name;
-          if (String(s.name).toLowerCase() === 'new lead') newLeadStageId = s.id;
-        });
-
         allJobs = ops.filter(function (o) { return o.pipelineId === api.SALES_PIPELINE_ID; });
-
 
         if (!allJobs.length) {
           statsEl.innerHTML = '';
-          tableEl.innerHTML = '<div class="mm-empty">No jobs yet. Import contacts or add one in GHL to get started.</div>';
+          tableEl.innerHTML = '<div class="mm-empty">No jobs yet.</div>';
           return;
         }
         render();
@@ -830,70 +560,6 @@ window.MM = window.MM || {};
         statsEl.innerHTML = '';
         tableEl.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
       });
-  }
-
-  function filterBtn(id, label, count, isZero) {
-    return '<button class="mm-filter' + (activeFilter === id ? ' active' : '') + (isZero ? ' is-empty' : '') + '"' +
-      ' data-filter="' + U.esc(id) + '" aria-pressed="' + (activeFilter === id ? 'true' : 'false') + '">' +
-      U.esc(label) + '<span class="mm-filter-count">' + count + '</span></button>';
-  }
-
-  function renderWorkFilters() {
-    var el = document.getElementById('mm-dash-filters');
-    el.innerHTML = WORK_FILTERS.map(function (f) {
-      var n = activeJobs().filter(f.test).length;
-      return filterBtn(f.id, f.label, n, n === 0 && f.id !== 'all');
-    }).join('');
-    el.querySelectorAll('.mm-filter').forEach(bindFilterButton);
-  }
-
-  // Stage buttons are generated from the live pipeline rather than hard-coded,
-  // so renaming or reordering a stage in GHL cannot leave a stale filter here.
-  // Only stages that currently hold jobs get a button.
-  function renderStageFilters() {
-    var el = document.getElementById('mm-dash-stage-filters');
-    var group = document.getElementById('mm-stage-group');
-    var counts = {};
-    activeJobs().forEach(function (o) {
-      var n = stageNames[o.pipelineStageId];
-      if (n) counts[n] = (counts[n] || 0) + 1;
-    });
-    var stages = (salesPipeline && salesPipeline.stages ? salesPipeline.stages : [])
-      .filter(function (st) { return counts[st.name]; });
-    group.style.display = stages.length ? '' : 'none';
-    el.innerHTML = stages.map(function (st) {
-      return filterBtn('stage:' + st.name, st.name, counts[st.name], false);
-    }).join('');
-    el.querySelectorAll('.mm-filter').forEach(bindFilterButton);
-  }
-
-  // One plain sentence naming what is on screen, so the selection is never
-  // ambiguous — the highlighted button alone is easy to miss.
-  function renderActiveFilter(shown, total) {
-    var el = document.getElementById('mm-dash-active-filter');
-    if (activeView !== 'all' || activeFilter === 'all') {
-      el.innerHTML = '';
-      return;
-    }
-    el.innerHTML = '<span class="mm-active-filter-text">Showing <strong>' + shown +
-      '</strong> of ' + total + ' jobs — ' + U.esc(activeFilterLabel()) + '</span>' +
-      '<button class="mm-clear-filter" type="button">Clear filter</button>';
-    el.querySelector('.mm-clear-filter').addEventListener('click', function () {
-      activeFilter = 'all';
-      renderWorkFilters(); renderStageFilters(); renderTable();
-    });
-  }
-
-  function bindFilterButton(btn) {
-    btn.addEventListener('click', function () {
-      var id = btn.getAttribute('data-filter');
-      // Clicking the selected filter again clears it — the quickest way back
-      // to the full list without hunting for "All jobs".
-      activeFilter = (activeFilter === id && id !== 'all') ? 'all' : id;
-      renderWorkFilters();
-      renderStageFilters();
-      renderTable();
-    });
   }
 
   function setView(view) {
@@ -908,18 +574,19 @@ window.MM = window.MM || {};
 
   function initDashboard(openJobFn) {
     onOpenJob = openJobFn;
-    renderNote();
 
     document.querySelectorAll('#mm-dash-views .mm-view-tab').forEach(function (btn) {
       btn.addEventListener('click', function () { setView(btn.getAttribute('data-view')); });
     });
 
-
     var searchEl = document.getElementById('mm-dash-search');
     var timer = null;
     searchEl.addEventListener('input', function () {
       clearTimeout(timer);
-      timer = setTimeout(function () { searchTerm = searchEl.value.trim(); renderTable(); }, 200);
+      timer = setTimeout(function () {
+        searchTerm = searchEl.value.trim();
+        if (allJobs.length) render();
+      }, 200);
     });
 
     document.getElementById('mm-dash-refresh').addEventListener('click', loadDashboard);
@@ -930,7 +597,7 @@ window.MM = window.MM || {};
     });
     document.getElementById('mm-assign-cancel').addEventListener('click', closeAssign);
     document.getElementById('mm-modal-assign').addEventListener('click', function (e) {
-      if (e.target === this) closeAssign();   // click the backdrop to dismiss
+      if (e.target === this) closeAssign();
     });
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
@@ -941,6 +608,7 @@ window.MM = window.MM || {};
 
   window.MM.dashboard = {
     loadDashboard: loadDashboard, initDashboard: initDashboard,
-    openStage: openStage, stageNameFor: function (o) { return stageNames[o.pipelineStageId] || ''; },
+    openStage: openStage, openAssign: openAssign,
+    stageNameFor: function (o) { return stageNames[o.pipelineStageId] || ''; },
   };
 })();

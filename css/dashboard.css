@@ -1,0 +1,243 @@
+/* ==========================================================================
+   DASHBOARD
+   Two views over the same jobs, sharing one job-card design so switching
+   tabs never looks like switching apps. Built for a non-technical owner on
+   a phone: large tap targets, one idea per line, and colour used only where
+   it means "act on this".
+   ========================================================================== */
+
+/* A border colour that clears 3:1 against the page background, for controls
+   sitting on --bg rather than inside a card. --border is tuned for dividers
+   inside cards and is too faint out here. */
+:root, :root[data-theme="dark"]{ --control-border:#7d99b5; }
+:root[data-theme="light"]{ --control-border:#6b7c8f; }
+
+/* ---- Summary tiles ---- */
+.mm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+          gap:10px;margin-bottom:18px}
+.mm-stat{background:var(--card);border:1px solid var(--border);border-left-width:4px;
+         border-radius:12px;padding:14px 16px;box-shadow:var(--card-shadow)}
+.mm-stat-num{font-size:1.9em;font-weight:800;line-height:1.1;color:var(--text);
+             font-variant-numeric:tabular-nums}
+.mm-stat-label{font-size:.82em;color:var(--text2);margin-top:2px}
+.mm-stat-neutral{border-left-color:var(--accent)}
+.mm-stat-warn{border-left-color:#e8a33d}
+.mm-stat-bad{border-left-color:var(--danger-text)}
+.mm-stat-good{border-left-color:var(--success)}
+
+/* ---- View tabs ----
+   Both tabs carry a surface at rest: a transparent inactive tab disappears
+   into the page and the control stops reading as clickable. */
+.mm-views{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.mm-view-tab{background:var(--card);color:var(--text);
+             border:2px solid var(--control-border);border-radius:10px;
+             padding:12px 26px;font-size:.95em;font-weight:700;cursor:pointer;
+             font-family:inherit;min-height:48px;white-space:nowrap;
+             box-shadow:var(--card-shadow)}
+.mm-view-tab:hover{border-color:var(--accent);color:var(--accent)}
+.mm-view-tab.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.mm-view-tab.active:hover{color:var(--bg)}
+.mm-view-tab:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.mm-view-note{color:var(--text2);font-size:.88em;margin:0 0 16px;max-width:62ch}
+
+/* ---- Filters (All jobs view only) ---- */
+.mm-filter-wrap{background:var(--card);border:1px solid var(--border);
+                border-radius:12px;padding:14px;margin-bottom:16px}
+.mm-filters{display:flex;flex-wrap:wrap;gap:8px}
+.mm-filter{display:inline-flex;align-items:center;gap:8px;
+           background:var(--card2);color:var(--text);
+           border:2px solid var(--control-border);border-radius:999px;
+           padding:9px 16px;font-size:.86em;font-weight:600;
+           cursor:pointer;min-height:44px;font-family:inherit}
+.mm-filter:hover{color:var(--accent);border-color:var(--accent)}
+.mm-filter.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.mm-filter:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+/* A filter matching nothing stays clickable but recedes, so an empty result
+   is visible before it is clicked. */
+.mm-filter.is-empty{opacity:.45}
+.mm-filter.is-empty:hover{opacity:1}
+.mm-filter-count{display:inline-flex;align-items:center;justify-content:center;
+                 min-width:22px;height:22px;padding:0 7px;border-radius:999px;
+                 background:var(--card);color:var(--text2);
+                 font-size:.78em;font-weight:700;font-variant-numeric:tabular-nums}
+.mm-filter.active .mm-filter-count{background:var(--bg);color:var(--accent)}
+
+/* ---- Accordion groups (Work list) ----
+   All closed by default: the whole sequence of work fits on one screen, and
+   the user opens the step being worked on. An empty group is disabled rather
+   than hidden, so the order of the process stays readable. */
+.mm-acclist{display:flex;flex-direction:column;gap:10px}
+.mm-agroup{background:var(--card);border:1px solid var(--border);
+           border-radius:12px;overflow:hidden;box-shadow:var(--card-shadow)}
+.mm-agroup.is-open{border-color:var(--accent)}
+.mm-agroup.is-closedgroup{opacity:.85}
+
+.mm-agroup-head{display:flex;align-items:center;gap:14px;width:100%;
+                background:transparent;border:none;cursor:pointer;
+                padding:16px 18px;font-family:inherit;text-align:left;min-height:66px}
+.mm-agroup-head:hover:not(:disabled){background:var(--card2)}
+.mm-agroup-head:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.mm-agroup-head:disabled{cursor:default;opacity:.5}
+
+.mm-agroup-arrow{color:var(--accent);font-size:1.3em;flex:0 0 auto;line-height:1;
+                 transition:transform .15s ease}
+.mm-agroup.is-open .mm-agroup-arrow{transform:rotate(180deg)}
+.mm-agroup-head:disabled .mm-agroup-arrow{visibility:hidden}
+
+.mm-agroup-text{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-width:0}
+.mm-agroup-title{font-size:1.02em;font-weight:800;color:var(--text)}
+.mm-agroup-hint{font-size:.8em;color:var(--text2)}
+.mm-agroup-count{display:inline-flex;align-items:center;justify-content:center;
+                 min-width:36px;height:36px;padding:0 11px;border-radius:999px;
+                 background:var(--accent);color:var(--bg);flex:0 0 auto;
+                 font-size:.95em;font-weight:800;font-variant-numeric:tabular-nums}
+.mm-agroup.is-empty .mm-agroup-count{background:var(--card2);color:var(--text2)}
+
+/* The body only exists in the DOM when open, so there is no hidden content
+   for screen readers or browser find to stumble into. */
+.mm-agroup-body{display:none;flex-direction:column;gap:8px;padding:0 14px 14px}
+.mm-agroup.is-open .mm-agroup-body{display:flex}
+
+/* ---- The job card — one design, used by both views ---- */
+.mm-jlist{display:flex;flex-direction:column;gap:8px}
+.mm-jcard{display:flex;align-items:center;gap:14px;width:100%;
+          text-align:left;font-family:inherit;font-size:1em;
+          background:var(--card2);border:1px solid var(--border);
+          border-left:4px solid var(--accent);border-radius:10px;
+          padding:14px 16px;cursor:pointer;min-height:66px}
+.mm-jlist .mm-jcard{background:var(--card);box-shadow:var(--card-shadow)}
+.mm-jcard:hover{border-color:var(--accent)}
+.mm-jcard:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-jcard.is-closed{border-left-color:var(--success);opacity:.75}
+
+.mm-jcard-main{display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0}
+.mm-jcard-name{font-weight:700;color:var(--text);line-height:1.3}
+.mm-jcard-addr{font-size:.82em;color:var(--text2);overflow-wrap:anywhere}
+
+/* Progress as a bar rather than dots: it reads as "how far along" at a
+   glance without the viewer having to count anything. */
+.mm-jbar{display:block;height:5px;border-radius:999px;background:var(--border);
+         margin-top:6px;max-width:230px;overflow:hidden}
+.mm-jbar-fill{display:block;height:100%;background:var(--success);border-radius:999px}
+
+.mm-jcard-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px;
+               flex:0 0 auto;text-align:right}
+.mm-jcard-staff{font-size:.8em;color:var(--text2);font-weight:600}
+.mm-staff-none{color:var(--danger-text);font-weight:700}
+.mm-jcard-arrow{color:var(--text2);font-size:1.3em;flex:0 0 auto;line-height:1}
+
+/* Next step and flags — colour means "how soon", nothing else. */
+.mm-next{font-size:.84em;font-weight:700;line-height:1.3;white-space:nowrap}
+.mm-next-urgent{color:var(--danger-text)}
+.mm-next-soon{color:#e8a33d}
+.mm-next-wait{color:var(--text2);font-weight:600}
+.mm-next-done{color:var(--success)}
+
+.mm-jflag{font-size:.75em;font-weight:700;border-radius:999px;padding:3px 10px;
+          background:var(--card);color:var(--text2);white-space:nowrap}
+.mm-jflag-urgent{background:color-mix(in srgb,var(--danger-text) 20%,transparent);
+                 color:var(--danger-text)}
+.mm-jflag-soon{background:color-mix(in srgb,#e8a33d 20%,transparent);color:#e8a33d}
+.mm-jflag-done{background:color-mix(in srgb,var(--success) 18%,transparent);
+               color:var(--success)}
+
+.mm-dash-count{text-align:center;color:var(--empty);font-size:.85em;padding:14px 0 4px}
+
+/* ---- Assign / stage modals ---- */
+.mm-modal-narrow{max-width:460px}
+.mm-assign-job{color:var(--text2);font-size:.9em;margin-bottom:16px}
+.mm-assign-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.mm-assign-opt{display:flex;align-items:center;justify-content:space-between;gap:12px;
+               background:var(--card2);color:var(--text);
+               border:2px solid var(--control-border);border-radius:10px;
+               padding:14px 16px;font-size:.95em;font-weight:600;
+               cursor:pointer;font-family:inherit;min-height:52px;text-align:left}
+.mm-assign-opt:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.mm-assign-opt:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-assign-opt:disabled{opacity:.5;cursor:wait}
+.mm-assign-opt.is-current{border-color:var(--accent);
+                          background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.mm-assign-tick{color:var(--accent);font-weight:800}
+.mm-assign-error{color:var(--danger-text);font-size:.86em;margin-bottom:12px}
+.mm-assign-error:empty{display:none}
+.mm-stage-note{color:var(--text2);font-size:.82em;margin-bottom:12px}
+
+/* ---- Job progress panel (on the job screen) ---- */
+.mm-steps-card{padding:18px 20px}
+.mm-steps-head{display:flex;align-items:center;justify-content:space-between;
+               gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.mm-steps-title{font-size:1.05em;font-weight:800;color:var(--text)}
+.mm-steps-badge{font-size:.78em;font-weight:700;border-radius:999px;
+                padding:6px 14px;border:1px solid transparent;white-space:nowrap}
+.mm-steps-badge-todo{background:color-mix(in srgb,#e8a33d 18%,transparent);
+                     color:#e8a33d;border-color:#e8a33d}
+.mm-steps-badge-done{background:color-mix(in srgb,var(--success) 20%,transparent);
+                     color:var(--success);border-color:var(--success)}
+
+.mm-steps{display:flex;flex-direction:column}
+.mm-step{display:grid;grid-template-columns:34px 1fr;gap:14px;
+         padding-bottom:20px;position:relative}
+.mm-step:last-child{padding-bottom:0}
+/* The connector runs marker to marker, drawing the sequence itself. */
+.mm-step:not(:last-child)::before{content:'';position:absolute;
+         left:17px;top:34px;bottom:6px;width:2px;background:var(--divider)}
+.mm-step-done:not(:last-child)::before{background:var(--success)}
+
+.mm-step-mark{width:34px;height:34px;border-radius:50%;
+              display:flex;align-items:center;justify-content:center;
+              font-weight:800;font-size:.9em;border:2px solid var(--control-border);
+              background:var(--card2);color:var(--text2);z-index:1}
+.mm-step-done .mm-step-mark{background:var(--success);border-color:var(--success);color:#04220f}
+.mm-step-active .mm-step-mark{border-color:var(--accent);color:var(--accent);
+                              background:color-mix(in srgb,var(--accent) 15%,transparent)}
+
+.mm-step-body{min-width:0;padding-top:4px}
+.mm-step-label{font-weight:700;color:var(--text);margin-bottom:6px}
+.mm-step-waiting .mm-step-label{color:var(--text2)}
+.mm-step-value{color:var(--success);font-weight:600}
+.mm-step-waiting{color:var(--empty);font-size:.88em}
+.mm-step-note{font-size:.82em;color:var(--text2);margin-top:6px}
+.mm-step-soon{color:var(--accent);font-weight:700}
+.mm-step-late{color:var(--danger-text);font-weight:700}
+.mm-step-action{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.mm-step-date{width:auto;min-width:170px;flex:0 1 auto}
+.mm-step-error{color:var(--danger-text);font-size:.86em;margin-top:12px}
+.mm-step-error:empty{display:none}
+.mm-step-final{margin-top:16px;padding:12px 14px;border-radius:10px;
+               background:color-mix(in srgb,var(--success) 12%,transparent);
+               border:1px solid var(--success);color:var(--text);font-size:.88em}
+
+/* ---- Stage / staff controls on the job screen ---- */
+.mm-staff-btn,.mm-stage-btn{display:flex;align-items:center;gap:10px;width:100%;
+              background:transparent;border:1px solid transparent;border-radius:8px;
+              padding:7px 10px;margin:-7px -10px;cursor:pointer;
+              font-family:inherit;font-size:1em;text-align:left;min-height:44px}
+.mm-staff-btn:hover,.mm-stage-btn:hover{background:var(--card2);border-color:var(--control-border)}
+.mm-staff-btn:focus-visible,.mm-stage-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-staff-edit{margin-left:auto;font-size:.74em;font-weight:700;color:var(--accent);
+               text-transform:uppercase;letter-spacing:.05em}
+.mm-stage{display:inline-block;font-size:.8em;color:var(--text2);
+          background:var(--card2);border:1px solid var(--border);
+          border-radius:6px;padding:3px 8px}
+
+/* ---- Phone ---- */
+@media (max-width: 620px){
+  .mm-stats{grid-template-columns:1fr 1fr;gap:8px}
+  .mm-stat{padding:12px 14px}
+  .mm-stat-num{font-size:1.6em}
+  .mm-views{width:100%}
+  .mm-view-tab{flex:1 1 0;padding:12px 14px;text-align:center}
+  .mm-agroup-head{padding:14px;gap:10px;min-height:60px}
+  .mm-agroup-count{min-width:32px;height:32px}
+  /* The card stacks so the name always gets a full line, and the status
+     lands underneath rather than being squeezed against it. */
+  .mm-jcard{flex-wrap:wrap;padding:14px}
+  .mm-jcard-side{align-items:flex-start;text-align:left;flex-direction:row;
+                 flex-wrap:wrap;gap:10px;width:100%;
+                 padding-top:8px;border-top:1px solid var(--border)}
+  .mm-jcard-arrow{display:none}
+  .mm-jbar{max-width:none}
+  .mm-step-action{flex-direction:column;align-items:stretch}
+  .mm-step-date{width:100%;min-width:0}
+  .mm-step-action .mm-btn-sm{width:100%}
+}
