@@ -399,13 +399,19 @@ window.MM = window.MM || {};
         el.querySelectorAll('[data-list]').forEach(function (b) {
           b.addEventListener('click', function () {
             el.querySelectorAll('.mm-assign-opt').forEach(function (x) { x.disabled = true; });
-            b.textContent = 'Adding...';
+            b.innerHTML = '<span>Adding&hellip;</span>';
+            var label = b.innerHTML;
             applyList(b.getAttribute('data-list'))
               .then(closeListPicker)
               .catch(function (e) {
+                // Re-enable the buttons in place. Re-opening the picker here
+                // would re-render it and wipe the error message that has just
+                // been set, which is how a real failure ended up looking like
+                // the dialog simply refreshing itself.
                 el.querySelectorAll('.mm-assign-opt').forEach(function (x) { x.disabled = false; });
-                document.getElementById('mm-pick-error').textContent = e.message;
-                openListPicker();
+                b.innerHTML = label;
+                document.getElementById('mm-pick-error').textContent =
+                  'Could not add the list: ' + e.message;
               });
           });
         });
