@@ -3,7 +3,7 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists, ACT = window.MM.activity, MY = window.MM.mytasks;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists, ACT = window.MM.activity, MY = window.MM.mytasks, ACCESS = window.MM.jobaccess;
 
   var job = null, room = null, editRoom = null, contactSearchTimer = null;
 
@@ -76,7 +76,10 @@
 
   // ===== JOB =====
   function pickJob(o) {
-    if (!window.MM.auth.isAdmin()) return;   // workers stay on their task list
+    // A worker may open a job they are on — that is how measuring happens —
+    // but nothing else. The check is here as well as in the lists, so a stale
+    // reference cannot open a job they were removed from.
+    if (!ACCESS.canOpen(o.id)) return;
     job = o;
     document.getElementById('mm-job-title').textContent = customerName(o);
     showScreen('job');
@@ -97,6 +100,7 @@
 
     STEPS.render(o);
     TASKS.showForJob(o);
+    ACCESS.showForJob(o);
     ACT.showForJob(o);
 
     loadRooms();
@@ -228,8 +232,9 @@
 
   // ===== NAV =====
   document.getElementById('mm-back-to-jobs').addEventListener('click', function () {
-    showScreen('dashboard');
-    setActiveNavLink('dashboard');
+    var home = window.MM.auth.isAdmin() ? 'dashboard' : 'mytasks';
+    showScreen(home);
+    setActiveNavLink(home);
   });
   document.getElementById('mm-back-to-job').addEventListener('click', function () { showScreen('job'); });
   document.getElementById('mm-back-to-contacts').addEventListener('click', function () { showScreen('contacts'); });
@@ -479,6 +484,7 @@
   TASKS.init();
   TLISTS.init();
   ACT.initPage();
+  MY.onOpenJob(pickJob);
 
   window.MM.auth.init(function () {
     var admin = window.MM.auth.isAdmin();
@@ -505,7 +511,7 @@
     } else {
       setActiveNavLink('mytasks');
       showScreen('mytasks');
-      MY.load();
+      MY.load();   // loads job access as part of its own fetch
     }
   });
 })();

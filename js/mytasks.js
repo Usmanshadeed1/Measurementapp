@@ -47,19 +47,73 @@ window.MM = window.MM || {};
     { id: 'done',  title: 'Finished', test: function (t) { return !!t.done_at; } },
   ];
 
+  var myJobs = [];
+
   function load() {
     var el = document.getElementById('mm-my-body');
-    el.innerHTML = '<div class="mm-empty">Loading your tasks...</div>';
+    el.innerHTML = '<div class="mm-empty">Loading...</div>';
     var me = auth.user();
     if (!me) return Promise.resolve();
 
-    return TASKS.loadMyTasks(me.id)
-      .then(function (r) {
-        rows = r || [];
+    return Promise.all([
+      TASKS.loadMyTasks(me.id),
+      window.MM.jobaccess.loadMine().then(loadJobsForWorker),
+    ])
+      .then(function (res) {
+        rows = res[0] || [];
+        myJobs = res[1] || [];
         render();
+        renderJobs();
       })
       .catch(function (e) { el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>'; });
   }
+
+  // The jobs themselves come from GHL, filtered to the ones this worker is
+  // allowed to open.
+  function loadJobsForWorker() {
+    if (!window.MM.jobaccess.count()) return Promise.resolve([]);
+    return window.MM.api.fetchAllOpportunities()
+      .then(function (ops) {
+        return window.MM.jobaccess.mineOnly(
+          ops.filter(function (o) { return o.pipelineId === window.MM.api.SALES_PIPELINE_ID; }));
+      })
+      .catch(function () { return []; });
+  }
+
+  function renderJobs() {
+    var el = document.getElementById('mm-my-jobs');
+    if (!el) return;
+    if (!myJobs.length) { el.innerHTML = ''; return; }
+
+    el.innerHTML =
+      '<section class="mm-mygroup">' +
+        '<div class="mm-mygroup-head">' +
+          '<h3 class="mm-mygroup-title">My jobs</h3>' +
+          '<span class="mm-mygroup-count">' + myJobs.length + '</span>' +
+        '</div>' +
+        '<p class="mm-crew-note">Open a job to take measurements or record a date.</p>' +
+        myJobs.map(function (o) {
+          var name = (o.contact && o.contact.name) || o.name || 'Job';
+          var addr = window.MM.api.oppField(o, window.MM.api.ADDR_FIELD_ID) || '';
+          return '<button type="button" class="mm-myjob" data-job="' + U.esc(o.id) + '">' +
+            '<span class="mm-myjob-main">' +
+              '<span class="mm-myjob-name">' + U.esc(name) + '</span>' +
+              '<span class="mm-myjob-addr">' + U.esc(addr || 'No address on file') + '</span>' +
+            '</span>' +
+            '<span class="mm-jcard-arrow" aria-hidden="true">&#8250;</span>' +
+          '</button>';
+        }).join('') +
+      '</section>';
+
+    el.querySelectorAll('[data-job]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var o = myJobs.find(function (j) { return j.id === b.getAttribute('data-job'); });
+        if (o && onOpenJob) onOpenJob(o);
+      });
+    });
+  }
+
+  var onOpenJob = null;
 
   function render() {
     var el = document.getElementById('mm-my-body');
@@ -177,5 +231,8 @@ window.MM = window.MM || {};
     });
   }
 
-  window.MM.mytasks = { load: load };
+  window.MM.mytasks = {
+    load: load,
+    onOpenJob: function (fn) { onOpenJob = fn; },
+  };
 })();
