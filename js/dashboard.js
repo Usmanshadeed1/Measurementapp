@@ -92,83 +92,50 @@ window.MM = window.MM || {};
   //
   // Every job belongs to exactly one group. The order is the order the work
   // actually happens, so the page reads top-to-bottom like the process does.
-  var GROUPS = [
-    { id: 'book', title: 'Book a visit', hint: 'No appointment date set yet',
-      test: function (o) { return !measuredDate(o) && !apptDate(o); } },
-    { id: 'measure', title: 'Go and measure', hint: 'Visit booked, measurements not recorded',
-      test: function (o) { return !measuredDate(o) && !!apptDate(o); } },
-    { id: 'design', title: 'Create the design', hint: 'Measured, design not finished',
-      test: function (o) { return !!measuredDate(o) && !designDate(o); } },
-    { id: 'pricing', title: 'Work out the pricing', hint: 'Design done, pricing not finished',
-      test: function (o) { return !!designDate(o) && !pricingDate(o); } },
-    { id: 'send', title: 'Send the proposal', hint: 'Ready to go to the customer',
-      test: function (o) { return !!pricingDate(o) && !sentDate(o); } },
-    { id: 'wait', title: 'Waiting for the customer', hint: 'Proposal sent, no answer yet',
-      test: function (o) { return !!sentDate(o) && !isWon(o); } },
-    { id: 'cabinets', title: 'Order the cabinets', hint: 'Job won, cabinets not ordered',
-      test: function (o) { return isWon(o) && !cabinetsDate(o); } },
-    { id: 'finish', title: 'Finish the job', hint: 'Cabinets ordered, work in progress',
-      test: function (o) { return !!cabinetsDate(o); } },
-  ];
-  // Closed jobs get their own groups, so "which ones are finished?" is
-  // answered in the same place as everything else.
-  var CLOSED_GROUPS = [
-    { id: 'done', title: 'Finished jobs', hint: 'Completed — no more work needed',
-      test: isCompleted, closed: true },
-    { id: 'lost', title: 'Lost jobs', hint: 'Marked as a dead lead',
-      test: function (o) { return isDead(o) && !isCompleted(o); }, closed: true },
-  ];
-  var ALL_GROUPS = GROUPS.concat(CLOSED_GROUPS);
-
-  // A short label for the job's state, shown on the All jobs list.
-  function nextStep(o) {
-    if (isCompleted(o)) return { text: 'Finished', tone: 'done' };
-    if (isDead(o)) return { text: 'Lost', tone: 'wait' };
-    if (!measuredDate(o)) {
-      var appt = apptDate(o);
-      if (!appt) return { text: 'Book a visit', tone: 'urgent' };
-      var dd = daysTo(appt);
-      if (dd < 0) return { text: 'Visit overdue', tone: 'urgent' };
-      if (dd === 0) return { text: 'Visit today', tone: 'soon' };
-      return { text: 'Visit ' + fmtDate(appt), tone: 'wait' };
-    }
-    if (!designDate(o)) return { text: 'Create the design', tone: 'soon' };
-    if (!pricingDate(o)) return { text: 'Work out pricing', tone: 'soon' };
-    if (!sentDate(o)) return { text: 'Send the proposal', tone: 'soon' };
-    if (!isWon(o)) {
-      var w = daysSince(sentDate(o));
-      if (w >= 7) return { text: 'Chase customer (' + w + 'd)', tone: 'urgent' };
-      return { text: 'Waiting for customer', tone: 'wait' };
-    }
-    if (!cabinetsDate(o)) return { text: 'Order the cabinets', tone: 'soon' };
-    return { text: 'Finish the job', tone: 'soon' };
+  // Groups come from the pipeline itself rather than a list in the code:
+  // the owner thinks in his own stage names, and adding or renaming a stage
+  // in GoHighLevel should not need a deploy here.
+  //
+  // The date warnings survive the change — a job sitting in "New Lead" with
+  // no visit booked still says so, because the stage alone does not tell you
+  // whether anything is slipping.
+  function stageGroups() {
+    var stages = (salesPipeline && salesPipeline.stages) || [];
+    return stages.map(function (st) {
+      return {
+        id: 'stage:' + st.id,
+        stageId: st.id,
+        title: st.name,
+        test: function (o) { return o.pipelineStageId === st.id; },
+      };
+    });
   }
 
-  // The fact worth showing beside a job in its group — the thing that
-  // explains why it is sitting there and whether it is slipping.
-  function groupFlag(o, groupId) {
-    if (groupId === 'measure') {
-      var dd = daysTo(apptDate(o));
-      if (dd < 0) return { cls: 'urgent', text: Math.abs(dd) + 'd overdue' };
-      if (dd === 0) return { cls: 'soon', text: 'Today' };
-      if (dd === 1) return { cls: 'soon', text: 'Tomorrow' };
-      return { cls: '', text: fmtDate(apptDate(o)) };
+  // What is outstanding on this job right now. Independent of the stage, so
+  // a job parked in the wrong stage still reports the truth.
+  function groupFlag(o) {
+    if (isCompleted(o)) return { cls: 'done', text: 'Finished ' + fmtDate(completedDate(o)) };
+    if (isDead(o)) return { cls: '', text: 'Lost' };
+
+    if (!measuredDate(o)) {
+      var appt = apptDate(o);
+      if (!appt) return { cls: 'urgent', text: 'No visit booked' };
+      var dd = daysTo(appt);
+      if (dd < 0) return { cls: 'urgent', text: 'Visit ' + Math.abs(dd) + 'd overdue' };
+      if (dd === 0) return { cls: 'soon', text: 'Visit today' };
+      if (dd === 1) return { cls: 'soon', text: 'Visit tomorrow' };
+      return { cls: '', text: 'Visit ' + fmtDate(appt) };
     }
-    if (groupId === 'book') {
-      var age = daysSince(o.createdAt);
-      if (age >= 7) return { cls: 'urgent', text: age + 'd old' };
-      if (age >= 3) return { cls: 'soon', text: age + 'd old' };
-      return { cls: '', text: age === 0 ? 'New today' : age + 'd old' };
-    }
-    if (groupId === 'wait') {
+    if (!designDate(o)) return { cls: 'soon', text: 'Needs design' };
+    if (!pricingDate(o)) return { cls: 'soon', text: 'Needs pricing' };
+    if (!sentDate(o)) return { cls: 'soon', text: 'Proposal not sent' };
+    if (!isWon(o)) {
       var w = daysSince(sentDate(o));
-      if (w === null) return { cls: '', text: '' };
       if (w >= 7) return { cls: 'urgent', text: w + 'd — chase' };
-      if (w >= 3) return { cls: 'soon', text: w + 'd waiting' };
-      return { cls: '', text: w === 0 ? 'Sent today' : w + 'd waiting' };
+      return { cls: '', text: 'Sent ' + w + 'd ago' };
     }
-    if (groupId === 'done') return { cls: 'done', text: fmtDate(completedDate(o)) };
-    return { cls: '', text: '' };
+    if (!cabinetsDate(o)) return { cls: 'soon', text: 'Cabinets not ordered' };
+    return { cls: '', text: 'In production' };
   }
 
   // Most pressing first: overdue visits, then soonest dates, then oldest job.
@@ -193,7 +160,7 @@ window.MM = window.MM || {};
   function jobCard(o, opts) {
     opts = opts || {};
     var flag = opts.flag || { cls: '', text: '' };
-    var step = opts.showStep ? nextStep(o) : null;
+    var step = opts.showStep ? groupFlag(o) : null;
     var done = [measuredDate(o), designDate(o), pricingDate(o),
                 sentDate(o), cabinetsDate(o), completedDate(o)].filter(Boolean).length;
 
@@ -207,7 +174,7 @@ window.MM = window.MM || {};
         '</span>' +
       '</span>' +
       '<span class="mm-jcard-side">' +
-        (step ? '<span class="mm-next mm-next-' + step.tone + '">' + U.esc(step.text) + '</span>' : '') +
+        (step ? '<span class="mm-next mm-next-' + (step.cls || 'wait') + '">' + U.esc(step.text) + '</span>' : '') +
         '<span class="mm-jcard-staff' + (o.assignedTo ? '' : ' mm-staff-none') + '">' +
           U.esc(staffName(o) || 'Unassigned') + '</span>' +
         (flag.text ? '<span class="mm-jflag mm-jflag-' + flag.cls + '">' + U.esc(flag.text) + '</span>' : '') +
@@ -233,8 +200,13 @@ window.MM = window.MM || {};
   function renderWorkList() {
     var open = loadOpenGroups();
     var searching = !!searchTerm;
+    var groups = stageGroups();
 
-    var sections = ALL_GROUPS.map(function (g) {
+    if (!groups.length) {
+      return '<div class="mm-empty">No pipeline stages found.</div>';
+    }
+
+    var sections = groups.map(function (g) {
       var jobs = allJobs.filter(function (o) { return g.test(o) && matchesSearch(o); }).sort(sortJobs);
       return { g: g, jobs: jobs };
     });
@@ -248,19 +220,28 @@ window.MM = window.MM || {};
       // A search reveals its matches without the user hunting for the right
       // section to open.
       var isOpen = !empty && (searching || !!open[s.g.id]);
-      return '<section class="mm-agroup' + (empty ? ' is-empty' : '') + (isOpen ? ' is-open' : '') +
-             (s.g.closed ? ' is-closedgroup' : '') + '">' +
+      // How many in this stage still need something doing.
+      var needs = s.jobs.filter(function (o) {
+        var f = groupFlag(o);
+        return f.cls === 'urgent' || f.cls === 'soon';
+      }).length;
+
+      return '<section class="mm-agroup' + (empty ? ' is-empty' : '') + (isOpen ? ' is-open' : '') + '">' +
         '<button type="button" class="mm-agroup-head" data-group="' + U.esc(s.g.id) + '"' +
           ' aria-expanded="' + (isOpen ? 'true' : 'false') + '"' + (empty ? ' disabled' : '') + '>' +
           '<span class="mm-agroup-arrow" aria-hidden="true">&#9662;</span>' +
           '<span class="mm-agroup-text">' +
             '<span class="mm-agroup-title">' + U.esc(s.g.title) + '</span>' +
-            '<span class="mm-agroup-hint">' + U.esc(empty ? 'Nothing here' : s.g.hint) + '</span>' +
+            '<span class="mm-agroup-hint">' +
+              (empty ? 'No jobs at this stage'
+                     : needs ? needs + ' need' + (needs === 1 ? 's' : '') + ' attention'
+                             : 'Nothing outstanding') +
+            '</span>' +
           '</span>' +
           '<span class="mm-agroup-count">' + s.jobs.length + '</span>' +
         '</button>' +
         (empty ? '' : '<div class="mm-agroup-body">' +
-          s.jobs.map(function (o) { return jobCard(o, { flag: groupFlag(o, s.g.id) }); }).join('') +
+          s.jobs.map(function (o) { return jobCard(o, { flag: groupFlag(o) }); }).join('') +
           '</div>') +
       '</section>';
     }).join('') + '</div>';
@@ -272,15 +253,20 @@ window.MM = window.MM || {};
   // disagree about what state a job is in.
   var FILTERS = [
     { id: 'all', label: 'All active', test: function (o) { return !isClosed(o); } },
-    { id: 'book', label: 'Book a visit', test: GROUPS[0].test },
-    { id: 'measure', label: 'To measure', test: GROUPS[1].test },
-    { id: 'design', label: 'To design', test: GROUPS[2].test },
-    { id: 'pricing', label: 'To price', test: GROUPS[3].test },
-    { id: 'send', label: 'To send', test: GROUPS[4].test },
-    { id: 'wait', label: 'Awaiting reply', test: GROUPS[5].test },
-    { id: 'cabinets', label: 'Order cabinets', test: GROUPS[6].test },
-    { id: 'finish', label: 'In production', test: GROUPS[7].test },
-    { id: 'unassigned', label: 'No staff', test: function (o) { return !isClosed(o) && !o.assignedTo; } },
+    { id: 'attention', label: 'Needs attention', test: function (o) {
+        if (isClosed(o)) return false;
+        var f = groupFlag(o);
+        return f.cls === 'urgent' || f.cls === 'soon';
+      } },
+    { id: 'urgent', label: 'Urgent', test: function (o) {
+        return !isClosed(o) && groupFlag(o).cls === 'urgent';
+      } },
+    { id: 'measure', label: 'Not measured', test: function (o) {
+        return !isClosed(o) && notMeasured(o);
+      } },
+    { id: 'unassigned', label: 'No staff', test: function (o) {
+        return !isClosed(o) && !o.assignedTo;
+      } },
     { id: 'done', label: 'Finished', test: isCompleted },
     { id: 'lost', label: 'Lost', test: function (o) { return isDead(o) && !isCompleted(o); } },
   ];
@@ -324,10 +310,10 @@ window.MM = window.MM || {};
   function renderStats() {
     var el = document.getElementById('mm-dash-stats');
     var open = openJobs();
-    var urgent = open.filter(function (o) { return nextStep(o).tone === 'urgent'; }).length;
+    var urgent = open.filter(function (o) { return groupFlag(o).cls === 'urgent'; }).length;
     var needAction = open.filter(function (o) {
-      var t = nextStep(o).tone;
-      return t === 'urgent' || t === 'soon';
+      var c = groupFlag(o).cls;
+      return c === 'urgent' || c === 'soon';
     }).length;
 
     function stat(label, value, tone) {
