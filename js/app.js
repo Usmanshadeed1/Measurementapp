@@ -475,10 +475,18 @@
       .then(function () { btn.textContent = '📁 Upload'; btn.disabled = false; });
   });
 
-  // A saved step can move the stage, so the job header has to be redrawn.
-  STEPS.onChange(function (o) {
+  // Redraw the stage button whenever the stage changes, from either route:
+  // saving a progress step, or picking a stage directly.
+  function refreshStageButton(o) {
     var btn = document.getElementById('mm-job-stage-btn');
     if (btn) btn.innerHTML = U.esc(DASH.stageNameFor(o) || 'Set stage') + ' &#9662;';
+  }
+  STEPS.onChange(refreshStageButton);
+  DASH.onStageChange(function (o) {
+    // Only the job currently on screen needs redrawing.
+    if (!job || o.id !== job.id) return;
+    refreshStageButton(o);
+    STEPS.render(o);   // which steps are available depends on the stage
   });
 
   // ===== BOOT =====

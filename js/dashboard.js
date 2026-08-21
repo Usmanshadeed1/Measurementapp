@@ -408,6 +408,7 @@ window.MM = window.MM || {};
   // ---- Change stage -------------------------------------------------------
 
   var stagingJob = null;
+  var onStageChanged = null;   // set by app.js so the job screen can redraw
 
   function openStage(o) {
     // The job screen can open this before the dashboard has ever loaded.
@@ -466,6 +467,7 @@ window.MM = window.MM || {};
       .then(function () {
         job.pipelineStageId = stageId;
         closeStage();
+        if (onStageChanged) onStageChanged(job);
         if (allJobs.length) {
           render();
           // The stage move fires GHL workflows that write fields a few
@@ -609,6 +611,7 @@ window.MM = window.MM || {};
   window.MM.dashboard = {
     loadDashboard: loadDashboard, initDashboard: initDashboard,
     openStage: openStage, openAssign: openAssign,
+    onStageChange: function (fn) { onStageChanged = fn; },
     stageNameFor: function (o) { return stageNames[o.pipelineStageId] || ''; },
   };
 })();
