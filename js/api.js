@@ -35,14 +35,33 @@ window.MM = window.MM || {};
 
   // Stage a job moves to once measuring is done. WF-2 fires on arrival here
   // and creates the design / pricing / meeting tasks.
-  var STAGE_AFTER_MEASURED = '4c348bc2-30b5-4b41-a7aa-c6e299f4b062'; // 1st Client Visit
-  // Pricing done means the proposal is ready to send, which is the stage
-  // meaning "designs and pricing are finished" — WF-3 fires there.
-  var STAGE_AFTER_PRICING = 'eb7eca8c-db5c-4df7-a766-2366d240d469';  // Design Meeting Scheduled
-  var STAGE_PROPOSAL_SENT = 'a3e8f945-415a-442f-bf60-050a62d4dc54';  // Proposal Sent
-  var STAGE_MATERIAL_ORDERING = 'c0c28c4a-599c-4f38-86cc-9accd2a6f199'; // Material Ordering
-  var STAGE_WON = '846384b2-f083-4189-9736-4a9de34ba4d0';            // Hired Maximus
-  var STAGE_DEAD = 'a94ddd00-0d94-4eab-9c86-f52b1be45157';           // Dead Lead
+  // Each progress step moves the job to its matching stage, so the stage
+  // name and the step name are always the same thing. Renaming a stage in
+  // GHL keeps its id, so these stay valid — only adding or deleting a stage
+  // needs a change here.
+  var STAGE = {
+    newLead:      '388a6d1b-15dd-4146-ac7d-caa1c3e07deb',
+    apptBooked:   'f7bb3e4e-82e9-4617-96a9-d6a8bb52d7e3',  // Measurement Appointment
+    measured:     '4c348bc2-30b5-4b41-a7aa-c6e299f4b062',  // Measurement Complete
+    design:       '5abda84b-8753-436f-8d4d-34d93620f5f0',  // Design Complete
+    pricing:      'ba83959c-dd8e-47bc-8cb0-a1e78944ef13',  // Pricing Complete
+    designMeeting:'eb7eca8c-db5c-4df7-a766-2366d240d469',
+    revision:     'c1d6ee95-7275-4f50-b3a0-be4744923131',
+    proposalSent: 'a3e8f945-415a-442f-bf60-050a62d4dc54',
+    won:          '846384b2-f083-4189-9736-4a9de34ba4d0',  // Hired Maximus
+    dead:         'a94ddd00-0d94-4eab-9c86-f52b1be45157',
+    materials:    'c0c28c4a-599c-4f38-86cc-9accd2a6f199',  // Material Ordering
+    completed:    '0c1d4f66-c120-4e1a-9b51-e886bdd69d0e',  // Job Completed
+  };
+
+  // Kept as named exports because several modules read them directly.
+  var STAGE_AFTER_MEASURED = STAGE.measured;
+  var STAGE_AFTER_PRICING = STAGE.pricing;
+  var STAGE_PROPOSAL_SENT = STAGE.proposalSent;
+  var STAGE_MATERIAL_ORDERING = STAGE.materials;
+  var STAGE_WON = STAGE.won;
+  var STAGE_DEAD = STAGE.dead;
+  var STAGE_COMPLETED = STAGE.completed;
 
   // Association IDs — one per relationship type in GHL's custom-object schema.
   var A = {
@@ -258,6 +277,7 @@ window.MM = window.MM || {};
     DATE_FIELD_IDS: DATE_FIELD_IDS, STAGE_AFTER_MEASURED: STAGE_AFTER_MEASURED,
     STAGE_AFTER_PRICING: STAGE_AFTER_PRICING, STAGE_PROPOSAL_SENT: STAGE_PROPOSAL_SENT,
     STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
+    STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,

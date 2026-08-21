@@ -118,35 +118,35 @@ window.MM = window.MM || {};
 
     var html =
       stepHtml({
-        num: 1, label: 'Appointment date', state: appt ? 'done' : 'active',
+        num: 1, label: 'Measurement appointment', state: appt ? 'done' : 'active',
         valueText: fmtLong(appt), value: toInputDate(appt),
         inputId: 'mm-step-appt', btnId: 'mm-step-appt-save', note: apptNote,
       }) +
       stepHtml({
-        num: 2, label: 'Measurement completed',
+        num: 2, label: 'Measurement complete',
         state: measured ? 'done' : (appt ? 'active' : 'waiting'),
         valueText: fmtLong(measured), value: toInputDate(measured) || todayInput(),
         inputId: 'mm-step-meas', btnId: 'mm-step-meas-save',
         waitingText: 'Set the appointment date first',
-        note: measured ? '' : (appt ? 'Saving this also moves the job to 1st Client Visit.' : ''),
+        note: measured ? '' : (appt ? 'Saving this moves the job to Measurement Complete.' : ''),
       }) +
       stepHtml({
-        num: 3, label: 'Design completed',
+        num: 3, label: 'Design complete',
         state: design ? 'done' : (measured ? 'active' : 'waiting'),
         valueText: fmtLong(design), value: toInputDate(design) || todayInput(),
         inputId: 'mm-step-design', btnId: 'mm-step-design-save',
         waitingText: 'Measure the property first',
       }) +
       stepHtml({
-        num: 4, label: 'Pricing completed',
+        num: 4, label: 'Pricing complete',
         state: pricing ? 'done' : (design ? 'active' : 'waiting'),
         valueText: fmtLong(pricing), value: toInputDate(pricing) || todayInput(),
         inputId: 'mm-step-pricing', btnId: 'mm-step-pricing-save',
         waitingText: 'Finish the design first',
-        note: pricing ? '' : (design ? 'Saving this also moves the job to Design Meeting Scheduled.' : ''),
+        note: pricing ? '' : (design ? 'Saving this moves the job to Pricing Complete.' : ''),
       }) +
       stepHtml({
-        num: 5, label: 'Proposal sent to customer',
+        num: 5, label: 'Proposal sent',
         state: sent ? 'done' : (pricing ? 'active' : 'waiting'),
         valueText: fmtLong(sent), value: toInputDate(sent) || todayInput(),
         inputId: 'mm-step-sent', btnId: 'mm-step-sent-save',
@@ -154,12 +154,12 @@ window.MM = window.MM || {};
         note: sent ? waitingNote(sent, won) : (pricing ? 'Email the customer yourself, then record the date here.' : ''),
       }) +
       stepHtml({
-        num: 6, label: 'Cabinets ordered',
+        num: 6, label: 'Material ordering',
         state: cabinets ? 'done' : (won ? 'active' : 'waiting'),
         valueText: fmtLong(cabinets), value: toInputDate(cabinets) || todayInput(),
         inputId: 'mm-step-cab', btnId: 'mm-step-cab-save',
         waitingText: 'Move the job to Hired Maximus once the customer signs',
-        note: cabinets ? '' : (won ? 'Saving this also moves the job to Material Ordering.' : ''),
+        note: cabinets ? '' : (won ? 'Saving this moves the job to Material Ordering.' : ''),
       }) +
       stepHtml({
         num: 7, label: 'Job completed',
@@ -167,7 +167,7 @@ window.MM = window.MM || {};
         valueText: fmtLong(completed), value: toInputDate(completed) || todayInput(),
         inputId: 'mm-step-done', btnId: 'mm-step-done-save',
         waitingText: 'Order the cabinets first',
-        note: completed ? '' : (cabinets ? 'Saving this archives the job — it leaves the active dashboard.' : ''),
+        note: completed ? '' : (cabinets ? 'Saving this moves the job to Job Completed.' : ''),
       });
 
     // The badge names the single next thing to do, so the panel answers that
@@ -224,19 +224,19 @@ window.MM = window.MM || {};
 
   function bind(o, st) {
     if (!st.appt) wire('mm-step-appt-save', 'mm-step-appt', function (val) {
-      return saveDateThenStage(o, 'appointment', val, null);
+      return saveDateThenStage(o, 'appointment', val, api.STAGE.apptBooked);
     });
 
     if (st.appt && !st.measured) wire('mm-step-meas-save', 'mm-step-meas', function (val) {
-      return saveDateThenStage(o, 'measured', val, api.STAGE_AFTER_MEASURED);
+      return saveDateThenStage(o, 'measured', val, api.STAGE.measured);
     });
 
     if (st.measured && !st.design) wire('mm-step-design-save', 'mm-step-design', function (val) {
-      return saveDateThenStage(o, 'design', val, null);
+      return saveDateThenStage(o, 'design', val, api.STAGE.design);
     });
 
     if (st.design && !st.pricing) wire('mm-step-pricing-save', 'mm-step-pricing', function (val) {
-      return saveDateThenStage(o, 'pricing', val, api.STAGE_AFTER_PRICING);
+      return saveDateThenStage(o, 'pricing', val, api.STAGE.pricing);
     });
 
     if (st.pricing && !st.sent) wire('mm-step-sent-save', 'mm-step-sent', function (val) {
@@ -250,7 +250,7 @@ window.MM = window.MM || {};
     // Completion only records the date — the job is already in the right
     // stage, and the dashboard archives it on the date alone.
     if (st.cabinets && !st.completed) wire('mm-step-done-save', 'mm-step-done', function (val) {
-      return saveDateThenStage(o, 'completed', val, null);
+      return saveDateThenStage(o, 'completed', val, api.STAGE.completed);
     });
   }
 
