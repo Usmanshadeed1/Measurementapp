@@ -205,6 +205,35 @@
   </div>
 </div>
 
+<!-- New / rename a task list -->
+<div class="mm-modal-overlay" id="mm-modal-listedit">
+  <div class="mm-modal mm-modal-narrow" role="dialog" aria-modal="true" aria-labelledby="mm-ld-heading">
+    <div class="mm-modal-title" id="mm-ld-heading">New task list</div>
+    <div class="mm-field-group">
+      <label class="mm-label" for="mm-ld-name">List name</label>
+      <input class="mm-input" id="mm-ld-name" placeholder="e.g. Kitchen remodel">
+    </div>
+    <div class="mm-field-group">
+      <label class="mm-label" for="mm-ld-desc">What is it for? <span class="mm-label-hint">optional</span></label>
+      <input class="mm-input" id="mm-ld-desc" placeholder="e.g. The standard run of work for a kitchen job">
+    </div>
+    <p class="mm-assign-error" id="mm-ld-error" role="alert"></p>
+    <button class="mm-btn mm-btn-primary" id="mm-ld-save">Save</button>
+    <button class="mm-btn mm-btn-secondary" id="mm-ld-cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- Confirm a removal -->
+<div class="mm-modal-overlay" id="mm-modal-confirm">
+  <div class="mm-modal mm-modal-narrow" role="dialog" aria-modal="true" aria-labelledby="mm-cf-heading">
+    <div class="mm-modal-title" id="mm-cf-heading">Are you sure?</div>
+    <p class="mm-assign-job" id="mm-cf-body"></p>
+    <p class="mm-assign-error" id="mm-cf-error" role="alert"></p>
+    <button class="mm-btn mm-btn-danger" id="mm-cf-go">Delete</button>
+    <button class="mm-btn mm-btn-secondary" id="mm-cf-cancel">Cancel</button>
+  </div>
+</div>
+
 <!-- Pick a task list to add to a job -->
 <div class="mm-modal-overlay" id="mm-modal-picklist">
   <div class="mm-modal mm-modal-narrow" role="dialog" aria-modal="true" aria-labelledby="mm-pick-heading">

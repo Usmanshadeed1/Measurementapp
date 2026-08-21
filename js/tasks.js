@@ -161,7 +161,7 @@ window.MM = window.MM || {};
         '<p class="mm-task-empty">No tasks on this job yet.</p>' +
         (admin ? '<div class="mm-task-actions">' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-task-add">Add a task</button>' +
-          '<button class="mm-btn-sm mm-btn-secondary" id="mm-task-template">Use a task list</button>' +
+          '<button class="mm-btn-sm mm-btn-secondary" id="mm-task-template">Add a task list</button>' +
           '</div>' : '');
     } else {
       // Tasks are shown under their group heading, so a twenty-task job reads
@@ -182,6 +182,7 @@ window.MM = window.MM || {};
       el.innerHTML = head + body +
         (admin ? '<div class="mm-task-actions">' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-task-add">Add a task</button>' +
+          '<button class="mm-btn-sm mm-btn-secondary" id="mm-task-template">Add a task list</button>' +
           '</div>' : '');
     }
     el.innerHTML += '<p class="mm-task-error" id="mm-task-error" role="alert"></p>';
