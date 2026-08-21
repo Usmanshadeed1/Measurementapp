@@ -198,8 +198,23 @@ window.MM = window.MM || {};
   // Saves the date, then optionally moves the stage. The stage move is what
   // triggers the GHL workflow, so it must happen only once the date is
   // safely stored.
+  var STEP_LABELS = {
+    appointment: 'Set the appointment date', measured: 'Recorded the measurement date',
+    design: 'Recorded the design as finished', pricing: 'Recorded the pricing as finished',
+    proposalSent: 'Recorded the proposal as sent', cabinets: 'Recorded the cabinets as ordered',
+    completed: 'Marked the job completed',
+  };
+
   function saveDateThenStage(o, fieldKey, val, stageId) {
     return api.setOpportunityField(o.id, api.DATE_FIELD_IDS[fieldKey], val)
+      .then(function (r) {
+        window.MM.activity.log('date', STEP_LABELS[fieldKey] || 'Updated a date', {
+          jobId: o.id,
+          jobName: (o.contact && o.contact.name) || o.name,
+          detail: val,
+        });
+        return r;
+      })
       .then(function () {
         if (!stageId || o.pipelineStageId === stageId) return null;
         return api.setOpportunityStage(o.id, stageId);

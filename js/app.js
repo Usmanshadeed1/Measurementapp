@@ -3,7 +3,7 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists, ACT = window.MM.activity, MY = window.MM.mytasks;
 
   var job = null, room = null, editRoom = null, contactSearchTimer = null;
 
@@ -20,6 +20,8 @@
   function goToTab(tab) {
     if (tab === 'dashboard') { showScreen('dashboard'); DASH.loadDashboard(); }
     else if (tab === 'tasklists') { showScreen('tasklists'); TLISTS.load(); }
+    else if (tab === 'mytasks') { showScreen('mytasks'); MY.load(); }
+    else if (tab === 'history') { showScreen('history'); ACT.loadPage(); }
     else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
     setActiveNavLink(tab);
     closeMobileNav();
@@ -69,6 +71,7 @@
 
   // ===== JOB =====
   function pickJob(o) {
+    if (!window.MM.auth.isAdmin()) return;   // workers stay on their task list
     job = o;
     document.getElementById('mm-job-title').textContent = customerName(o);
     showScreen('job');
@@ -89,6 +92,7 @@
 
     STEPS.render(o);
     TASKS.showForJob(o);
+    ACT.showForJob(o);
 
     loadRooms();
     loadJobMedia();
@@ -469,14 +473,30 @@
   DASH.initDashboard(function (o) { pickJob(o); });
   TASKS.init();
   TLISTS.init();
+  ACT.initPage();
+
   window.MM.auth.init(function () {
-    // Task Lists is an admin tool: a worker has no reason to define the
-    // standard run of work, and the database refuses the writes anyway.
-    if (window.MM.auth.isAdmin()) {
-      document.querySelectorAll('.mm-admin-only').forEach(function (el) { el.style.display = ''; });
+    var admin = window.MM.auth.isAdmin();
+
+    // A worker gets their own task list and nothing else. The customer list,
+    // every job's address and the whole pipeline are not theirs to browse —
+    // and the database enforces the same split, so hiding the nav is the
+    // presentation of a rule rather than the rule itself.
+    document.querySelectorAll('.mm-admin-only').forEach(function (el) {
+      el.style.display = admin ? '' : 'none';
+    });
+    document.querySelectorAll('.mm-worker-only').forEach(function (el) {
+      el.style.display = admin ? 'none' : '';
+    });
+
+    if (admin) {
+      setActiveNavLink('dashboard');
+      showScreen('dashboard');
+      DASH.loadDashboard();
+    } else {
+      setActiveNavLink('mytasks');
+      showScreen('mytasks');
+      MY.load();
     }
-    setActiveNavLink('dashboard');
-    showScreen('dashboard');
-    DASH.loadDashboard();
   });
 })();

@@ -1,0 +1,88 @@
+/* ==========================================================================
+   MY TASKS — a worker's home screen
+   Grouped by urgency rather than by job: the question someone opens this to
+   answer is "what am I doing today". Cards are large because this is used
+   one-handed on a site, often with gloves on.
+   ========================================================================== */
+.mm-mygroup{margin-bottom:22px}
+.mm-mygroup-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.mm-mygroup-title{font-size:1em;font-weight:800;color:var(--text)}
+.mm-mygroup-count{display:inline-flex;align-items:center;justify-content:center;
+                  min-width:26px;height:26px;padding:0 9px;border-radius:999px;
+                  background:var(--card2);color:var(--text2);
+                  font-size:.8em;font-weight:800;font-variant-numeric:tabular-nums}
+/* Overdue and today earn colour on the heading; the rest stay quiet. */
+.mm-mygroup-late .mm-mygroup-title{color:var(--danger-text)}
+.mm-mygroup-late .mm-mygroup-count{background:color-mix(in srgb,var(--danger-text) 22%,transparent);
+                                   color:var(--danger-text)}
+.mm-mygroup-today .mm-mygroup-title{color:#e8a33d}
+.mm-mygroup-today .mm-mygroup-count{background:color-mix(in srgb,#e8a33d 22%,transparent);color:#e8a33d}
+
+.mm-mytask{display:flex;align-items:flex-start;gap:14px;
+           background:var(--card);border:1px solid var(--border);
+           border-left:4px solid var(--accent);border-radius:12px;
+           padding:16px;margin-bottom:10px;box-shadow:var(--card-shadow)}
+.mm-mygroup-late .mm-mytask{border-left-color:var(--danger-text)}
+.mm-mygroup-today .mm-mytask{border-left-color:#e8a33d}
+
+/* Bigger than the admin tick: this is the one thing a worker taps all day. */
+.mm-mytask .mm-task-tick{width:40px;height:40px;font-size:1.3em}
+
+.mm-mytask-main{flex:1 1 auto;min-width:0}
+.mm-mytask-title{font-weight:700;font-size:1.05em;color:var(--text);line-height:1.35}
+.mm-mytask-job{font-size:.85em;color:var(--text2);margin-top:3px;overflow-wrap:anywhere}
+.mm-mytask-notes{font-size:.84em;color:var(--text2);margin-top:6px;
+                 padding-top:6px;border-top:1px solid var(--divider)}
+
+.mm-my-clear{text-align:center;padding:56px 24px;max-width:44ch;margin:0 auto}
+.mm-my-clear-tick{width:64px;height:64px;margin:0 auto 18px;border-radius:50%;
+                  background:color-mix(in srgb,var(--success) 20%,transparent);
+                  color:var(--success);font-size:2em;font-weight:800;
+                  display:flex;align-items:center;justify-content:center}
+.mm-my-clear h2{font-size:1.25em;font-weight:800;color:var(--text);margin-bottom:8px}
+.mm-my-clear p{color:var(--text2);font-size:.92em;line-height:1.55}
+
+/* ==========================================================================
+   HISTORY
+   A timeline, grouped by day. Every row answers the same three things in the
+   same order: what happened, who did it, when.
+   ========================================================================== */
+.mm-hist-controls{display:grid;grid-template-columns:1fr 200px;gap:12px;
+                  align-items:start;margin-bottom:18px}
+.mm-hist-controls .mm-search-bar{margin-bottom:0}
+
+.mm-act-day{margin-bottom:22px}
+.mm-act-daylabel{font-size:.74em;font-weight:800;text-transform:uppercase;
+                 letter-spacing:.08em;color:var(--text2);
+                 padding-bottom:8px;margin-bottom:10px;
+                 border-bottom:1px solid var(--divider)}
+
+.mm-act{display:flex;align-items:flex-start;gap:12px;padding:10px 0}
+.mm-act-icon{flex:0 0 auto;width:30px;height:30px;border-radius:8px;
+             display:flex;align-items:center;justify-content:center;
+             background:var(--card2);color:var(--text2);font-size:.95em;line-height:1}
+/* Colour by kind of change, so a stage move and a finished task are told
+   apart without reading either line. */
+.mm-act-stage{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent)}
+.mm-act-task_done{background:color-mix(in srgb,var(--success) 20%,transparent);color:var(--success)}
+.mm-act-date{background:color-mix(in srgb,#e8a33d 20%,transparent);color:#e8a33d}
+.mm-act-task_removed{background:color-mix(in srgb,var(--danger-text) 20%,transparent);
+                     color:var(--danger-text)}
+
+.mm-act-main{flex:1 1 auto;min-width:0}
+.mm-act-label{display:block;color:var(--text);font-weight:600;line-height:1.4}
+.mm-act-detail{display:block;font-size:.84em;color:var(--text2);margin-top:2px}
+.mm-act-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:3px;font-size:.8em}
+.mm-act-who{color:var(--accent);font-weight:700}
+.mm-act-job{color:var(--text2)}
+.mm-act-when{flex:0 0 auto;font-size:.78em;color:var(--empty);
+             white-space:nowrap;padding-top:2px}
+
+@media (max-width: 620px){
+  .mm-hist-controls{grid-template-columns:1fr}
+  .mm-act{gap:10px}
+  /* The timestamp drops under the text rather than squeezing the label. */
+  .mm-act-when{display:block;width:100%;padding-top:4px}
+  .mm-act{flex-wrap:wrap}
+  .mm-act-main{flex-basis:calc(100% - 42px)}
+}

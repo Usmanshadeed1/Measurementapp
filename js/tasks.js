@@ -220,7 +220,12 @@ window.MM = window.MM || {};
       : { done_at: new Date().toISOString(), done_by: (auth.user() || {}).id };
     taskError('');
     db('PATCH', '/tasks?id=eq.' + taskId, body)
-      .then(function () { return refreshJob(); })
+      .then(function () {
+        window.MM.activity.log(t.done_at ? 'task_undone' : 'task_done',
+          (t.done_at ? 'Reopened' : 'Finished') + ' "' + t.title + '"',
+          { jobId: currentJob.id, jobName: jobLabel(currentJob) });
+        return refreshJob();
+      })
       .catch(function (e) { taskError('Could not save: ' + e.message); });
   }
 
@@ -262,7 +267,11 @@ window.MM = window.MM || {};
           });
         }, Promise.resolve());
       })
-      .then(refreshJob);
+      .then(function () {
+        window.MM.activity.log('list_added', 'Added a task list to this job',
+          { jobId: currentJob.id, jobName: jobLabel(currentJob) });
+        return refreshJob();
+      });
   }
 
   function jobLabel(o) {
@@ -286,9 +295,16 @@ window.MM = window.MM || {};
       document.getElementById('mm-te-title').value = task ? task.title : '';
       document.getElementById('mm-te-notes').value = (task && task.notes) || '';
 
-      var defaults = task ? null : nextStart(currentTasks);
-      document.getElementById('mm-te-start').value = task ? (task.start_date || '') : defaults;
-      document.getElementById('mm-te-end').value = task ? (task.end_date || '') : defaults;
+      // A task always opens with a usable pair of dates. Leaving one blank
+      // let the browser fill it from the other field's neighbouring day,
+      // which produced an end date one day BEFORE the start and a validation
+      // error the user had done nothing to cause.
+      var fallback = nextStart(currentTasks);
+      var sVal = (task && task.start_date) || fallback;
+      var eVal = (task && task.end_date) || sVal;
+      if (eVal < sVal) eVal = sVal;
+      document.getElementById('mm-te-start').value = sVal;
+      document.getElementById('mm-te-end').value = eVal;
 
       var ids = task ? assigneeIds(task) : [];
       document.getElementById('mm-te-staff').innerHTML = staff.length
@@ -319,7 +335,11 @@ window.MM = window.MM || {};
     var err = document.getElementById('mm-te-error');
 
     if (!title) { err.textContent = 'Give the task a name.'; return; }
-    if (start && end && end < start) { err.textContent = 'The end date cannot be before the start date.'; return; }
+    if (start && end && end < start) {
+      err.textContent = 'The end date cannot be before the start date.';
+      document.getElementById('mm-te-end').focus();
+      return;
+    }
 
     var chosen = Array.prototype.slice
       .call(document.querySelectorAll('#mm-te-staff input:checked'))
@@ -356,7 +376,12 @@ window.MM = window.MM || {};
               chosen.map(function (id) { return { task_id: taskId, staff_id: id }; }));
           });
       })
-      .then(function () { closeEditor(); return refreshJob(); })
+      .then(function () {
+        window.MM.activity.log(editing ? 'task_edited' : 'task_added',
+          (editing ? 'Changed the task ' : 'Added the task ') + '"' + title + '"',
+          { jobId: currentJob.id, jobName: jobLabel(currentJob) });
+        closeEditor(); return refreshJob();
+      })
       .catch(function (e) {
         btn.disabled = false; btn.textContent = 'Save task';
         err.textContent = 'Could not save: ' + e.message;

@@ -395,6 +395,10 @@ window.MM = window.MM || {};
         // Update in place: GHL's opportunity search index lags a few seconds
         // behind a write, so an immediate reload can hand back the old owner
         // and look like the save failed.
+        var who = userId ? (userNames[userId] || 'someone') : 'nobody';
+        window.MM.activity.log('staff', 'Assigned the job to ' + who, {
+          jobId: job.id, jobName: customerName(job),
+        });
         job.assignedTo = userId || null;
         closeAssign();
         if (allJobs.length) render();
@@ -465,6 +469,10 @@ window.MM = window.MM || {};
 
     api.setOpportunityStage(job.id, stageId)
       .then(function () {
+        var stageName = stageNames[stageId] || 'another stage';
+        window.MM.activity.log('stage', 'Moved to ' + stageName, {
+          jobId: job.id, jobName: customerName(job),
+        });
         job.pipelineStageId = stageId;
         closeStage();
         if (onStageChanged) onStageChanged(job);
