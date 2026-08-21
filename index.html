@@ -64,13 +64,11 @@
   <div class="mm-header-row">
     <a href="#" class="mm-brand" data-tab="dashboard">Measurement App</a>
     <nav class="mm-nav" aria-label="Main">
-      <a href="#" class="mm-nav-link active" data-tab="dashboard">Dashboard</a>
+      <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
       <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks" style="display:none">My Tasks</a>
-      <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks" style="display:none">My Tasks</a>
-    <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists" style="display:none">Task Lists</a>
-    <a href="#" class="mm-nav-link mm-admin-only" data-tab="history" style="display:none">History</a>
+      <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists" style="display:none">Task Lists</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history" style="display:none">History</a>
-      <a href="#" class="mm-nav-link" data-tab="contacts">Contacts</a>
+      <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts" style="display:none">Contacts</a>
     </nav>
     <div class="mm-header-controls">
       <button class="font-btn mm-theme-toggle" aria-label="Switch to light mode">☀️</button>
@@ -84,9 +82,11 @@
     </div>
   </div>
   <nav class="mm-mobile-nav" id="mm-mobile-nav" aria-label="Main (mobile)">
-    <a href="#" class="mm-nav-link active" data-tab="dashboard">Dashboard</a>
+    <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
+    <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks" style="display:none">My Tasks</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists" style="display:none">Task Lists</a>
-    <a href="#" class="mm-nav-link" data-tab="contacts">Contacts</a>
+    <a href="#" class="mm-nav-link mm-admin-only" data-tab="history" style="display:none">History</a>
+    <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts" style="display:none">Contacts</a>
   </nav>
 </header>
 

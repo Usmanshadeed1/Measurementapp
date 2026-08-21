@@ -119,13 +119,27 @@ window.MM = window.MM || {};
       : 'Due ' + fmt(t.end_date);
     var cls = d !== null && d < 0 ? 'urgent' : d === 0 ? 'soon' : '';
 
+    // The dates are spelled out as a range: a worker needs to know when they
+    // can start as well as when it is due, and "Sep 12 - Sep 14" answers both
+    // at a glance.
+    var range = t.start_date && t.end_date
+      ? fmt(t.start_date) + ' &rarr; ' + fmt(t.end_date)
+      : t.end_date ? 'Due ' + fmt(t.end_date)
+      : t.start_date ? 'From ' + fmt(t.start_date)
+      : 'No dates set';
+
     return '<div class="mm-mytask">' +
       '<button type="button" class="mm-task-tick" data-tick="' + U.esc(t.id) + '" ' +
         'aria-label="Mark ' + U.esc(t.title) + ' done"></button>' +
       '<div class="mm-mytask-main">' +
         '<div class="mm-mytask-title">' + U.esc(t.title) + '</div>' +
-        '<div class="mm-mytask-job">' + U.esc(t.job_name || 'No job name') +
-          (t.job_address ? ' &middot; ' + U.esc(t.job_address) : '') + '</div>' +
+        '<div class="mm-mytask-jobrow">' +
+          '<span class="mm-mytask-joblabel">Job</span>' +
+          '<span class="mm-mytask-jobname">' + U.esc(t.job_name || 'Not recorded') + '</span>' +
+        '</div>' +
+        (t.job_address
+          ? '<div class="mm-mytask-addr">' + U.esc(t.job_address) + '</div>' : '') +
+        '<div class="mm-mytask-dates">' + range + '</div>' +
         (t.notes ? '<div class="mm-mytask-notes">' + U.esc(t.notes) + '</div>' : '') +
       '</div>' +
       '<span class="mm-jflag mm-jflag-' + cls + '">' + U.esc(flag) + '</span>' +

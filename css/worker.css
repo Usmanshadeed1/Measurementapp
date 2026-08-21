@@ -30,7 +30,16 @@
 
 .mm-mytask-main{flex:1 1 auto;min-width:0}
 .mm-mytask-title{font-weight:700;font-size:1.05em;color:var(--text);line-height:1.35}
-.mm-mytask-job{font-size:.85em;color:var(--text2);margin-top:3px;overflow-wrap:anywhere}
+/* The job is labelled rather than left as a bare line of text: a worker
+   glancing at this needs to know which house, not guess what the grey line
+   underneath the task means. */
+.mm-mytask-jobrow{display:flex;align-items:baseline;gap:8px;margin-top:6px;flex-wrap:wrap}
+.mm-mytask-joblabel{font-size:.68em;font-weight:800;text-transform:uppercase;
+                    letter-spacing:.07em;color:var(--text2);flex:0 0 auto}
+.mm-mytask-jobname{font-size:.9em;font-weight:700;color:var(--accent);overflow-wrap:anywhere}
+.mm-mytask-addr{font-size:.82em;color:var(--text2);margin-top:2px;overflow-wrap:anywhere}
+.mm-mytask-dates{font-size:.82em;color:var(--text2);margin-top:6px;
+                 font-variant-numeric:tabular-nums}
 .mm-mytask-notes{font-size:.84em;color:var(--text2);margin-top:6px;
                  padding-top:6px;border-top:1px solid var(--divider)}
 

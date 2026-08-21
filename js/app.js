@@ -18,6 +18,10 @@
 
   // ===== SITE NAV (header links, desktop + mobile copies, and brand link) =====
   function goToTab(tab) {
+    // A worker has one screen. Anything else is refused here as well as
+    // being hidden, so a stale link or a back button cannot get them in.
+    if (!window.MM.auth.isAdmin() && tab !== 'mytasks') tab = 'mytasks';
+
     if (tab === 'dashboard') { showScreen('dashboard'); DASH.loadDashboard(); }
     else if (tab === 'tasklists') { showScreen('tasklists'); TLISTS.load(); }
     else if (tab === 'mytasks') { showScreen('mytasks'); MY.load(); }
@@ -34,7 +38,8 @@
   document.querySelectorAll('.mm-nav-link, .mm-brand').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();
-      goToTab(a.getAttribute('data-tab') || 'dashboard');
+      goToTab(a.getAttribute('data-tab') ||
+              (window.MM.auth.isAdmin() ? 'dashboard' : 'mytasks'));
     });
   });
 
