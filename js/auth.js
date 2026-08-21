@@ -55,7 +55,14 @@ window.MM = window.MM || {};
     return fetch(URL_BASE + '/rest/v1' + path, {
       method: method, headers: headers,
       body: body ? JSON.stringify(body) : undefined,
-    }).then(readJson);
+    }).then(readJson).catch(function (e) {
+      // fetch() rejects with a bare "Failed to fetch" for anything network
+      // level — offline, blocked, CORS — which tells the user nothing.
+      if (e instanceof TypeError) {
+        throw new Error('Could not reach the database. Check your connection and try again.');
+      }
+      throw e;
+    });
   }
 
   function readJson(r) {

@@ -188,6 +188,23 @@
   </div>
 </div>
 
+<!-- Standard task list editor (admin) -->
+<div class="mm-modal-overlay" id="mm-modal-templates">
+  <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-tpl-heading">
+    <div class="mm-modal-title" id="mm-tpl-heading">Standard task list</div>
+    <p class="mm-assign-job">These tasks are added to a job when you use the standard list. Edit a name or the number of days and it saves automatically.</p>
+    <div class="mm-tpl-list" id="mm-tpl-list"></div>
+    <div class="mm-tpl-new">
+      <input class="mm-input" id="mm-tpl-new-title" placeholder="New task name">
+      <input class="mm-input" id="mm-tpl-new-group" placeholder="Group (e.g. Ordering)">
+      <input class="mm-input" id="mm-tpl-new-days" type="number" min="1" value="1" aria-label="Days">
+      <button class="mm-btn-sm mm-btn-primary" id="mm-tpl-add">Add</button>
+    </div>
+    <p class="mm-assign-error" id="mm-tpl-error" role="alert"></p>
+    <button class="mm-btn mm-btn-secondary" id="mm-tpl-close">Done</button>
+  </div>
+</div>
+
 <!-- Add Contact modal -->
 <div class="mm-modal-overlay" id="mm-modal-contact">
   <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-contact-modal-title">

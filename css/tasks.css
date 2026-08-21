@@ -72,3 +72,33 @@
   .mm-te-dates{grid-template-columns:1fr}
   .mm-task-edit{align-self:flex-start}
 }
+
+/* ---- Standard task list editor ---- */
+.mm-tpl-list{max-height:340px;overflow-y:auto;margin-bottom:16px}
+.mm-tpl-group{margin-bottom:14px}
+.mm-tpl-group-name{font-size:.72em;font-weight:800;text-transform:uppercase;
+                   letter-spacing:.07em;color:var(--text2);margin-bottom:6px}
+.mm-tpl-row{display:grid;grid-template-columns:1fr 72px 40px;gap:8px;margin-bottom:6px}
+.mm-tpl-row .mm-input{padding:9px 10px;font-size:.9em}
+.mm-tpl-del{background:transparent;color:var(--danger-text);
+            border:1px solid var(--control-border);border-radius:8px;
+            font-size:1.2em;line-height:1;cursor:pointer;font-family:inherit}
+.mm-tpl-del:hover{background:var(--danger-bg);border-color:var(--danger-text)}
+.mm-tpl-del:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-tpl-new{display:grid;grid-template-columns:1fr 1fr 72px auto;gap:8px;
+            padding-top:14px;border-top:1px solid var(--divider);margin-bottom:14px}
+
+/* Date inputs render their own calendar icon, which on a dark ground comes
+   out near-black against near-black. Inverting the widget makes it visible
+   without replacing the native picker, which phones handle better than any
+   custom one. */
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+:root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator{
+  filter:invert(1) brightness(1.4);cursor:pointer}
+input[type="date"]{color-scheme:dark}
+:root[data-theme="light"] input[type="date"]{color-scheme:light}
+
+@media (max-width: 620px){
+  .mm-tpl-new{grid-template-columns:1fr 1fr;}
+  .mm-tpl-new .mm-btn-sm{grid-column:1 / -1}
+}
