@@ -695,30 +695,50 @@ textarea.mm-input{min-height:90px;resize:vertical}
                border:1px solid var(--success);color:var(--text);font-size:.88em}
 
 /* ==========================================================================
-   TO-DO VIEW — the same jobs grouped by what needs doing to them.
-   Groups are stacked rather than tabbed: the whole day's work should be
-   readable in one scroll, and an empty group is itself information.
+   TO-DO VIEW — one accordion section per kind of work.
+   Collapsed by default so the whole list of steps is visible at once; the
+   user opens the step they are working on. A section with nothing in it is
+   disabled rather than hidden, so the sequence of work stays readable.
    ========================================================================== */
-.mm-tgroup{margin-bottom:22px}
-.mm-tgroup:last-child{margin-bottom:0}
-.mm-tgroup-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-.mm-tgroup-title{font-size:1em;font-weight:800;color:var(--text);letter-spacing:.01em}
-.mm-tgroup-count{display:inline-flex;align-items:center;justify-content:center;
-                 min-width:26px;height:26px;padding:0 9px;border-radius:999px;
-                 background:var(--accent);color:var(--bg);
-                 font-size:.8em;font-weight:800;font-variant-numeric:tabular-nums}
-.mm-tgroup-hint{flex:1 1 100%;font-size:.8em;color:var(--text2)}
-.mm-tgroup-empty .mm-tgroup-title{color:var(--text2);font-weight:700}
-.mm-tgroup-empty .mm-tgroup-count{background:var(--card2);color:var(--text2)}
-.mm-tgroup-none{font-size:.85em;color:var(--empty);padding:2px 0 0}
+.mm-tacc{display:flex;flex-direction:column;gap:10px}
 
-.mm-tlist{display:flex;flex-direction:column;gap:8px}
+.mm-tgroup{background:var(--card);border:1px solid var(--border);
+           border-radius:12px;overflow:hidden;box-shadow:var(--card-shadow)}
+.mm-tgroup.is-open{border-color:var(--accent)}
+
+.mm-tgroup-head{display:flex;align-items:center;gap:14px;width:100%;
+                background:transparent;border:none;cursor:pointer;
+                padding:16px 18px;font-family:inherit;text-align:left;min-height:64px}
+.mm-tgroup-head:hover:not(:disabled){background:var(--card2)}
+.mm-tgroup-head:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.mm-tgroup-head:disabled{cursor:default;opacity:.5}
+
+.mm-tgroup-arrow{color:var(--accent);font-size:1.1em;flex:0 0 auto;
+                 transition:transform .15s ease}
+.mm-tgroup.is-open .mm-tgroup-arrow{transform:rotate(90deg)}
+.mm-tgroup-head:disabled .mm-tgroup-arrow{visibility:hidden}
+
+.mm-tgroup-text{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-width:0}
+.mm-tgroup-title{font-size:1.02em;font-weight:800;color:var(--text)}
+.mm-tgroup-hint{font-size:.8em;color:var(--text2)}
+
+.mm-tgroup-count{display:inline-flex;align-items:center;justify-content:center;
+                 min-width:34px;height:34px;padding:0 11px;border-radius:999px;
+                 background:var(--accent);color:var(--bg);flex:0 0 auto;
+                 font-size:.92em;font-weight:800;font-variant-numeric:tabular-nums}
+.mm-tgroup-empty .mm-tgroup-count{background:var(--card2);color:var(--text2)}
+
+/* The list only exists in the DOM when open, so there is no hidden content
+   for screen readers or Ctrl+F to stumble into. */
+.mm-tlist{display:none;flex-direction:column;gap:8px;padding:0 14px 14px}
+.mm-tgroup.is-open .mm-tlist{display:flex}
+
 .mm-titem{display:flex;align-items:center;justify-content:space-between;gap:16px;
           width:100%;text-align:left;font-family:inherit;font-size:1em;
-          background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);
-          border-radius:10px;padding:13px 16px;cursor:pointer;min-height:60px;
-          box-shadow:var(--card-shadow)}
-.mm-titem:hover{border-color:var(--accent);background:var(--card2)}
+          background:var(--card2);border:1px solid var(--border);
+          border-left:4px solid var(--accent);
+          border-radius:10px;padding:13px 16px;cursor:pointer;min-height:60px}
+.mm-titem:hover{border-color:var(--accent);background:var(--card)}
 .mm-titem:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .mm-titem-main{display:flex;flex-direction:column;gap:2px;min-width:0}
 .mm-titem-name{font-weight:700;color:var(--text);line-height:1.3}
@@ -727,12 +747,14 @@ textarea.mm-input{min-height:90px;resize:vertical}
                justify-content:flex-end}
 .mm-titem-staff{font-size:.82em;color:var(--text2);font-weight:600}
 .mm-titem-flag{font-size:.76em;font-weight:700;border-radius:999px;padding:4px 11px;
-               background:var(--card2);color:var(--text2);white-space:nowrap}
+               background:var(--card);color:var(--text2);white-space:nowrap}
 .mm-titem-urgent{background:color-mix(in srgb,var(--danger-text) 20%,transparent);
                  color:var(--danger-text)}
 .mm-titem-soon{background:color-mix(in srgb,#e8a33d 20%,transparent);color:#e8a33d}
 
 @media (max-width: 620px){
+  .mm-tgroup-head{padding:14px;gap:10px}
   .mm-titem{flex-direction:column;align-items:stretch;gap:10px}
   .mm-titem-meta{justify-content:space-between}
+}
 }

@@ -370,7 +370,8 @@ window.MM = window.MM || {};
       return;
     }
 
-    var needMeasure = allJobs.filter(notMeasured).length;
+    var act2 = activeJobs();
+    var needMeasure = act2.filter(notMeasured).length;
     var revisionCount = act2.filter(inRevision).length;
     var overdue = act2.filter(function (o) {
       if (!notMeasured(o)) return false;
@@ -585,6 +586,24 @@ window.MM = window.MM || {};
     return { cls: '', text: '' };
   }
 
+  // Which groups the user has opened. Remembered across refreshes so a
+  // reload does not undo where someone was working.
+  var openGroups = null;
+  function loadOpenGroups() {
+    if (openGroups) return openGroups;
+    try {
+      var raw = localStorage.getItem('mm_open_groups');
+      openGroups = raw ? JSON.parse(raw) : null;
+    } catch (e) { openGroups = null; }
+    // First visit: open the first group that actually has work in it, so the
+    // screen is never a wall of closed bars.
+    if (!openGroups) openGroups = {};
+    return openGroups;
+  }
+  function saveOpenGroups() {
+    try { localStorage.setItem('mm_open_groups', JSON.stringify(openGroups)); } catch (e) { /* private mode */ }
+  }
+
   function renderTaskView(rows) {
     var groups = TASK_GROUPS.map(function (g) {
       return { g: g, jobs: rows.filter(g.test).sort(taskSort) };
@@ -595,21 +614,28 @@ window.MM = window.MM || {};
       return '<div class="mm-empty">Nothing to do — every job is up to date.</div>';
     }
 
-    return groups.map(function (x) {
-      // An empty group still earns its place: it shows the stage is clear
-      // rather than leaving the reader wondering if it was filtered out.
-      if (!x.jobs.length) {
-        return '<section class="mm-tgroup mm-tgroup-empty">' +
-          '<div class="mm-tgroup-head"><h3 class="mm-tgroup-title">' + U.esc(x.g.title) + '</h3>' +
-          '<span class="mm-tgroup-count">0</span></div>' +
-          '<p class="mm-tgroup-none">Nothing waiting</p></section>';
-      }
-      return '<section class="mm-tgroup">' +
-        '<div class="mm-tgroup-head">' +
-          '<h3 class="mm-tgroup-title">' + U.esc(x.g.title) + '</h3>' +
+    var open = loadOpenGroups();
+    // Nothing opened yet: open the first group with work so the page opens
+    // showing something useful.
+    if (!Object.keys(open).length) {
+      var first = groups.find(function (x) { return x.jobs.length; });
+      if (first) open[first.g.id] = true;
+    }
+
+    return '<div class="mm-tacc">' + groups.map(function (x) {
+      var isOpen = !!open[x.g.id] && x.jobs.length > 0;
+      var empty = !x.jobs.length;
+      return '<section class="mm-tgroup' + (empty ? ' mm-tgroup-empty' : '') + (isOpen ? ' is-open' : '') + '">' +
+        '<button type="button" class="mm-tgroup-head" data-group="' + U.esc(x.g.id) + '"' +
+          ' aria-expanded="' + (isOpen ? 'true' : 'false') + '"' + (empty ? ' disabled' : '') + '>' +
+          '<span class="mm-tgroup-arrow" aria-hidden="true">&#9656;</span>' +
+          '<span class="mm-tgroup-text">' +
+            '<span class="mm-tgroup-title">' + U.esc(x.g.title) + '</span>' +
+            '<span class="mm-tgroup-hint">' + U.esc(empty ? 'Nothing waiting' : x.g.hint) + '</span>' +
+          '</span>' +
           '<span class="mm-tgroup-count">' + x.jobs.length + '</span>' +
-          '<span class="mm-tgroup-hint">' + U.esc(x.g.hint) + '</span>' +
-        '</div>' +
+        '</button>' +
+        (empty ? '' :
         '<div class="mm-tlist">' + x.jobs.map(function (o) {
           var u = taskUrgency(o, x.g.id);
           return '<button type="button" class="mm-titem" data-job="' + U.esc(o.id) + '">' +
@@ -623,9 +649,9 @@ window.MM = window.MM || {};
               (u.text ? '<span class="mm-titem-flag mm-titem-' + u.cls + '">' + U.esc(u.text) + '</span>' : '') +
             '</span>' +
           '</button>';
-        }).join('') + '</div>' +
+        }).join('') + '</div>') +
       '</section>';
-    }).join('');
+    }).join('') + '</div>';
   }
 
   function renderCompletedTable(rows) {
@@ -724,6 +750,14 @@ window.MM = window.MM || {};
   }
 
   function bindTaskItems(el) {
+    el.querySelectorAll('.mm-tgroup-head[data-group]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-group');
+        openGroups[id] = !openGroups[id];
+        saveOpenGroups();
+        renderTable();
+      });
+    });
     el.querySelectorAll('.mm-titem[data-job]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var o = allJobs.find(function (j) { return j.id === btn.getAttribute('data-job'); });
@@ -733,10 +767,10 @@ window.MM = window.MM || {};
   }
 
   var VIEW_NOTES = {
-    done: 'Finished jobs, kept as a record. These no longer appear in the other views.',
-    todo: 'Everything the team needs to do right now, grouped by the kind of work.',
-    all: 'Every job, what needs doing next, and how far it has got.',
-    new: 'Jobs with no measurement recorded yet — someone still needs to visit the property.',
+    todo: 'Your work list. Open a section to see the jobs waiting at that step.',
+    all: 'Every job that is still running, with its next step and how far it has got.',
+    new: 'Jobs nobody has been out to measure yet.',
+    done: 'Jobs marked complete. These are kept as a record and do not show anywhere else.',
   };
 
   function renderNote() {
