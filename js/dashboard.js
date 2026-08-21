@@ -20,8 +20,7 @@ window.MM = window.MM || {};
   var stageNames = {};
   var salesPipeline = null;
   var userNames = {};
-  var activeView = 'work';   // 'work' | 'all'
-  var activeFilter = 'all';
+  var activeView = 'work';   // only view; kept so filters can be reintroduced
   var searchTerm = '';
   var onOpenJob = null;
   var openGroups = null;
@@ -247,62 +246,6 @@ window.MM = window.MM || {};
     }).join('') + '</div>';
   }
 
-  // ---- All jobs -----------------------------------------------------------
-  //
-  // Filters mirror the work-list groups exactly, so the two views can never
-  // disagree about what state a job is in.
-  var FILTERS = [
-    { id: 'all', label: 'All active', test: function (o) { return !isClosed(o); } },
-    { id: 'attention', label: 'Needs attention', test: function (o) {
-        if (isClosed(o)) return false;
-        var f = groupFlag(o);
-        return f.cls === 'urgent' || f.cls === 'soon';
-      } },
-    { id: 'urgent', label: 'Urgent', test: function (o) {
-        return !isClosed(o) && groupFlag(o).cls === 'urgent';
-      } },
-    { id: 'measure', label: 'Not measured', test: function (o) {
-        return !isClosed(o) && notMeasured(o);
-      } },
-    { id: 'unassigned', label: 'No staff', test: function (o) {
-        return !isClosed(o) && !o.assignedTo;
-      } },
-    { id: 'done', label: 'Finished', test: isCompleted },
-    { id: 'lost', label: 'Lost', test: function (o) { return isDead(o) && !isCompleted(o); } },
-  ];
-  function filterById(id) { return FILTERS.find(function (f) { return f.id === id; }); }
-
-  function renderAllList() {
-    var f = filterById(activeFilter) || FILTERS[0];
-    var rows = allJobs.filter(function (o) { return f.test(o) && matchesSearch(o); }).sort(sortJobs);
-
-    if (!rows.length) {
-      return '<div class="mm-empty">No jobs under &ldquo;' + U.esc(f.label) + '&rdquo;.</div>';
-    }
-    return '<div class="mm-jlist">' +
-      rows.map(function (o) { return jobCard(o, { showStep: true }); }).join('') +
-      '</div><div class="mm-dash-count">' + rows.length + ' job' + (rows.length === 1 ? '' : 's') + '</div>';
-  }
-
-  function renderFilters() {
-    var el = document.getElementById('mm-dash-filters');
-    if (activeView !== 'all') { el.innerHTML = ''; return; }
-    el.innerHTML = FILTERS.map(function (f) {
-      var n = allJobs.filter(f.test).length;
-      var on = activeFilter === f.id;
-      return '<button type="button" class="mm-filter' + (on ? ' active' : '') + (n ? '' : ' is-empty') + '"' +
-        ' data-filter="' + U.esc(f.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
-        U.esc(f.label) + '<span class="mm-filter-count">' + n + '</span></button>';
-    }).join('');
-    el.querySelectorAll('.mm-filter').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        activeFilter = btn.getAttribute('data-filter');
-        renderFilters();
-        renderBody();
-      });
-    });
-  }
-
   // ---- Summary ------------------------------------------------------------
   //
   // Four numbers, always the same four, so the header never reshuffles as the
@@ -479,13 +422,12 @@ window.MM = window.MM || {};
   // ---- Rendering ----------------------------------------------------------
 
   var VIEW_NOTES = {
-    work: 'Your day, grouped by what needs doing. Tap a section to open it.',
-    all: 'Every job in one list. Use the filters or search to narrow it down.',
+    work: 'Every job, grouped by the stage it is in. Tap a section to open it.',
   };
 
   function renderBody() {
     var el = document.getElementById('mm-dash-table');
-    el.innerHTML = activeView === 'work' ? renderWorkList() : renderAllList();
+    el.innerHTML = renderWorkList();
     bindBody(el);
   }
 
@@ -508,9 +450,7 @@ window.MM = window.MM || {};
 
   function render() {
     document.getElementById('mm-dash-view-note').textContent = VIEW_NOTES[activeView] || '';
-    document.getElementById('mm-filter-wrap').style.display = activeView === 'all' ? '' : 'none';
     renderStats();
-    renderFilters();
     renderBody();
   }
 
@@ -558,22 +498,8 @@ window.MM = window.MM || {};
       });
   }
 
-  function setView(view) {
-    activeView = view;
-    document.querySelectorAll('#mm-dash-views .mm-view-tab').forEach(function (b) {
-      var on = b.getAttribute('data-view') === view;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-selected', on ? 'true' : 'false');
-    });
-    if (allJobs.length) render();
-  }
-
   function initDashboard(openJobFn) {
     onOpenJob = openJobFn;
-
-    document.querySelectorAll('#mm-dash-views .mm-view-tab').forEach(function (btn) {
-      btn.addEventListener('click', function () { setView(btn.getAttribute('data-view')); });
-    });
 
     var searchEl = document.getElementById('mm-dash-search');
     var timer = null;
