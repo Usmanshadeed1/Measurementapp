@@ -3,7 +3,7 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists;
 
   var job = null, room = null, editRoom = null, contactSearchTimer = null;
 
@@ -19,6 +19,7 @@
   // ===== SITE NAV (header links, desktop + mobile copies, and brand link) =====
   function goToTab(tab) {
     if (tab === 'dashboard') { showScreen('dashboard'); DASH.loadDashboard(); }
+    else if (tab === 'tasklists') { showScreen('tasklists'); TLISTS.load(); }
     else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
     setActiveNavLink(tab);
     closeMobileNav();
@@ -467,7 +468,13 @@
   // for a visitor who has not proved who they are.
   DASH.initDashboard(function (o) { pickJob(o); });
   TASKS.init();
+  TLISTS.init();
   window.MM.auth.init(function () {
+    // Task Lists is an admin tool: a worker has no reason to define the
+    // standard run of work, and the database refuses the writes anyway.
+    if (window.MM.auth.isAdmin()) {
+      document.querySelectorAll('.mm-admin-only').forEach(function (el) { el.style.display = ''; });
+    }
     setActiveNavLink('dashboard');
     showScreen('dashboard');
     DASH.loadDashboard();

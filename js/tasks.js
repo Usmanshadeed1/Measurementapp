@@ -161,14 +161,25 @@ window.MM = window.MM || {};
         '<p class="mm-task-empty">No tasks on this job yet.</p>' +
         (admin ? '<div class="mm-task-actions">' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-task-add">Add a task</button>' +
-          '<button class="mm-btn-sm mm-btn-secondary" id="mm-task-template">Use the standard list</button>' +
-          '<button class="mm-btn-sm mm-btn-secondary" id="mm-task-edit-list">Edit the standard list</button>' +
+          '<button class="mm-btn-sm mm-btn-secondary" id="mm-task-template">Use a task list</button>' +
           '</div>' : '');
     } else {
-      el.innerHTML = head +
-        '<div class="mm-tasklist">' +
-          currentTasks.map(function (t) { return taskRow(t, { canEdit: admin }); }).join('') +
-        '</div>' +
+      // Tasks are shown under their group heading, so a twenty-task job reads
+      // as stages of work rather than one long list.
+      var body = '', lastGroup = null;
+      currentTasks.forEach(function (t) {
+        var g = t.group_name || '';
+        if (g !== lastGroup) {
+          if (lastGroup !== null) body += '</div>';
+          body += (g ? '<div class="mm-taskgroup-name">' + U.esc(g) + '</div>' : '') +
+                  '<div class="mm-tasklist">';
+          lastGroup = g;
+        }
+        body += taskRow(t, { canEdit: admin });
+      });
+      if (lastGroup !== null) body += '</div>';
+
+      el.innerHTML = head + body +
         (admin ? '<div class="mm-task-actions">' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-task-add">Add a task</button>' +
           '</div>' : '');
@@ -190,9 +201,7 @@ window.MM = window.MM || {};
     var add = el.querySelector('#mm-task-add');
     if (add) add.addEventListener('click', function () { openEditor(null); });
     var tpl = el.querySelector('#mm-task-template');
-    if (tpl) tpl.addEventListener('click', applyTemplate);
-    var edt = el.querySelector('#mm-task-edit-list');
-    if (edt) edt.addEventListener('click', openTemplates);
+    if (tpl) tpl.addEventListener('click', openListPicker);
   }
 
   function taskError(msg) {
@@ -217,44 +226,42 @@ window.MM = window.MM || {};
   // The standard list becomes a real schedule: each task starts the day after
   // the one before it ends, and depends on it, so the chain is real rather
   // than a flat list of dates.
-  function applyTemplate() {
+  // Applies a named list to this job. Each task starts the day after the one
+  // before ends, giving a real schedule rather than a pile of same-day tasks.
+  //
+  // Inserted one at a time on purpose: a bulk POST returns the created rows
+  // in no guaranteed order, so chaining them by array index linked the wrong
+  // tasks together. Sequential inserts mean each task knows the real id of
+  // the one it waits for.
+  function applyList(listId) {
     taskError('');
-    var btn = document.getElementById('mm-task-template');
-    if (btn) { btn.disabled = true; btn.textContent = 'Adding...'; }
-
-    loadTemplates()
+    return db('GET', '/task_templates?list_id=eq.' + listId + '&select=*&order=position')
       .then(function (tpls) {
-        if (!tpls.length) throw new Error('There are no standard tasks set up yet.');
-        var start = todayStr();
-        var rows = tpls.map(function (tp, i) {
-          var s = start;
-          var e = addDays(s, Math.max(0, (tp.days || 1) - 1));
-          start = addDays(e, 1);
-          return {
-            job_id: currentJob.id, job_name: jobLabel(currentJob), job_address: jobAddr(currentJob),
-            title: tp.title, notes: tp.notes || null,
-            start_date: s, end_date: e, position: i + 1,
-            created_by: (auth.user() || {}).id,
-          };
-        });
-        return db('POST', '/tasks', rows);
-      })
-      .then(function (created) {
-        // Link each task to the one before it, now that the ids exist. Done
-        // one at a time: a burst of parallel writes is what was failing here,
-        // and the order matters anyway.
-        var list = created || [];
-        return list.slice(1).reduce(function (chain, t, i) {
+        if (!tpls || !tpls.length) throw new Error('That list has no tasks in it yet.');
+        var start = nextStart(currentTasks);
+        var pos = currentTasks.length;
+        var prevId = currentTasks.length ? currentTasks[currentTasks.length - 1].id : null;
+
+        return tpls.reduce(function (chain, tp) {
           return chain.then(function () {
-            return db('PATCH', '/tasks?id=eq.' + t.id, { depends_on: list[i].id });
+            var s = start;
+            var e = addDays(s, Math.max(0, (tp.days || 1) - 1));
+            start = addDays(e, 1);
+            pos += 1;
+            return db('POST', '/tasks', {
+              job_id: currentJob.id,
+              job_name: jobLabel(currentJob),
+              job_address: jobAddr(currentJob),
+              title: tp.title,
+              group_name: tp.group_name || null,
+              start_date: s, end_date: e, position: pos,
+              depends_on: prevId,
+              created_by: (auth.user() || {}).id,
+            }).then(function (rows) { prevId = rows[0].id; });
           });
         }, Promise.resolve());
       })
-      .then(refreshJob)
-      .catch(function (e) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Use the standard list'; }
-        taskError('Could not add the tasks: ' + e.message);
-      });
+      .then(refreshJob);
   }
 
   function jobLabel(o) {
@@ -367,99 +374,45 @@ window.MM = window.MM || {};
       });
   }
 
-  // ---- Standard task list (admin) -----------------------------------------
-  //
-  // The default tasks are rows in the database, not code, so the client can
-  // shape them to how he actually builds a kitchen without a deploy. Groups
-  // are free text — construction stages differ per business.
+  // ---- Choosing a list ----------------------------------------------------
 
-  var templates = [];
+  function openListPicker() {
+    var el = document.getElementById('mm-pick-list');
+    el.innerHTML = '<div class="mm-empty">Loading...</div>';
+    document.getElementById('mm-pick-error').textContent = '';
+    document.getElementById('mm-modal-picklist').classList.add('open');
 
-  function openTemplates() {
-    document.getElementById('mm-modal-templates').classList.add('open');
-    renderTemplates();
-    loadTemplates().then(function (rows) {
-      templates = rows || [];
-      renderTemplates();
-    }).catch(function (e) { tplError(e.message); });
-  }
-  function closeTemplates() {
-    document.getElementById('mm-modal-templates').classList.remove('open');
-  }
-  function tplError(msg) {
-    var el = document.getElementById('mm-tpl-error');
-    if (el) el.textContent = msg || '';
-  }
-
-  function renderTemplates() {
-    var el = document.getElementById('mm-tpl-list');
-    if (!templates.length) {
-      el.innerHTML = '<p class="mm-task-empty">No standard tasks yet. Add the first one below.</p>';
-      return;
-    }
-    // Grouped so a long list reads as stages of work rather than 20 rows.
-    var groups = {};
-    templates.forEach(function (t) {
-      var g = t.notes || 'Other';
-      (groups[g] = groups[g] || []).push(t);
-    });
-    el.innerHTML = Object.keys(groups).map(function (g) {
-      return '<div class="mm-tpl-group"><div class="mm-tpl-group-name">' + U.esc(g) + '</div>' +
-        groups[g].map(function (t) {
-          return '<div class="mm-tpl-row" data-tpl="' + U.esc(t.id) + '">' +
-            '<input class="mm-input mm-tpl-title" value="' + U.esc(t.title) + '" aria-label="Task name">' +
-            '<input class="mm-input mm-tpl-days" type="number" min="1" value="' + (t.days || 1) + '" aria-label="Days">' +
-            '<button type="button" class="mm-tpl-del" data-del="' + U.esc(t.id) + '" aria-label="Remove ' + U.esc(t.title) + '">&times;</button>' +
-          '</div>';
-        }).join('') + '</div>';
-    }).join('');
-
-    el.querySelectorAll('[data-del]').forEach(function (b) {
-      b.addEventListener('click', function () { deleteTemplate(b.getAttribute('data-del')); });
-    });
-    // Save on blur rather than a Save button per row: the admin edits a few
-    // cells and closes the box, and everything is already stored.
-    el.querySelectorAll('.mm-tpl-row').forEach(function (row) {
-      var id = row.getAttribute('data-tpl');
-      row.querySelector('.mm-tpl-title').addEventListener('blur', function () {
-        patchTemplate(id, { title: this.value.trim() });
-      });
-      row.querySelector('.mm-tpl-days').addEventListener('blur', function () {
-        patchTemplate(id, { days: Math.max(1, parseInt(this.value, 10) || 1) });
-      });
-    });
-  }
-
-  function patchTemplate(id, body) {
-    if (body.title === '') return;
-    tplError('');
-    db('PATCH', '/task_templates?id=eq.' + id, body).catch(function (e) {
-      tplError('Could not save: ' + e.message);
-    });
-  }
-  function deleteTemplate(id) {
-    tplError('');
-    db('DELETE', '/task_templates?id=eq.' + id)
-      .then(function () {
-        templates = templates.filter(function (t) { return t.id !== id; });
-        renderTemplates();
+    db('GET', '/task_lists?select=*,task_templates(count)&order=position')
+      .then(function (lists) {
+        if (!lists || !lists.length) {
+          el.innerHTML = '<p class="mm-task-empty">No task lists yet. Create one on the Task Lists page.</p>';
+          return;
+        }
+        el.innerHTML = lists.map(function (l) {
+          var n = (l.task_templates && l.task_templates[0] && l.task_templates[0].count) || 0;
+          return '<button type="button" class="mm-assign-opt" data-list="' + U.esc(l.id) + '">' +
+            '<span><span class="mm-pick-name">' + U.esc(l.name) + '</span>' +
+            (l.description ? '<span class="mm-pick-desc">' + U.esc(l.description) + '</span>' : '') +
+            '</span><span class="mm-pick-count">' + n + ' task' + (n === 1 ? '' : 's') + '</span></button>';
+        }).join('');
+        el.querySelectorAll('[data-list]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            el.querySelectorAll('.mm-assign-opt').forEach(function (x) { x.disabled = true; });
+            b.textContent = 'Adding...';
+            applyList(b.getAttribute('data-list'))
+              .then(closeListPicker)
+              .catch(function (e) {
+                el.querySelectorAll('.mm-assign-opt').forEach(function (x) { x.disabled = false; });
+                document.getElementById('mm-pick-error').textContent = e.message;
+                openListPicker();
+              });
+          });
+        });
       })
-      .catch(function (e) { tplError('Could not remove: ' + e.message); });
+      .catch(function (e) { el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>'; });
   }
-  function addTemplate() {
-    var title = document.getElementById('mm-tpl-new-title').value.trim();
-    var group = document.getElementById('mm-tpl-new-group').value.trim();
-    var days = Math.max(1, parseInt(document.getElementById('mm-tpl-new-days').value, 10) || 1);
-    if (!title) { tplError('Give the task a name.'); return; }
-    tplError('');
-    var pos = templates.reduce(function (m, t) { return Math.max(m, t.position || 0); }, 0) + 1;
-    db('POST', '/task_templates', { title: title, notes: group || null, days: days, position: pos })
-      .then(function (rows) {
-        templates.push(rows[0]);
-        document.getElementById('mm-tpl-new-title').value = '';
-        renderTemplates();
-      })
-      .catch(function (e) { tplError('Could not add: ' + e.message); });
+  function closeListPicker() {
+    document.getElementById('mm-modal-picklist').classList.remove('open');
   }
 
   // ---- Entry points -------------------------------------------------------
@@ -483,10 +436,9 @@ window.MM = window.MM || {};
   }
 
   function init() {
-    document.getElementById('mm-tpl-close').addEventListener('click', closeTemplates);
-    document.getElementById('mm-tpl-add').addEventListener('click', addTemplate);
-    document.getElementById('mm-modal-templates').addEventListener('click', function (e) {
-      if (e.target === this) closeTemplates();
+    document.getElementById('mm-pick-cancel').addEventListener('click', closeListPicker);
+    document.getElementById('mm-modal-picklist').addEventListener('click', function (e) {
+      if (e.target === this) closeListPicker();
     });
     document.getElementById('mm-te-save').addEventListener('click', saveTask);
     document.getElementById('mm-te-cancel').addEventListener('click', closeEditor);

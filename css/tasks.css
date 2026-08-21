@@ -102,3 +102,85 @@ input[type="date"]{color-scheme:dark}
   .mm-tpl-new{grid-template-columns:1fr 1fr;}
   .mm-tpl-new .mm-btn-sm{grid-column:1 / -1}
 }
+
+/* ==========================================================================
+   TASK LISTS PAGE
+   Where the standard runs of work are defined. Built as a page rather than a
+   modal: this is where twenty tasks get typed and rearranged, which needs
+   room and needs to survive a phone keyboard opening.
+   ========================================================================== */
+.mm-tl-head{display:flex;align-items:flex-start;justify-content:space-between;
+            gap:16px;flex-wrap:wrap;margin:16px 0 14px}
+.mm-tl-name{font-size:1.3em;font-weight:800;color:var(--text);line-height:1.25}
+.mm-tl-desc{font-size:.88em;color:var(--text2);margin-top:3px;max-width:60ch}
+.mm-tl-stats{display:flex;gap:16px;font-size:.85em;color:var(--text2);flex-wrap:wrap}
+.mm-tl-stats strong{color:var(--text);font-size:1.15em;font-variant-numeric:tabular-nums}
+
+.mm-tl-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+
+.mm-tl-group{background:var(--card);border:1px solid var(--border);
+             border-radius:12px;padding:14px 16px;margin-bottom:12px;
+             box-shadow:var(--card-shadow)}
+.mm-tl-group-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.mm-tl-group-name{font-size:.76em;font-weight:800;text-transform:uppercase;
+                  letter-spacing:.08em;color:var(--accent)}
+.mm-tl-group-count{display:inline-flex;align-items:center;justify-content:center;
+                   min-width:22px;height:22px;padding:0 7px;border-radius:999px;
+                   background:var(--card2);color:var(--text2);
+                   font-size:.75em;font-weight:700;font-variant-numeric:tabular-nums}
+
+.mm-tl-row{display:grid;grid-template-columns:auto 1fr 118px auto;gap:10px;
+           align-items:center;padding:6px 0}
+.mm-tl-grip{color:var(--empty);font-size:.8em;letter-spacing:-3px;cursor:default}
+.mm-tl-row .mm-input{padding:10px 12px;font-size:.92em}
+
+/* The unit sits inside the field so a bare number is never ambiguous. */
+.mm-tl-days-wrap{position:relative}
+.mm-tl-days-wrap .mm-input{padding-right:46px;text-align:right}
+.mm-tl-days-label{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+                  font-size:.78em;color:var(--text2);pointer-events:none}
+
+.mm-tl-del{background:transparent;color:var(--danger-text);
+           border:1px solid var(--control-border);border-radius:8px;
+           padding:8px 12px;font-size:.78em;font-weight:700;
+           cursor:pointer;font-family:inherit;min-height:40px;white-space:nowrap}
+.mm-tl-del:hover{background:var(--danger-bg);border-color:var(--danger-text)}
+.mm-tl-del:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.mm-tl-add{background:var(--card2);border:1px dashed var(--control-border);
+           border-radius:12px;padding:14px 16px;margin-top:6px}
+.mm-tl-addrow{display:grid;grid-template-columns:1fr 180px 118px auto;gap:10px;
+              align-items:center;margin-top:10px}
+
+.mm-tl-empty{text-align:center;padding:48px 24px;max-width:52ch;margin:0 auto}
+.mm-tl-empty h2{font-size:1.25em;font-weight:800;color:var(--text);margin-bottom:10px}
+.mm-tl-empty p{color:var(--text2);font-size:.92em;line-height:1.55;margin-bottom:22px}
+
+/* Blur-saving has no button press to acknowledge it, so this confirms. */
+.mm-tl-saved{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);
+             background:var(--success);color:#04220f;font-weight:800;font-size:.85em;
+             padding:10px 20px;border-radius:999px;opacity:0;pointer-events:none;
+             transition:opacity .18s ease, transform .18s ease;z-index:50}
+.mm-tl-saved.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Group heading inside a job's task panel */
+.mm-taskgroup-name{font-size:.72em;font-weight:800;text-transform:uppercase;
+                   letter-spacing:.08em;color:var(--accent);margin:14px 0 6px}
+.mm-taskgroup-name:first-child{margin-top:0}
+
+/* List picker */
+.mm-pick-name{display:block;font-weight:700;color:var(--text)}
+.mm-pick-desc{display:block;font-size:.8em;color:var(--text2);margin-top:2px}
+.mm-pick-count{font-size:.78em;color:var(--text2);white-space:nowrap;font-weight:700}
+
+@media (max-width: 720px){
+  /* Stacked on a phone: three inputs across a small screen makes each one
+     too narrow to read what you typed. */
+  .mm-tl-row{grid-template-columns:1fr auto;gap:8px}
+  .mm-tl-grip{display:none}
+  .mm-tl-row .mm-tl-title{grid-column:1 / -1}
+  .mm-tl-days-wrap{width:118px}
+  .mm-tl-addrow{grid-template-columns:1fr}
+  .mm-tl-addrow .mm-tl-days-wrap{width:100%}
+  .mm-tl-head{flex-direction:column;gap:10px}
+}
