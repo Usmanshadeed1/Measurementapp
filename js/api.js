@@ -28,7 +28,9 @@ window.MM = window.MM || {};
     measured: 'iM2aDumKi2NctsUP80bd',      // when measuring was finished
     design: 'nZtlNKXw54QNcDFZLUhc',        // when the design was finished
     pricing: 'ZwMwQt4rCYOvxzYfTdPu',       // when pricing was finished
-    proposalSent: 'wwLRthpRhQLmMcSOLnaH',
+    proposalSent: 'wwLRthpRhQLmMcSOLnaH',  // when the proposal went to the customer
+    cabinets: 'IPuLmeNR8jrtQ41gO3RF',      // after the sale: cabinets ordered
+    completed: 'rrzfNKhLCYfDVq5v0ZLq',     // the job is finished and archived
   };
 
   // Stage a job moves to once measuring is done. WF-2 fires on arrival here
@@ -37,6 +39,9 @@ window.MM = window.MM || {};
   // Pricing done means the proposal is ready to send, which is the stage
   // meaning "designs and pricing are finished" — WF-3 fires there.
   var STAGE_AFTER_PRICING = 'eb7eca8c-db5c-4df7-a766-2366d240d469';  // Design Meeting Scheduled
+  var STAGE_PROPOSAL_SENT = 'a3e8f945-415a-442f-bf60-050a62d4dc54';  // Proposal Sent
+  var STAGE_MATERIAL_ORDERING = 'c0c28c4a-599c-4f38-86cc-9accd2a6f199'; // Material Ordering
+  var STAGE_WON = '846384b2-f083-4189-9736-4a9de34ba4d0';            // Hired Maximus
 
   // Association IDs — one per relationship type in GHL's custom-object schema.
   var A = {
@@ -263,7 +268,8 @@ window.MM = window.MM || {};
     LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
     DATE_FIELD_IDS: DATE_FIELD_IDS, STAGE_AFTER_MEASURED: STAGE_AFTER_MEASURED,
-    STAGE_AFTER_PRICING: STAGE_AFTER_PRICING,
+    STAGE_AFTER_PRICING: STAGE_AFTER_PRICING, STAGE_PROPOSAL_SENT: STAGE_PROPOSAL_SENT,
+    STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON,
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,

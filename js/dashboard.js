@@ -49,6 +49,17 @@ window.MM = window.MM || {};
   function designDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.design); }
   function pricingDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.pricing); }
   function notMeasured(o) { return !measuredDate(o); }
+  function sentDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.proposalSent); }
+  function cabinetsDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.cabinets); }
+  function completedDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.completed); }
+  function isCompleted(o) { return !!completedDate(o); }
+  function isWon(o) {
+    return o.pipelineStageId === api.STAGE_WON ||
+           o.pipelineStageId === api.STAGE_MATERIAL_ORDERING || !!cabinetsDate(o);
+  }
+  // Every active view works from this list, so a completed job disappears
+  // everywhere at once rather than each view remembering to exclude it.
+  function activeJobs() { return allJobs.filter(function (o) { return !isCompleted(o); }); }
 
   // Progress is read from the dates the staff actually enter, not from the
   // status dropdowns — a date is a fact someone recorded, whereas a status
@@ -292,8 +303,9 @@ window.MM = window.MM || {};
     return (customerName(o) + ' ' + jobAddress(o) + ' ' + staffName(o)).toLowerCase().indexOf(searchTerm.toLowerCase()) > -1;
   }
   function visibleJobs() {
-    if (activeView === 'todo') return allJobs.filter(matchesSearch);
-    var base = activeView === 'new' ? allJobs.filter(notMeasured) : allJobs;
+    if (activeView === 'done') return allJobs.filter(isCompleted).filter(matchesSearch);
+    if (activeView === 'todo') return activeJobs().filter(matchesSearch);
+    var base = activeView === 'new' ? activeJobs().filter(notMeasured) : activeJobs();
     return base.filter(function (o) {
       return matchesSearch(o) && (activeView === 'new' || matchesFilter(o));
     });
@@ -307,9 +319,23 @@ window.MM = window.MM || {};
         '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
     }
 
+    if (activeView === 'done') {
+      var doneJobs = allJobs.filter(isCompleted);
+      var last30 = doneJobs.filter(function (o) {
+        var d = daysSince(completedDate(o));
+        return d !== null && d <= 30;
+      }).length;
+      el.innerHTML =
+        stat('Completed jobs', doneJobs.length, 'good') +
+        stat('In the last 30 days', last30, 'neutral') +
+        stat('Still active', activeJobs().length, 'neutral');
+      return;
+    }
+
     if (activeView === 'todo') {
-      var counts = TASK_GROUPS.map(function (g) { return allJobs.filter(g.test).length; });
-      var overdueVisits = allJobs.filter(function (o) {
+      var act = activeJobs();
+      var counts = TASK_GROUPS.map(function (g) { return act.filter(g.test).length; });
+      var overdueVisits = act.filter(function (o) {
         if (measuredDate(o) || !apptDate(o)) return false;
         var d = daysTo(apptDate(o));
         return d !== null && d < 0;
@@ -320,6 +346,9 @@ window.MM = window.MM || {};
         stat('To design', counts[2], counts[2] ? 'warn' : 'good') +
         stat('To price', counts[3], counts[3] ? 'warn' : 'good') +
         stat('To send', counts[4], counts[4] ? 'good' : 'neutral') +
+        (counts[5] ? stat('Awaiting reply', counts[5], 'neutral') : '') +
+        (counts[6] ? stat('Order cabinets', counts[6], 'warn') : '') +
+        (counts[7] ? stat('In production', counts[7], 'neutral') : '') +
         (overdueVisits ? stat('Visits overdue', overdueVisits, 'bad') : '');
       return;
     }
@@ -342,16 +371,16 @@ window.MM = window.MM || {};
     }
 
     var needMeasure = allJobs.filter(notMeasured).length;
-    var revisionCount = allJobs.filter(inRevision).length;
-    var overdue = allJobs.filter(function (o) {
+    var revisionCount = act2.filter(inRevision).length;
+    var overdue = act2.filter(function (o) {
       if (!notMeasured(o)) return false;
       var d = daysTo(apptDate(o));
       return d !== null && d < 0;
     }).length;
 
-    var doneCount = allJobs.filter(allStepsDone).length;
+    var doneCount = act2.filter(allStepsDone).length;
     el.innerHTML =
-      stat('Total jobs', allJobs.length, 'neutral') +
+      stat('Active jobs', act2.length, 'neutral') +
       stat('Needs measuring', needMeasure, needMeasure ? 'warn' : 'good') +
       (overdue ? stat('Visit overdue', overdue, 'bad') : '') +
       (revisionCount ? stat('Needs changes', revisionCount, 'bad') : '') +
@@ -469,7 +498,15 @@ window.MM = window.MM || {};
     if (inRevision(o)) return { text: 'Customer wants changes', tone: 'urgent' };
     if (!designDate(o)) return { text: 'Create the design', tone: 'soon' };
     if (!pricingDate(o)) return { text: 'Work out pricing', tone: 'soon' };
-    return { text: 'Send the proposal', tone: 'done' };
+    if (!sentDate(o)) return { text: 'Send the proposal', tone: 'soon' };
+    if (!isWon(o)) {
+      var w = daysSince(sentDate(o));
+      if (w >= 7) return { text: 'Chase the customer — ' + w + 'd', tone: 'urgent' };
+      return { text: 'Waiting for the customer', tone: 'wait' };
+    }
+    if (!cabinetsDate(o)) return { text: 'Order the cabinets', tone: 'soon' };
+    if (!completedDate(o)) return { text: 'Finish the job', tone: 'soon' };
+    return { text: 'Completed', tone: 'done' };
   }
 
   // Compact progress read-out: measured -> design -> pricing -> meeting.
@@ -503,7 +540,13 @@ window.MM = window.MM || {};
     { id: 'pricing', title: 'Work out pricing',  hint: 'Design done, pricing not finished',
       test: function (o) { return !!designDate(o) && !pricingDate(o); } },
     { id: 'send',    title: 'Send the proposal', hint: 'Everything is ready for the customer',
-      test: function (o) { return !!pricingDate(o); } },
+      test: function (o) { return !!pricingDate(o) && !sentDate(o); } },
+    { id: 'wait',    title: 'Waiting for the customer', hint: 'Proposal sent, no answer yet',
+      test: function (o) { return !!sentDate(o) && !isWon(o); } },
+    { id: 'cabinets', title: 'Order the cabinets', hint: 'Job won, cabinets not ordered',
+      test: function (o) { return isWon(o) && !cabinetsDate(o); } },
+    { id: 'finish',  title: 'Finish the job', hint: 'Cabinets ordered, job not marked complete',
+      test: function (o) { return !!cabinetsDate(o); } },
   ];
 
   // Within a group, the most pressing job first: an overdue visit outranks
@@ -530,6 +573,13 @@ window.MM = window.MM || {};
       if (age >= 7) return { cls: 'urgent', text: age + 'd old' };
       if (age >= 3) return { cls: 'soon', text: age + 'd old' };
       return { cls: '', text: age === 0 ? 'New today' : age + 'd old' };
+    }
+    if (groupId === 'wait') {
+      var w = daysSince(sentDate(o));
+      if (w === null) return { cls: '', text: '' };
+      if (w >= 7) return { cls: 'urgent', text: w + 'd — chase' };
+      if (w >= 3) return { cls: 'soon', text: w + 'd waiting' };
+      return { cls: '', text: w === 0 ? 'Sent today' : w + 'd waiting' };
     }
     if (inRevision(o)) return { cls: 'urgent', text: 'Changes wanted' };
     return { cls: '', text: '' };
@@ -578,6 +628,30 @@ window.MM = window.MM || {};
     }).join('');
   }
 
+  function renderCompletedTable(rows) {
+    if (!rows.length) {
+      return '<div class="mm-empty">No completed jobs yet.</div>';
+    }
+    var sorted = rows.slice().sort(function (a, b) {
+      return new Date(completedDate(b)) - new Date(completedDate(a));
+    });
+    var head =
+      '<div class="mm-dash-row mm-dash-new mm-dash-head">' +
+        '<div class="mm-dash-c-name">Customer</div>' +
+        '<div class="mm-dash-c-staff">Staff</div>' +
+        '<div class="mm-dash-c-when">Cabinets ordered</div>' +
+        '<div class="mm-dash-c-when">Completed</div>' +
+      '</div>';
+    var body = sorted.map(function (o) {
+      return '<div class="mm-dash-row mm-dash-new is-complete" data-job="' + U.esc(o.id) + '" role="button" tabindex="0">' +
+        nameCell(o) + staffCell(o) +
+        '<div class="mm-dash-c-when" data-label="Cabinets ordered">' + U.esc(fmtDate(cabinetsDate(o)) || '—') + '</div>' +
+        '<div class="mm-dash-c-when" data-label="Completed">' + U.esc(fmtDate(completedDate(o)) || '—') + '</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="mm-dash-table">' + head + body + '</div>';
+  }
+
   function renderAllTable(rows) {
     if (!rows.length) {
       return '<div class="mm-empty">No jobs match &ldquo;' + U.esc(activeFilterLabel()) + '&rdquo;.</div>';
@@ -617,6 +691,19 @@ window.MM = window.MM || {};
     document.querySelector('.mm-filter-bar').style.display =
       (activeView === 'all') ? '' : 'none';
 
+    if (activeView === 'done') {
+      var doneJobs = allJobs.filter(isCompleted);
+      var last30 = doneJobs.filter(function (o) {
+        var d = daysSince(completedDate(o));
+        return d !== null && d <= 30;
+      }).length;
+      el.innerHTML =
+        stat('Completed jobs', doneJobs.length, 'good') +
+        stat('In the last 30 days', last30, 'neutral') +
+        stat('Still active', activeJobs().length, 'neutral');
+      return;
+    }
+
     if (activeView === 'todo') {
       el.innerHTML = renderTaskView(rows);
       bindTaskItems(el);
@@ -624,8 +711,11 @@ window.MM = window.MM || {};
       return;
     }
 
-    var total = activeView === 'new' ? allJobs.filter(notMeasured).length : allJobs.length;
-    var tableHtml = activeView === 'new' ? renderNewLeadTable(rows) : renderAllTable(rows);
+    var act = activeJobs();
+    var total = activeView === 'done' ? allJobs.filter(isCompleted).length
+              : activeView === 'new' ? act.filter(notMeasured).length : act.length;
+    var tableHtml = activeView === 'done' ? renderCompletedTable(rows)
+                  : activeView === 'new' ? renderNewLeadTable(rows) : renderAllTable(rows);
 
     el.innerHTML = tableHtml +
       (rows.length ? '<div class="mm-dash-count">Showing ' + rows.length + ' of ' + total + ' jobs</div>' : '');
@@ -643,6 +733,7 @@ window.MM = window.MM || {};
   }
 
   var VIEW_NOTES = {
+    done: 'Finished jobs, kept as a record. These no longer appear in the other views.',
     todo: 'Everything the team needs to do right now, grouped by the kind of work.',
     all: 'Every job, what needs doing next, and how far it has got.',
     new: 'Jobs with no measurement recorded yet — someone still needs to visit the property.',
@@ -716,7 +807,7 @@ window.MM = window.MM || {};
   function renderWorkFilters() {
     var el = document.getElementById('mm-dash-filters');
     el.innerHTML = WORK_FILTERS.map(function (f) {
-      var n = allJobs.filter(f.test).length;
+      var n = activeJobs().filter(f.test).length;
       return filterBtn(f.id, f.label, n, n === 0 && f.id !== 'all');
     }).join('');
     el.querySelectorAll('.mm-filter').forEach(bindFilterButton);
@@ -729,7 +820,7 @@ window.MM = window.MM || {};
     var el = document.getElementById('mm-dash-stage-filters');
     var group = document.getElementById('mm-stage-group');
     var counts = {};
-    allJobs.forEach(function (o) {
+    activeJobs().forEach(function (o) {
       var n = stageNames[o.pipelineStageId];
       if (n) counts[n] = (counts[n] || 0) + 1;
     });
