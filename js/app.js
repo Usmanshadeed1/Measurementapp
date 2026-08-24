@@ -604,6 +604,7 @@
   MY.onOpenJob(pickJob);
   MEASURE.init(pickJob);
   C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
+  C.initEdit(function () { loadContacts(); });
   document.getElementById('mm-measure-refresh').addEventListener('click', function () { MEASURE.load(); });
 
   window.MM.auth.init(function () {

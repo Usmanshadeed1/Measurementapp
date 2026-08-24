@@ -5,7 +5,7 @@
 window.MM = window.MM || {};
 
 (function () {
-  var U = window.MM.utils, api = window.MM.api;
+  var U = window.MM.utils, api = window.MM.api, auth = window.MM.auth;
 
   function fmtTags(tags) {
     if (!tags || !tags.length) return '';
@@ -61,9 +61,107 @@ window.MM = window.MM || {};
     return '<div class="mm-field-display"><div class="flabel">' + U.esc(label) + '</div><div class="fvalue">' + U.esc(value) + '</div></div>';
   }
 
+  // ---- Editing a contact ---------------------------------------------------
+  //
+  // Admin only: a worker changing a customer's phone number is not something
+  // the business would want, and the database enforces the same split.
+
+  var editingContact = null;
+  var onSaved = null;
+
+  function openEdit(c) {
+    editingContact = c;
+    var f = document.getElementById('mm-ce-form');
+    f.innerHTML =
+      field('mm-ce-first', 'First name', c.firstName || '') +
+      field('mm-ce-last', 'Last name', c.lastName || '') +
+      field('mm-ce-phone', 'Phone', c.phone || '', 'tel') +
+      field('mm-ce-email', 'Email', c.email || '', 'email') +
+      field('mm-ce-address', 'Street address', c.address1 || '') +
+      field('mm-ce-city', 'City', c.city || '') +
+      field('mm-ce-state', 'State', c.state || '') +
+      field('mm-ce-postal', 'Postal code', c.postalCode || '');
+    document.getElementById('mm-ce-error').textContent = '';
+    var btn = document.getElementById('mm-ce-save');
+    btn.disabled = false; btn.textContent = 'Save changes';
+    document.getElementById('mm-modal-contactedit').classList.add('open');
+    document.getElementById('mm-ce-first').focus();
+
+    function field(id, label, val, type) {
+      return '<div class="mm-field-group">' +
+        '<label class="mm-label" for="' + id + '">' + U.esc(label) + '</label>' +
+        '<input class="mm-input" id="' + id + '"' + (type ? ' type="' + type + '"' : '') +
+        ' value="' + U.esc(val) + '"></div>';
+    }
+  }
+
+  function closeEdit() {
+    document.getElementById('mm-modal-contactedit').classList.remove('open');
+    editingContact = null;
+  }
+
+  function saveEdit() {
+    if (!editingContact) return;
+    var btn = document.getElementById('mm-ce-save');
+    var err = document.getElementById('mm-ce-error');
+    var v = function (id) { return (document.getElementById(id).value || '').trim(); };
+
+    var first = v('mm-ce-first');
+    if (!first) { err.textContent = 'A first name is required.'; return; }
+
+    btn.disabled = true; btn.textContent = 'Saving...';
+    err.textContent = '';
+
+    // Every field is sent, including empty ones, so clearing a value in the
+    // form actually clears it in GHL rather than silently keeping the old one.
+    var fields = {
+      firstName: first,
+      lastName: v('mm-ce-last'),
+      phone: v('mm-ce-phone'),
+      email: v('mm-ce-email'),
+      address1: v('mm-ce-address'),
+      city: v('mm-ce-city'),
+      state: v('mm-ce-state').toUpperCase(),
+      postalCode: v('mm-ce-postal'),
+    };
+
+    api.updateContact(editingContact.id, fields)
+      .then(function (updated) {
+        closeEdit();
+        // Re-read rather than trusting the form: GHL normalises phone numbers
+        // and may reformat what was typed.
+        return api.getContact(editingContact ? editingContact.id : updated.id)
+          .catch(function () { return updated; });
+      })
+      .then(function (fresh) {
+        if (fresh) renderContactDetail(fresh);
+        if (onSaved) onSaved();
+      })
+      .catch(function (e) {
+        btn.disabled = false; btn.textContent = 'Save changes';
+        err.textContent = 'Could not save: ' + e.message;
+      });
+  }
+
+  function initEdit(afterSave) {
+    onSaved = afterSave;
+    document.getElementById('mm-ce-save').addEventListener('click', saveEdit);
+    document.getElementById('mm-ce-cancel').addEventListener('click', closeEdit);
+    document.getElementById('mm-modal-contactedit').addEventListener('click', function (e) {
+      if (e.target === this) closeEdit();
+    });
+  }
+
   function renderContactDetail(c) {
     var name = U.titleCase(c.contactName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name) || 'Unnamed Contact';
     document.getElementById('mm-contact-title').textContent = name;
+
+    // The pencil lives beside the title so it is obvious what it edits.
+    var editBtn = document.getElementById('mm-contact-edit');
+    if (editBtn) {
+      editBtn.style.display = auth.isAdmin() ? '' : 'none';
+      editBtn.onclick = function () { openEdit(c); };
+    }
     var el = document.getElementById('mm-contact-info');
     el.innerHTML =
       field('Name', name) +
@@ -182,6 +280,7 @@ window.MM = window.MM || {};
 
   window.MM.contacts = {
     onOpenJob: function (fn) { onOpenJob = fn; },
+    initEdit: initEdit,
     contactAdded: contactAdded,
     loadContacts: loadContacts,
     renderContactDetail: renderContactDetail,

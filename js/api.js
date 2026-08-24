@@ -275,6 +275,13 @@ window.MM = window.MM || {};
     p.locationId = LOC;
     return apiFetch('POST', '/contacts/', p).then(function (d) { return d.contact; });
   }
+  // Updates a contact in GHL. Only the fields passed are changed — anything
+  // omitted is left as it was, so a partial edit cannot wipe other details.
+  function updateContact(contactId, fields) {
+    return apiFetch('PUT', '/contacts/' + contactId, fields)
+      .then(function (d) { return d.contact; });
+  }
+
   function getTags() {
     return apiFetch('GET', '/locations/' + LOC + '/tags').then(function (d) { return d.tags || []; });
   }
@@ -307,7 +314,7 @@ window.MM = window.MM || {};
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
-    deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact,
+    deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact, updateContact: updateContact,
     getTags: getTags, findDuplicateContact: findDuplicateContact, enrollContactInWorkflow: enrollContactInWorkflow, getWorkflows: getWorkflows,
   };
 })();

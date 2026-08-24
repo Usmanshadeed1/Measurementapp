@@ -171,3 +171,14 @@
 @media (prefers-reduced-motion: reduce){
   .mm-spinner{animation:none;border-top-color:var(--accent)}
 }
+
+/* ---- Icon button in a topbar ----
+   Sits beside the title so it is obvious what it acts on. Sized to the same
+   44px target as every other control meant for a thumb. */
+.mm-icon-btn{background:transparent;border:1px solid var(--control-border);
+             color:var(--accent);border-radius:8px;cursor:pointer;
+             font-family:inherit;font-size:1.1em;line-height:1;
+             min-width:44px;min-height:44px;margin-left:auto;
+             display:inline-flex;align-items:center;justify-content:center}
+.mm-icon-btn:hover{background:var(--card);border-color:var(--accent)}
+.mm-icon-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}

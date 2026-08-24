@@ -69,7 +69,6 @@
     <nav class="mm-nav" aria-label="Main">
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
       <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
-      <a href="#" class="mm-nav-link" data-tab="measure">Room Measurement</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists">Task Lists</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -88,7 +87,6 @@
   <nav class="mm-mobile-nav" id="mm-mobile-nav" aria-label="Main (mobile)">
     <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
     <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
-    <a href="#" class="mm-nav-link" data-tab="measure">Room Measurement</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists">Task Lists</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -314,6 +312,18 @@
   </div>
 </div>
 
+<!-- Edit contact (admin) -->
+<div class="mm-modal-overlay" id="mm-modal-contactedit">
+  <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-ce-heading">
+    <div class="mm-modal-title" id="mm-ce-heading">Edit contact</div>
+    <p class="mm-assign-job">Changes are saved to GoHighLevel.</p>
+    <div id="mm-ce-form"></div>
+    <p class="mm-assign-error" id="mm-ce-error" role="alert"></p>
+    <button class="mm-btn mm-btn-primary" id="mm-ce-save">Save changes</button>
+    <button class="mm-btn mm-btn-secondary" id="mm-ce-cancel">Cancel</button>
+  </div>
+</div>
+
 <!-- Add Contact modal -->
 <div class="mm-modal-overlay" id="mm-modal-contact">
   <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-contact-modal-title">
@@ -366,6 +376,8 @@
   <div class="topbar">
     <button class="back-btn" id="mm-back-to-contacts" aria-label="Back to contacts">&#8249;</button>
     <h1 id="mm-contact-title">Contact</h1>
+    <button class="mm-icon-btn" id="mm-contact-edit" title="Edit contact"
+            aria-label="Edit contact" style="display:none">&#9998;</button>
   </div>
   <div class="mm-content">
     <div class="card" id="mm-contact-info"></div>
