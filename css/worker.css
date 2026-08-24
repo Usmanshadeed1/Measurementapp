@@ -115,6 +115,8 @@
 .mm-act-date{background:color-mix(in srgb,#e8a33d 20%,transparent);color:#e8a33d}
 .mm-act-task_removed{background:color-mix(in srgb,var(--danger-text) 20%,transparent);
                      color:var(--danger-text)}
+.mm-act-note{background:color-mix(in srgb,#c678dd 20%,transparent);color:#d9a2e8}
+:root[data-theme="light"] .mm-act-note{color:#7d3a91}
 
 .mm-act-main{flex:1 1 auto;min-width:0}
 .mm-act-label{display:block;color:var(--text);font-weight:600;line-height:1.4}

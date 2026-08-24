@@ -233,15 +233,26 @@ window.MM = window.MM || {};
     return apiFetch('GET', '/opportunities/' + oppId).then(function (d) { return d.opportunity; });
   }
 
-  // Notes live on the CONTACT in GHL — there is no note endpoint on an
-  // opportunity — so a customer with two jobs sees the same notes on both.
-  // The UI labels them as customer notes rather than pretending otherwise.
-  function getNotes(contactId) {
+  // Notes are created through the contact endpoint, but a `relations` array
+  // ties each one to a specific opportunity — so two jobs for the same
+  // customer keep their own notes. There is no /opportunities/{id}/notes
+  // endpoint; this array is how GHL itself links them.
+  function getNotes(contactId, oppId) {
     return apiFetch('GET', '/contacts/' + contactId + '/notes')
-      .then(function (d) { return d.notes || []; });
+      .then(function (d) {
+        var all = d.notes || [];
+        if (!oppId) return all;
+        return all.filter(function (n) {
+          return (n.relations || []).some(function (r) {
+            return r.objectKey === 'opportunity' && r.recordId === oppId;
+          });
+        });
+      });
   }
-  function addNote(contactId, body) {
-    return apiFetch('POST', '/contacts/' + contactId + '/notes', { body: body })
+  function addNote(contactId, body, oppId) {
+    var payload = { body: body };
+    if (oppId) payload.relations = [{ objectKey: 'opportunity', recordId: oppId }];
+    return apiFetch('POST', '/contacts/' + contactId + '/notes', payload)
       .then(function (d) { return d.note; });
   }
   function deleteNote(contactId, noteId) {

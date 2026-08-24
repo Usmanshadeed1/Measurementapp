@@ -1,10 +1,10 @@
 // js/notes.js
 // Customer notes on the job screen.
 //
-// GoHighLevel stores notes against the CONTACT, not the opportunity — there
-// is no note endpoint on an opportunity at all. So a customer with two jobs
-// sees the same notes on both. The panel says "Customer notes" rather than
-// "Job notes" so that is not a surprise.
+// GoHighLevel creates notes through the contact endpoint, but each note
+// carries a `relations` array that ties it to a specific opportunity. So a
+// customer with two jobs keeps separate notes on each — which is what the
+// business needs, since a note about the kitchen is not about the bathroom.
 //
 // GHL also cannot record who wrote a note through the API: every write uses
 // one shared integration token, so `userId` comes back null. The app stamps
@@ -47,7 +47,7 @@ window.MM = window.MM || {};
 
     var head =
       '<div class="mm-steps-head">' +
-        '<span class="mm-steps-title">Customer notes</span>' +
+        '<span class="mm-steps-title">Notes</span>' +
         (notes.length
           ? '<span class="mm-steps-badge mm-steps-badge-done">' + notes.length +
             ' note' + (notes.length === 1 ? '' : 's') + '</span>'
@@ -55,14 +55,14 @@ window.MM = window.MM || {};
       '</div>';
 
     el.innerHTML = head +
-      '<p class="mm-crew-note">These notes are on the customer in GoHighLevel, so they ' +
-      'show on every job for this customer.</p>' +
+      '<p class="mm-crew-note">Notes for this job. They appear on the opportunity ' +
+      'in GoHighLevel too.</p>' +
       (notes.length
         ? '<div class="mm-notelist">' + notes.map(noteRow).join('') + '</div>'
         : '<p class="mm-task-empty">No notes yet.</p>') +
       '<div class="mm-note-add">' +
         '<textarea class="mm-input" id="mm-note-text" rows="2" ' +
-          'placeholder="Add a note about this customer..."></textarea>' +
+          'placeholder="Add a note about this job..."></textarea>' +
         '<button class="mm-btn-sm mm-btn-primary" id="mm-note-save">Add note</button>' +
       '</div>' +
       '<p class="mm-task-error" id="mm-note-error" role="alert"></p>';
@@ -114,7 +114,7 @@ window.MM = window.MM || {};
     var me = auth.user();
     var body = me ? text + '\n\n— ' + me.name : text;
 
-    api.addNote(cid, body)
+    api.addNote(cid, body, currentJob.id)
       .then(function () {
         window.MM.activity.log('note', 'Added a note', {
           jobId: currentJob.id,
@@ -137,9 +137,11 @@ window.MM = window.MM || {};
     btn.disabled = true; btn.textContent = 'Deleting...';
     api.deleteNote(cid, noteId)
       .then(function () {
+        var gone = notes.find(function (n) { return n.id === noteId; });
         window.MM.activity.log('note', 'Deleted a note', {
           jobId: currentJob.id,
           jobName: (currentJob.contact && currentJob.contact.name) || currentJob.name,
+          detail: gone ? plain(gone) : null,
         });
         return load();
       })
@@ -152,7 +154,7 @@ window.MM = window.MM || {};
   function load() {
     var cid = contactId();
     if (!cid) { notes = []; render(); return Promise.resolve(); }
-    return api.getNotes(cid)
+    return api.getNotes(cid, currentJob.id)
       .then(function (rows) {
         // Newest first: the note someone needs is usually the most recent.
         notes = (rows || []).sort(function (a, b) {
@@ -172,7 +174,7 @@ window.MM = window.MM || {};
     notes = [];
     var el = document.getElementById('mm-job-notes');
     if (el) {
-      el.innerHTML = '<div class="mm-steps-head"><span class="mm-steps-title">Customer notes</span></div>' +
+      el.innerHTML = '<div class="mm-steps-head"><span class="mm-steps-title">Notes</span></div>' +
                      '<div class="mm-empty">Loading...</div>';
     }
     return load();

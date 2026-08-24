@@ -60,6 +60,7 @@ window.MM = window.MM || {};
     stage: '&#8646;', date: '&#128197;', task_done: '&#10003;', task_undone: '&#8630;',
     task_added: '&#43;', task_edited: '&#9998;', task_removed: '&#215;',
     list_added: '&#9776;', staff: '&#128100;', room: '&#127968;', signin: '&#8594;',
+    note: '&#9998;', crew: '&#128100;',
   };
 
   function when(iso) {
