@@ -66,7 +66,9 @@
     <nav class="mm-nav" aria-label="Main">
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
       <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
-      <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists">Task Lists</a>
+      <a href="#" class="mm-nav-link" data-tab="measure">Room Measurement</a>
+      <a href="#" class="mm-nav-link" data-tab="measure">Room Measurement</a>
+    <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists">Task Lists</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
     </nav>
@@ -126,6 +128,24 @@
     <div id="mm-tl-body"></div>
     <p class="mm-task-error" id="mm-tl-error" role="alert"></p>
     <div class="mm-tl-saved" id="mm-tl-saved">Saved</div>
+  </div>
+</div>
+
+<!-- ROOM MEASUREMENT — pick a job, go straight to measuring -->
+<div class="screen" id="screen-measure">
+  <div class="mm-content">
+    <div class="section-header">
+      <span class="section-title">Room Measurement</span>
+      <button class="mm-btn-sm mm-btn-secondary" id="mm-measure-refresh">Refresh</button>
+    </div>
+    <p class="mm-view-note">Pick the property you are at to record its rooms and measurements.</p>
+    <div class="mm-stats" id="mm-measure-stats"></div>
+    <div class="mm-search-bar">
+      <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
+      <label for="mm-measure-search" class="sr-only">Search jobs by customer or address</label>
+      <input class="mm-input" id="mm-measure-search" placeholder="Search by customer or address...">
+    </div>
+    <div id="mm-measure-body"></div>
   </div>
 </div>
 
@@ -339,21 +359,40 @@
 <!-- JOB DETAIL -->
 <div class="screen" id="screen-job">
   <div class="topbar">
-    <button class="back-btn" id="mm-back-to-jobs" aria-label="Back to jobs">&#8249;</button>
+    <button class="back-btn" id="mm-back-to-jobs" aria-label="Back">&#8249;</button>
     <h1 id="mm-job-title">Job</h1>
   </div>
+
+  <!-- Tabs rather than one long scroll: on a phone the measuring tool was
+       five panels down the page, and measuring is the most-used thing here. -->
+  <div class="mm-jobtabs" id="mm-jobtabs" role="tablist" aria-label="Job sections">
+    <button class="mm-jobtab active" data-jobtab="overview" role="tab" aria-selected="true">Overview</button>
+    <button class="mm-jobtab" data-jobtab="measure" role="tab" aria-selected="false">Measure</button>
+    <button class="mm-jobtab" data-jobtab="tasks" role="tab" aria-selected="false">Tasks</button>
+  </div>
+
   <div class="mm-content">
-    <div class="card" id="mm-job-info"></div>
-    <div class="card mm-steps-card" id="mm-job-steps"></div>
-    <div class="card mm-steps-card" id="mm-job-tasks"></div>
-    <div class="card mm-steps-card" id="mm-job-crew"></div>
-    <div class="card mm-steps-card" id="mm-job-history"></div>
-    <div class="mm-divider"></div>
-    <div class="section-header"><span class="section-title">Rooms</span><button class="mm-btn-sm mm-btn-primary" id="mm-add-room-btn">+ Add Room</button></div>
-    <div id="mm-rooms-list"></div>
-    <div class="mm-divider"></div>
-    <div class="section-header"><span class="section-title">Photos &amp; Videos</span></div>
-    <div id="mm-job-media"></div>
+    <div class="mm-jobpane active" data-pane="overview">
+      <div class="card" id="mm-job-info"></div>
+      <div class="card mm-steps-card" id="mm-job-steps"></div>
+      <div class="card mm-steps-card" id="mm-job-history"></div>
+    </div>
+
+    <div class="mm-jobpane" data-pane="measure">
+      <div class="section-header">
+        <span class="section-title">Rooms</span>
+        <button class="mm-btn-sm mm-btn-primary" id="mm-add-room-btn">+ Add Room</button>
+      </div>
+      <div id="mm-rooms-list"></div>
+      <div class="mm-divider"></div>
+      <div class="section-header"><span class="section-title">Photos &amp; Videos</span></div>
+      <div id="mm-job-media"></div>
+    </div>
+
+    <div class="mm-jobpane" data-pane="tasks">
+      <div class="card mm-steps-card" id="mm-job-tasks"></div>
+      <div class="card mm-steps-card" id="mm-job-crew"></div>
+    </div>
   </div>
 </div>
 
@@ -415,6 +454,7 @@
 <script src="js/tasklists.js"></script>
 <script src="js/activity.js"></script>
 <script src="js/jobaccess.js"></script>
+<script src="js/measure.js"></script>
 <script src="js/mytasks.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/import.js"></script>

@@ -3,7 +3,7 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists, ACT = window.MM.activity, MY = window.MM.mytasks, ACCESS = window.MM.jobaccess;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists, ACT = window.MM.activity, MY = window.MM.mytasks, ACCESS = window.MM.jobaccess, MEASURE = window.MM.measure;
 
   var job = null, room = null, editRoom = null, contactSearchTimer = null;
 
@@ -20,11 +20,13 @@
   function goToTab(tab) {
     // A worker has one screen. Anything else is refused here as well as
     // being hidden, so a stale link or a back button cannot get them in.
-    if (!window.MM.auth.isAdmin() && tab !== 'mytasks') tab = 'mytasks';
+    var workerTabs = { mytasks: 1, measure: 1 };
+    if (!window.MM.auth.isAdmin() && !workerTabs[tab]) tab = 'mytasks';
 
     if (tab === 'dashboard') { showScreen('dashboard'); DASH.loadDashboard(); }
     else if (tab === 'tasklists') { showScreen('tasklists'); TLISTS.load(); }
     else if (tab === 'mytasks') { showScreen('mytasks'); MY.load(); }
+    else if (tab === 'measure') { showScreen('measure'); MEASURE.load(); }
     else if (tab === 'history') { showScreen('history'); ACT.loadPage(); }
     else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
     setActiveNavLink(tab);
@@ -75,7 +77,31 @@
   }
 
   // ===== JOB =====
-  function pickJob(o) {
+  // ---- Job tabs -----------------------------------------------------------
+
+  function showJobTab(name) {
+    document.querySelectorAll('#mm-jobtabs .mm-jobtab').forEach(function (b) {
+      var on = b.getAttribute('data-jobtab') === name;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('#screen-job .mm-jobpane').forEach(function (p) {
+      p.classList.toggle('active', p.getAttribute('data-pane') === name);
+    });
+    // A tab switch is a new screen as far as the reader is concerned.
+    var c = document.querySelector('#screen-job .mm-content');
+    if (c) c.scrollTop = 0;
+  }
+
+  document.querySelectorAll('#mm-jobtabs .mm-jobtab').forEach(function (btn) {
+    btn.addEventListener('click', function () { showJobTab(btn.getAttribute('data-jobtab')); });
+  });
+
+  var jobCameFrom = 'dashboard';
+
+  function pickJob(o, tab) {
+    jobCameFrom = tab === 'measure' ? 'measure'
+                : window.MM.auth.isAdmin() ? 'dashboard' : 'mytasks';
     // A worker may open a job they are on — that is how measuring happens —
     // but nothing else. The check is here as well as in the lists, so a stale
     // reference cannot open a job they were removed from.
@@ -83,6 +109,13 @@
     job = o;
     document.getElementById('mm-job-title').textContent = customerName(o);
     showScreen('job');
+    showJobTab(tab || 'overview');
+
+    // Tasks and crew are admin work; a worker opening a job is there to
+    // measure, so the tab would only be an empty panel for them.
+    var admin = window.MM.auth.isAdmin();
+    var tasksTab = document.querySelector('#mm-jobtabs [data-jobtab="tasks"]');
+    if (tasksTab) tasksTab.style.display = admin ? '' : 'none';
 
     var stage = DASH.stageNameFor(o);
     var infoEl = document.getElementById('mm-job-info');
@@ -232,9 +265,8 @@
 
   // ===== NAV =====
   document.getElementById('mm-back-to-jobs').addEventListener('click', function () {
-    var home = window.MM.auth.isAdmin() ? 'dashboard' : 'mytasks';
-    showScreen(home);
-    setActiveNavLink(home);
+    showScreen(jobCameFrom);
+    setActiveNavLink(jobCameFrom);
   });
   document.getElementById('mm-back-to-job').addEventListener('click', function () { showScreen('job'); });
   document.getElementById('mm-back-to-contacts').addEventListener('click', function () { showScreen('contacts'); });
@@ -485,6 +517,8 @@
   TLISTS.init();
   ACT.initPage();
   MY.onOpenJob(pickJob);
+  MEASURE.init(pickJob);
+  document.getElementById('mm-measure-refresh').addEventListener('click', function () { MEASURE.load(); });
 
   window.MM.auth.init(function () {
     var admin = window.MM.auth.isAdmin();

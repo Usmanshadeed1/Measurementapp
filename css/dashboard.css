@@ -241,3 +241,32 @@
   .mm-step-date{width:100%;min-width:0}
   .mm-step-action .mm-btn-sm{width:100%}
 }
+
+/* ==========================================================================
+   JOB TABS
+   The job screen was five stacked panels with the measuring tool at the
+   bottom — on a phone that is a long scroll past things the field crew do
+   not need. Tabs put each job's three jobs-to-be-done one tap apart.
+   ========================================================================== */
+.mm-jobtabs{display:flex;gap:0;background:var(--card);
+            border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5}
+.mm-jobtab{flex:1 1 0;background:transparent;border:none;
+           border-bottom:3px solid transparent;
+           padding:14px 10px;font-family:inherit;font-size:.92em;font-weight:700;
+           color:var(--text2);cursor:pointer;min-height:52px;white-space:nowrap}
+.mm-jobtab:hover{color:var(--text)}
+.mm-jobtab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.mm-jobtab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+
+/* Only the selected pane exists on screen, so a hidden pane cannot be
+   reached by tab key or found by browser search. */
+.mm-jobpane{display:none}
+.mm-jobpane.active{display:block}
+
+/* Measured jobs recede on the measurement list — still reachable for a
+   correction, but not competing with the work still to do. */
+.mm-myjob.is-measured{opacity:.65;border-left-color:var(--success)}
+
+@media (max-width: 620px){
+  .mm-jobtab{font-size:.86em;padding:14px 6px}
+}
