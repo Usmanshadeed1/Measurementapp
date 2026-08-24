@@ -281,7 +281,7 @@ depend on another, and built from reusable task-list templates.
 workers see only jobs they are on, either by being assigned to the job
 or by holding a task on it. The database enforces this, not just the UI.
 
-**Contact Customer** — opens the customer in GoHighLevel, where calling,
+**Contact Conversation** — opens the customer in GoHighLevel, where calling,
 texting and email all live. Explained under "Calling and messaging".
 
 **Room measurement** — the original tool, unchanged.
@@ -293,7 +293,7 @@ making a call — the entire phone-system API is: list numbers, buy
 numbers. A plain `tel:` link dials from the staff member's own SIM, so
 the customer sees a personal number and GHL never records the call.
 
-**What the app does instead.** The green **Contact Customer** button
+**What the app does instead.** The green **Contact Conversation** button
 opens that customer in GoHighLevel. The staff member is signed in there
 as themselves, so the call, text or email goes out on their own business
 number and is recorded against them. A smaller **Direct call** button

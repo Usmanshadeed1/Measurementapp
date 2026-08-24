@@ -52,7 +52,7 @@ window.MM = window.MM || {};
   // The buttons shown wherever a customer's number appears.
   //
   // The first opens the customer in GoHighLevel, where calling, texting and
-  // email all live on one screen — hence "Contact Customer" rather than a
+  // email all live on one screen — hence "Contact Conversation" rather than a
   // name that mentions only calling. Because the staff member is signed into
   // GoHighLevel as themselves there, whatever they send goes out on their own
   // business number and is recorded against them. The app cannot do that on
@@ -67,7 +67,7 @@ window.MM = window.MM || {};
     if (contactId) {
       out += '<a class="mm-callbtn mm-callbtn-ghl" href="' + esc(ghlContactUrl(contactId)) + '" ' +
         'target="_blank" rel="noopener">' +
-        '<span aria-hidden="true">&#128222;</span> Contact Customer</a>';
+        '<span aria-hidden="true">&#128222;</span> Contact Conversation</a>';
     }
     out += '<a class="mm-callbtn mm-callbtn-direct" href="tel:' + esc(phoneNumber) + '" ' +
       'aria-label="Call directly from this phone">Direct call</a></span>';
