@@ -11,7 +11,7 @@
 window.MM = window.MM || {};
 
 (function () {
-  var U = window.MM.utils, auth = window.MM.auth;
+  var U = window.MM.utils, auth = window.MM.auth, api = window.MM.api;
 
   var staffCache = null;
   var currentJob = null;
@@ -141,10 +141,35 @@ window.MM = window.MM || {};
 
   // ---- Job task panel -----------------------------------------------------
 
+  // Post-sale work only. "Install cabinets" on a lead nobody has visited is
+  // noise, so the panel stays shut until the job reaches Material Ordering —
+  // and stays open afterwards, including once completed, because the task
+  // list is the record of the build.
+  var TASK_STAGES = [api.STAGE.materials, api.STAGE.completed];
+
+  function tasksAllowed(job) {
+    if (!job) return false;
+    // Tasks already on the job are always shown, whatever stage it is in:
+    // hiding work someone has been assigned would be worse than showing it
+    // early.
+    if (currentTasks.length) return true;
+    return TASK_STAGES.indexOf(job.pipelineStageId) > -1;
+  }
+
   function renderJobTasks() {
     var el = document.getElementById('mm-job-tasks');
     if (!el) return;
     var admin = auth.isAdmin();
+
+    if (!tasksAllowed(currentJob)) {
+      el.innerHTML =
+        '<div class="mm-steps-head">' +
+          '<span class="mm-steps-title">Job tasks</span>' +
+        '</div>' +
+        '<p class="mm-task-empty">Tasks appear once the job reaches Material Ordering.</p>';
+      if (window.MM.wireJobPanels) window.MM.wireJobPanels();
+      return;
+    }
     var open = currentTasks.filter(function (t) { return !t.done_at; }).length;
 
     var head =

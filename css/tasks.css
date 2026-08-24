@@ -184,3 +184,27 @@ input[type="date"]{color-scheme:dark}
   .mm-tl-headbtns{width:100%}
   .mm-tl-headbtns .mm-btn-sm{flex:1 1 0}
 }
+
+/* ---- Customer notes ---- */
+.mm-notelist{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.mm-note{background:var(--card2);border:1px solid var(--border);
+         border-left:3px solid var(--accent);border-radius:10px;padding:12px 14px}
+.mm-note-body{color:var(--text);line-height:1.5;white-space:pre-wrap;
+              overflow-wrap:anywhere;font-size:0.94em}
+.mm-note-foot{display:flex;align-items:center;justify-content:space-between;
+              gap:12px;margin-top:8px}
+.mm-note-when{font-size:0.86em;color:var(--text2);font-variant-numeric:tabular-nums}
+.mm-note-del{background:transparent;color:var(--danger-text);border:none;
+             font-family:inherit;font-size:0.86em;font-weight:700;cursor:pointer;
+             padding:4px 6px;border-radius:6px}
+.mm-note-del:hover{background:var(--danger-bg)}
+.mm-note-del:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.mm-note-add{display:flex;gap:10px;align-items:flex-start}
+.mm-note-add textarea{flex:1 1 auto;margin-bottom:0;min-height:60px}
+.mm-note-add .mm-btn-sm{flex:0 0 auto;white-space:nowrap}
+
+@media (max-width: 620px){
+  .mm-note-add{flex-direction:column}
+  .mm-note-add .mm-btn-sm{width:100%}
+}

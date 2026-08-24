@@ -233,6 +233,21 @@ window.MM = window.MM || {};
     return apiFetch('GET', '/opportunities/' + oppId).then(function (d) { return d.opportunity; });
   }
 
+  // Notes live on the CONTACT in GHL — there is no note endpoint on an
+  // opportunity — so a customer with two jobs sees the same notes on both.
+  // The UI labels them as customer notes rather than pretending otherwise.
+  function getNotes(contactId) {
+    return apiFetch('GET', '/contacts/' + contactId + '/notes')
+      .then(function (d) { return d.notes || []; });
+  }
+  function addNote(contactId, body) {
+    return apiFetch('POST', '/contacts/' + contactId + '/notes', { body: body })
+      .then(function (d) { return d.note; });
+  }
+  function deleteNote(contactId, noteId) {
+    return apiFetch('DELETE', '/contacts/' + contactId + '/notes/' + noteId);
+  }
+
   function getPipelines() {
     return apiFetch('GET', '/opportunities/pipelines?locationId=' + LOC).then(function (d) { return d.pipelines || []; });
   }
@@ -278,7 +293,7 @@ window.MM = window.MM || {};
     STAGE_AFTER_PRICING: STAGE_AFTER_PRICING, STAGE_PROPOSAL_SENT: STAGE_PROPOSAL_SENT,
     STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
     STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
-    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity,
+    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact,
