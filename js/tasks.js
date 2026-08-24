@@ -276,9 +276,10 @@ window.MM = window.MM || {};
   }
 
   function jobLabel(o) {
-    if (o.contact && o.contact.name) return o.contact.name;
+    // Formatted the way GHL shows it, not the way it is stored.
+    if (o.contact && o.contact.name) return U.titleCase(o.contact.name);
     var n = o.name || '';
-    return n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n;
+    return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
   function jobAddr(o) {
     var a = window.MM.api.oppField(o, window.MM.api.ADDR_FIELD_ID);

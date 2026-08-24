@@ -16,9 +16,10 @@ window.MM = window.MM || {};
   var onOpenJob = null;
 
   function customerName(o) {
-    if (o.contact && o.contact.name) return o.contact.name;
+    // Formatted the way GHL shows it, not the way it is stored.
+    if (o.contact && o.contact.name) return U.titleCase(o.contact.name);
     var n = o.name || '';
-    return n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n;
+    return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
   function jobAddress(o) {
     var a = api.oppField(o, api.ADDR_FIELD_ID);

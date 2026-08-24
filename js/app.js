@@ -74,9 +74,10 @@
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
   function customerName(o) {
-    if (o.contact && o.contact.name) return o.contact.name;
+    // Formatted the way GHL shows it, not the way it is stored.
+    if (o.contact && o.contact.name) return U.titleCase(o.contact.name);
     var n = o.name || '';
-    return n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n;
+    return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
   function jobAddress(o) {
     return api.oppField(o, api.ADDR_FIELD_ID);
@@ -172,7 +173,8 @@
     // reference cannot open a job they were removed from.
     if (!ACCESS.canOpen(o.id)) return;
     job = o;
-    document.getElementById('mm-job-title').textContent = customerName(o);
+    document.getElementById('mm-job-title').textContent =
+      U.titleCase(o.name) || customerName(o);
     showScreen('job');
     showJobTab(tab || 'overview');
 
@@ -183,12 +185,20 @@
     if (tasksTab) tasksTab.style.display = admin ? '' : 'none';
 
     var stage = DASH.stageNameFor(o);
+    var c = o.contact || {};
     var infoEl = document.getElementById('mm-job-info');
     infoEl.innerHTML =
       '<div class="mm-steps-head">' +
         '<span class="mm-steps-title">Job details</span>' +
         '<span class="mm-steps-badge mm-steps-badge-done">' + U.esc(stage || 'No stage') + '</span>' +
       '</div>' +
+      '<div class="mm-field-display"><div class="flabel">Customer</div><div class="fvalue">' + U.esc(customerName(o)) + '</div></div>' +
+      (c.phone
+        ? '<div class="mm-field-display"><div class="flabel">Phone</div><div class="fvalue">' +
+          '<a href="tel:' + U.esc(c.phone) + '">' + U.esc(U.phone(c.phone)) + '</a></div></div>' : '') +
+      (c.email
+        ? '<div class="mm-field-display"><div class="flabel">Email</div><div class="fvalue">' +
+          '<a href="mailto:' + U.esc(c.email) + '">' + U.esc(c.email) + '</a></div></div>' : '') +
       '<div class="mm-field-display"><div class="flabel">Address</div><div class="fvalue">' + U.esc(jobAddress(o) || '—') + '</div></div>' +
       // The stage is actionable here too: the crew finishes measuring at the
       // property and can move the job on without opening GHL.

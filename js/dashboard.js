@@ -48,9 +48,10 @@ window.MM = window.MM || {};
   function openJobs() { return allJobs.filter(function (o) { return !isClosed(o); }); }
 
   function customerName(o) {
-    if (o.contact && o.contact.name) return o.contact.name;
+    // Formatted the way GHL shows it, not the way it is stored.
+    if (o.contact && o.contact.name) return U.titleCase(o.contact.name);
     var n = o.name || '';
-    return n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n;
+    return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
   function jobAddress(o) {
     // Cards created before the Property Address action was fixed keep their

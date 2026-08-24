@@ -34,8 +34,8 @@ window.MM = window.MM || {};
       if (!contacts.length) { el.innerHTML = '<div class="mm-empty">No contacts found.</div>'; return; }
       el.innerHTML = '';
       contacts.forEach(function (c) {
-        var name = c.contactName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name || 'Unnamed Contact';
-        var subParts = [c.phone, c.email].filter(Boolean);
+        var name = U.titleCase(c.contactName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name) || 'Unnamed Contact';
+        var subParts = [U.phone(c.phone), c.email].filter(Boolean);
         var business = fmtBusiness(c);
         if (business) subParts.push(business);
 
@@ -59,12 +59,12 @@ window.MM = window.MM || {};
   }
 
   function renderContactDetail(c) {
-    var name = c.contactName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name || 'Unnamed Contact';
+    var name = U.titleCase(c.contactName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name) || 'Unnamed Contact';
     document.getElementById('mm-contact-title').textContent = name;
     var el = document.getElementById('mm-contact-info');
     el.innerHTML =
       field('Name', name) +
-      field('Phone', c.phone) +
+      field('Phone', U.phone(c.phone)) +
       field('Email', c.email) +
       field('Business', fmtBusiness(c)) +
       field('Address', fmtAddress(c)) +

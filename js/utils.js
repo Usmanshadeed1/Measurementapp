@@ -9,6 +9,31 @@ window.MM = window.MM || {};
   // make each press obvious. Index 1 is the default.
   var FONT_SIZES = [17, 20, 24, 28, 34];
 
+  // ---- Matching how GoHighLevel displays things ---------------------------
+  //
+  // GHL prettifies names and phone numbers on screen while storing them raw.
+  // The app was showing the raw values, so the same person looked different
+  // in the two places. These do what GHL's own UI does.
+
+  // "anitha sura" -> "Anitha Sura". Hyphenated and O'Brien style names keep
+  // their inner capitals, which a plain word-split would flatten.
+  function titleCase(str) {
+    return String(str || '').replace(/[^\s\-']+/g, function (w) {
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    });
+  }
+
+  // "+17328411520" -> "(732) 841-1520". Anything that is not a plain US
+  // number is left exactly as stored rather than mangled into a wrong shape.
+  function phone(v) {
+    var raw = String(v || '').trim();
+    if (!raw) return '';
+    var d = raw.replace(/\D/g, '');
+    if (d.length === 11 && d.charAt(0) === '1') d = d.slice(1);
+    if (d.length !== 10) return raw;
+    return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
+  }
+
   function esc(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -141,7 +166,7 @@ window.MM = window.MM || {};
   }
 
   window.MM.utils = {
-    esc: esc, pv: pv, uid: uid, fbk: fbk,
+    esc: esc, titleCase: titleCase, phone: phone, pv: pv, uid: uid, fbk: fbk,
     FONT_SIZES: FONT_SIZES, getFontIndex: getFontIndex, applyFont: applyFont,
     getTheme: getTheme, applyTheme: applyTheme, toggleTheme: toggleTheme,
     fld: fld, radios: radios, sel: sel, gv: gv, sv: sv, gr: gr, sr: sr, clearIfPlaceholder: clearIfPlaceholder,
