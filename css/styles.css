@@ -61,6 +61,11 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 
+/* Form controls do not inherit type from the page by default, so anything
+   built as a <button> ignored both the base size and the A- / A+ control.
+   Inheriting here fixes every control at once rather than per rule. */
+button,input,select,textarea{font:inherit;color:inherit}
+
 html,body{
   background:var(--bg);
   color:var(--text);
@@ -131,17 +136,18 @@ html,body{
 .mm-mobile-who{font-size:0.86em;color:var(--text2);margin-bottom:10px;padding:0 14px}
 .mm-mobile-who strong{color:var(--text);font-weight:700}
 .mm-mobile-tools{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px}
-.mm-mobile-tools .font-btn{flex:0 0 auto;min-height:44px}
-.mm-signout-m{margin-left:auto}
+.mm-mobile-tools .font-btn{flex:1 1 auto;min-height:44px}
 
 @media (max-width: 720px){
   .mm-nav{display:none}
   .mm-hamburger{display:flex}
   .mm-brand-icon{display:inline}
   .mm-brand-text{display:none}
-  /* Only the menu button stays in the bar; everything else moved inside it. */
-  .mm-header-controls > .font-btn,
-  .mm-header-controls > .mm-whoami{display:none}
+  /* Theme and text size stay in the bar — they are used often enough that a
+     menu would be a step backwards. The name, role and sign-out move inside,
+     since those are read rarely and cost the most width. */
+  .mm-header-controls > .mm-whoami,
+  .mm-header-controls > .mm-signout{display:none}
 }
 
 @media (min-width: 721px){
