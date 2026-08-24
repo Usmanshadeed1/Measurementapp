@@ -185,6 +185,10 @@
     var stage = DASH.stageNameFor(o);
     var infoEl = document.getElementById('mm-job-info');
     infoEl.innerHTML =
+      '<div class="mm-steps-head">' +
+        '<span class="mm-steps-title">Job details</span>' +
+        '<span class="mm-steps-badge mm-steps-badge-done">' + U.esc(stage || 'No stage') + '</span>' +
+      '</div>' +
       '<div class="mm-field-display"><div class="flabel">Address</div><div class="fvalue">' + U.esc(jobAddress(o) || '—') + '</div></div>' +
       // The stage is actionable here too: the crew finishes measuring at the
       // property and can move the job on without opening GHL.
