@@ -193,6 +193,7 @@ window.MM = window.MM || {};
 
     bind(o, { appt: appt, measured: measured, design: design, pricing: pricing,
              sent: sent, cabinets: cabinets, completed: completed, won: won });
+    if (window.MM.wireJobPanels) window.MM.wireJobPanels();
   }
 
   // Saves the date, then optionally moves the stage. The stage move is what

@@ -187,6 +187,7 @@ window.MM = window.MM || {};
     }
     el.innerHTML += '<p class="mm-task-error" id="mm-task-error" role="alert"></p>';
     bindJobTasks(el);
+    if (window.MM.wireJobPanels) window.MM.wireJobPanels();
   }
 
   function bindJobTasks(el) {

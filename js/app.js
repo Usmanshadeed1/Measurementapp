@@ -83,6 +83,65 @@
   }
 
   // ===== JOB =====
+  // ---- Collapsible job panels ---------------------------------------------
+  //
+  // Each panel already renders a .mm-steps-head; making that the toggle keeps
+  // the behaviour in one place rather than teaching four modules to build
+  // accordions. Panels re-render often, so this runs after each render and
+  // is safe to call repeatedly.
+  //
+  // The first panel on a tab opens by default: a screen of closed bars gives
+  // the reader nothing to land on.
+  var panelOpen = {};
+  try {
+    panelOpen = JSON.parse(localStorage.getItem('mm_job_panels') || '{}');
+  } catch (e) { panelOpen = {}; }
+
+  function savePanels() {
+    try { localStorage.setItem('mm_job_panels', JSON.stringify(panelOpen)); } catch (e) { /* private mode */ }
+  }
+
+  function wirePanels() {
+    document.querySelectorAll('#screen-job .mm-steps-card').forEach(function (card, i) {
+      var head = card.querySelector('.mm-steps-head');
+      if (!head || head.dataset.wired) return;
+
+      var id = card.id || ('panel' + i);
+      // Default: the first panel in each pane is open, the rest closed.
+      if (!(id in panelOpen)) {
+        panelOpen[id] = card.parentElement &&
+          card.parentElement.querySelector('.mm-steps-card') === card;
+      }
+
+      head.dataset.wired = '1';
+      head.setAttribute('role', 'button');
+      head.setAttribute('tabindex', '0');
+      if (!head.querySelector('.mm-panel-arrow')) {
+        var arrow = document.createElement('span');
+        arrow.className = 'mm-panel-arrow';
+        arrow.setAttribute('aria-hidden', 'true');
+        arrow.innerHTML = '&#9662;';
+        head.insertBefore(arrow, head.firstChild);
+      }
+
+      function apply() {
+        card.classList.toggle('is-open', !!panelOpen[id]);
+        head.setAttribute('aria-expanded', panelOpen[id] ? 'true' : 'false');
+      }
+      function toggle() { panelOpen[id] = !panelOpen[id]; savePanels(); apply(); }
+
+      head.addEventListener('click', toggle);
+      head.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      });
+      apply();
+    });
+  }
+
+  // Panels rebuild their own markup, which drops the wiring, so re-run after
+  // anything that re-renders one.
+  window.MM.wireJobPanels = wirePanels;
+
   // ---- Job tabs -----------------------------------------------------------
 
   function showJobTab(name) {
@@ -141,6 +200,7 @@
     TASKS.showForJob(o);
     ACCESS.showForJob(o);
     ACT.showForJob(o);
+    wirePanels();
 
     loadRooms();
     loadJobMedia();

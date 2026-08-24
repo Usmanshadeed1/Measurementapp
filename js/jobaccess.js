@@ -108,6 +108,7 @@ window.MM = window.MM || {};
         el.querySelectorAll('.mm-crew-list input').forEach(function (cb) {
           cb.addEventListener('change', function () { toggle(job, cb, cb.value, cb.checked); });
         });
+        if (window.MM.wireJobPanels) window.MM.wireJobPanels();
       })
       .catch(function (e) {
         el.innerHTML = head(0) + '<div class="mm-empty">' + U.esc(e.message) + '</div>';

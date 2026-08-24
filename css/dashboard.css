@@ -163,7 +163,6 @@
 .mm-stage-note{color:var(--text2);font-size:0.86em;margin-bottom:12px}
 
 /* ---- Job progress panel (on the job screen) ---- */
-.mm-steps-card{padding:18px 20px}
 .mm-steps-head{display:flex;align-items:center;justify-content:space-between;
                gap:12px;margin-bottom:16px;flex-wrap:wrap}
 .mm-steps-title{font-size:1.05em;font-weight:800;color:var(--text)}
@@ -269,4 +268,46 @@
 
 @media (max-width: 620px){
   .mm-jobtab{font-size:.86em;padding:14px 6px}
+}
+
+/* ==========================================================================
+   COLLAPSIBLE JOB PANELS
+   The job screen stacked several full panels, so reaching the last one meant
+   scrolling past all the others — worst on a phone. Each panel now collapses
+   to its header, and the first on each tab opens by default so the screen is
+   never a row of closed bars.
+   ========================================================================== */
+.mm-steps-card{padding:0;overflow:hidden}
+
+.mm-steps-card .mm-steps-head{display:flex;align-items:center;gap:12px;
+                              margin:0;padding:16px 18px;cursor:pointer;
+                              min-height:60px;user-select:none}
+.mm-steps-card .mm-steps-head:hover{background:var(--card2)}
+.mm-steps-card .mm-steps-head:focus-visible{outline:3px solid var(--accent);
+                                            outline-offset:-3px}
+
+.mm-panel-arrow{color:var(--accent);font-size:1.2em;line-height:1;flex:0 0 auto;
+                transition:transform .15s ease}
+.mm-steps-card.is-open .mm-panel-arrow{transform:rotate(180deg)}
+
+/* The title takes the room so the badge sits hard right, where it reads as a
+   summary of what is inside rather than part of the heading. */
+.mm-steps-card .mm-steps-title{flex:1 1 auto}
+.mm-steps-card .mm-steps-badge{flex:0 0 auto}
+
+/* Everything after the header is the body. Hidden rather than height-animated
+   so a long panel cannot be half-clipped mid-scroll. */
+.mm-steps-card > *:not(.mm-steps-head){display:none;padding-left:18px;
+                                       padding-right:18px}
+.mm-steps-card.is-open > *:not(.mm-steps-head){display:block}
+.mm-steps-card.is-open > *:last-child{padding-bottom:18px}
+.mm-steps-card.is-open .mm-steps{display:flex}
+.mm-steps-card.is-open .mm-tasklist{display:flex}
+.mm-steps-card.is-open .mm-crew-list{display:flex}
+.mm-steps-card.is-open .mm-task-actions{display:flex}
+
+@media (max-width: 620px){
+  .mm-steps-card .mm-steps-head{padding:14px;min-height:56px;gap:10px}
+  .mm-steps-card > *:not(.mm-steps-head){padding-left:14px;padding-right:14px}
+  .mm-steps-card.is-open > *:last-child{padding-bottom:14px}
 }

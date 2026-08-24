@@ -160,6 +160,7 @@ window.MM = window.MM || {};
           '<div id="mm-job-history-list"></div>';
         filterText = ''; filterActor = '';
         render('mm-job-history-list');
+        if (window.MM.wireJobPanels) window.MM.wireJobPanels();
       })
       .catch(function (e) {
         el.innerHTML = '<div class="mm-steps-head"><span class="mm-steps-title">History</span></div>' +
