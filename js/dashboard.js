@@ -435,7 +435,12 @@ window.MM = window.MM || {};
     el.querySelectorAll('.mm-agroup-head[data-group]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var id = btn.getAttribute('data-group');
-        openGroups[id] = !openGroups[id];
+        // One stage at a time. With nine stages, several open at once meant
+        // scrolling past jobs you were not looking at to reach the next
+        // heading — the accordion stopped doing its job.
+        var wasOpen = !!openGroups[id];
+        openGroups = {};
+        if (!wasOpen) openGroups[id] = true;
         saveOpenGroups();
         renderBody();
       });
