@@ -49,17 +49,28 @@ window.MM = window.MM || {};
       '/contacts/detail/' + encodeURIComponent(contactId);
   }
 
-  // The pair of call buttons shown wherever a customer's number appears.
-  // Both are offered on purpose: GoHighLevel for anything the customer should
-  // see a business number for, and the direct dial for a quick call where
-  // that does not matter.
+  // The buttons shown wherever a customer's number appears.
+  //
+  // The first opens the customer in GoHighLevel, where calling, texting and
+  // email all live on one screen — hence "Contact Customer" rather than a
+  // name that mentions only calling. Because the staff member is signed into
+  // GoHighLevel as themselves there, whatever they send goes out on their own
+  // business number and is recorded against them. The app cannot do that on
+  // its own: it holds one shared key, so GoHighLevel would attribute every
+  // message to the integration instead of to a person.
+  //
+  // The direct dial is kept beside it for a quick call where none of that
+  // matters. It uses the phone's own SIM, so nothing is recorded.
   function callButtons(phoneNumber, contactId) {
     if (!phoneNumber) return '';
-    var out = '<span class="mm-callrow">' +
-      '<a class="mm-callbtn mm-callbtn-ghl" href="' + esc(ghlContactUrl(contactId)) + '" ' +
-        'target="_blank" rel="noopener">Call via GoHighLevel</a>';
+    var out = '<span class="mm-callrow">';
+    if (contactId) {
+      out += '<a class="mm-callbtn mm-callbtn-ghl" href="' + esc(ghlContactUrl(contactId)) + '" ' +
+        'target="_blank" rel="noopener">' +
+        '<span aria-hidden="true">&#128222;</span> Contact Customer</a>';
+    }
     out += '<a class="mm-callbtn mm-callbtn-direct" href="tel:' + esc(phoneNumber) + '" ' +
-      'aria-label="Call directly from this phone">Direct</a></span>';
+      'aria-label="Call directly from this phone">Direct call</a></span>';
     return out;
   }
 

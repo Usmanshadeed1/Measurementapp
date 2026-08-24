@@ -345,7 +345,14 @@
   gap:6px;min-height:44px;padding:0 14px;border-radius:8px;
   font-weight:700;font-size:0.9em;text-decoration:none;
   border:1px solid var(--line);white-space:nowrap}
-.mm-callbtn-ghl{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* Green, because this is the action that keeps the business number and the
+   record in GoHighLevel — the one staff should reach for by default.
+   The label colour is set per theme rather than fixed white: the dark
+   theme's green is a bright mint that white text is unreadable on. */
+.mm-callbtn-ghl{background:var(--success);border-color:var(--success);color:#fff}
+:root:not([data-theme="light"]) .mm-callbtn-ghl{color:#08301c}
+:root[data-theme="dark"] .mm-callbtn-ghl{color:#08301c}
+:root[data-theme="light"] .mm-callbtn-ghl{color:#fff}
 .mm-callbtn-ghl:hover{filter:brightness(1.08)}
 .mm-callbtn-direct{background:var(--surface2);color:var(--text)}
 .mm-callbtn-direct:hover{border-color:var(--accent);color:var(--accent)}
