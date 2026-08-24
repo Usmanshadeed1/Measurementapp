@@ -61,6 +61,14 @@ window.MM = window.MM || {};
     return '<div class="mm-field-display"><div class="flabel">' + U.esc(label) + '</div><div class="fvalue">' + U.esc(value) + '</div></div>';
   }
 
+  // Same row, but the value is HTML that has already been escaped by its
+  // builder. Kept separate so field() above goes on escaping unconditionally.
+  function fieldHtml(label, html) {
+    if (!html) return '';
+    return '<div class="mm-field-display"><div class="flabel">' + U.esc(label) +
+      '</div><div class="fvalue">' + html + '</div></div>';
+  }
+
   // ---- Editing a contact ---------------------------------------------------
   //
   // Admin only: a worker changing a customer's phone number is not something
@@ -165,7 +173,9 @@ window.MM = window.MM || {};
     var el = document.getElementById('mm-contact-info');
     el.innerHTML =
       field('Name', name) +
-      field('Phone', U.phone(c.phone)) +
+      fieldHtml('Phone', c.phone
+        ? U.esc(U.phone(c.phone)) + U.callButtons(c.phone, c.id)
+        : '') +
       field('Email', c.email) +
       field('Business', fmtBusiness(c)) +
       field('Address', fmtAddress(c)) +

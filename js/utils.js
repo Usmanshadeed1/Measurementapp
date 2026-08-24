@@ -34,6 +34,35 @@ window.MM = window.MM || {};
     return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
   }
 
+  // A link that opens this customer in GoHighLevel.
+  //
+  // Calling from the app itself is not possible — GoHighLevel has no API for
+  // placing a call. A plain tel: link dials from the staff member's own SIM,
+  // so the customer sees a personal number and GoHighLevel never records the
+  // call. Handing the customer over to GoHighLevel instead means the call
+  // goes out on the business number the staff member is set up with, and it
+  // lands in the conversation history like any other call.
+  function ghlContactUrl(contactId) {
+    if (!contactId) return '';
+    return 'https://app.gohighlevel.com/v2/location/' +
+      encodeURIComponent(window.MM.api.LOC) +
+      '/contacts/detail/' + encodeURIComponent(contactId);
+  }
+
+  // The pair of call buttons shown wherever a customer's number appears.
+  // Both are offered on purpose: GoHighLevel for anything the customer should
+  // see a business number for, and the direct dial for a quick call where
+  // that does not matter.
+  function callButtons(phoneNumber, contactId) {
+    if (!phoneNumber) return '';
+    var out = '<span class="mm-callrow">' +
+      '<a class="mm-callbtn mm-callbtn-ghl" href="' + esc(ghlContactUrl(contactId)) + '" ' +
+        'target="_blank" rel="noopener">Call via GoHighLevel</a>';
+    out += '<a class="mm-callbtn mm-callbtn-direct" href="tel:' + esc(phoneNumber) + '" ' +
+      'aria-label="Call directly from this phone">Direct</a></span>';
+    return out;
+  }
+
   function esc(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -166,7 +195,7 @@ window.MM = window.MM || {};
   }
 
   window.MM.utils = {
-    esc: esc, titleCase: titleCase, phone: phone, pv: pv, uid: uid, fbk: fbk,
+    esc: esc, titleCase: titleCase, phone: phone, ghlContactUrl: ghlContactUrl, callButtons: callButtons, pv: pv, uid: uid, fbk: fbk,
     FONT_SIZES: FONT_SIZES, getFontIndex: getFontIndex, applyFont: applyFont,
     getTheme: getTheme, applyTheme: applyTheme, toggleTheme: toggleTheme,
     fld: fld, radios: radios, sel: sel, gv: gv, sv: sv, gr: gr, sr: sr, clearIfPlaceholder: clearIfPlaceholder,

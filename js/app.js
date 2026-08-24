@@ -196,7 +196,7 @@
       '<div class="mm-field-display"><div class="flabel">Customer</div><div class="fvalue">' + U.esc(customerName(o)) + '</div></div>' +
       (c.phone
         ? '<div class="mm-field-display"><div class="flabel">Phone</div><div class="fvalue">' +
-          '<a href="tel:' + U.esc(c.phone) + '">' + U.esc(U.phone(c.phone)) + '</a></div></div>' : '') +
+          U.esc(U.phone(c.phone)) + U.callButtons(c.phone, c.id) + '</div></div>' : '') +
       (c.email
         ? '<div class="mm-field-display"><div class="flabel">Email</div><div class="fvalue">' +
           '<a href="mailto:' + U.esc(c.email) + '">' + U.esc(c.email) + '</a></div></div>' : '') +
