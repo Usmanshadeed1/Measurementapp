@@ -165,9 +165,10 @@
 
   var jobCameFrom = 'dashboard';
 
-  function pickJob(o, tab) {
-    jobCameFrom = tab === 'measure' ? 'measure'
-                : window.MM.auth.isAdmin() ? 'dashboard' : 'mytasks';
+  function pickJob(o, tab, from) {
+    jobCameFrom = from
+                || (tab === 'measure' ? 'measure'
+                : window.MM.auth.isAdmin() ? 'dashboard' : 'mytasks');
     // A worker may open a job they are on — that is how measuring happens —
     // but nothing else. The check is here as well as in the lists, so a stale
     // reference cannot open a job they were removed from.
@@ -346,7 +347,9 @@
   // ===== NAV =====
   document.getElementById('mm-back-to-jobs').addEventListener('click', function () {
     showScreen(jobCameFrom);
-    setActiveNavLink(jobCameFrom);
+    // The contact screen is reached through Contacts, so that is the nav
+    // item that should read as current.
+    setActiveNavLink(jobCameFrom === 'contact' ? 'contacts' : jobCameFrom);
   });
   document.getElementById('mm-back-to-job').addEventListener('click', function () { showScreen('job'); });
   document.getElementById('mm-back-to-contacts').addEventListener('click', function () { showScreen('contacts'); });
@@ -598,6 +601,7 @@
   ACT.initPage();
   MY.onOpenJob(pickJob);
   MEASURE.init(pickJob);
+  C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
   document.getElementById('mm-measure-refresh').addEventListener('click', function () { MEASURE.load(); });
 
   window.MM.auth.init(function () {

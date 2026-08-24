@@ -72,9 +72,71 @@ window.MM = window.MM || {};
       field('Created', fmtDate(c.dateAdded || c.createdAt)) +
       field('Contact ID', c.id);
     if (!el.innerHTML) el.innerHTML = '<div class="mm-empty">No details on file.</div>';
+    renderJobs(c.id);
+  }
+
+  // ---- This customer's jobs ------------------------------------------------
+  //
+  // A customer can own several properties, each its own opportunity. Without
+  // this you can go job -> customer but not customer -> jobs, which meant
+  // going back to the dashboard and searching by name.
+
+  var onOpenJob = null;
+
+  function renderJobs(contactId) {
+    var el = document.getElementById('mm-contact-jobs');
+    if (!el) return;
+    el.innerHTML = '<div class="mm-empty">Loading jobs...</div>';
+
+    var api = window.MM.api;
+    api.fetchAllOpportunities()
+      .then(function (ops) {
+        var mine = (ops || []).filter(function (o) {
+          return o.pipelineId === api.SALES_PIPELINE_ID && o.contactId === contactId;
+        });
+
+        if (!mine.length) {
+          el.innerHTML =
+            '<div class="section-header"><span class="section-title">Jobs</span></div>' +
+            '<p class="mm-task-empty">This customer has no jobs yet.</p>';
+          return;
+        }
+
+        // Newest first: the job someone is asking about is usually the
+        // current one, not the kitchen they had done three years ago.
+        mine.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+
+        el.innerHTML =
+          '<div class="section-header">' +
+            '<span class="section-title">Jobs</span>' +
+            '<span class="mm-mygroup-count">' + mine.length + '</span>' +
+          '</div>' +
+          mine.map(function (o) {
+            var stage = window.MM.dashboard.stageNameFor(o);
+            return '<button type="button" class="mm-myjob" data-job="' + U.esc(o.id) + '">' +
+              '<span class="mm-myjob-main">' +
+                '<span class="mm-myjob-name">' + U.esc(U.titleCase(o.name) || 'Job') + '</span>' +
+                '<span class="mm-myjob-addr">' + U.esc(stage || 'No stage') + '</span>' +
+              '</span>' +
+              '<span class="mm-jcard-arrow" aria-hidden="true">&#8250;</span>' +
+            '</button>';
+          }).join('');
+
+        el.querySelectorAll('[data-job]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var o = mine.find(function (j) { return j.id === b.getAttribute('data-job'); });
+            if (o && onOpenJob) onOpenJob(o);
+          });
+        });
+      })
+      .catch(function (e) {
+        el.innerHTML = '<div class="section-header"><span class="section-title">Jobs</span></div>' +
+                       '<div class="mm-empty">' + U.esc(e.message) + '</div>';
+      });
   }
 
   window.MM.contacts = {
+    onOpenJob: function (fn) { onOpenJob = fn; },
     loadContacts: loadContacts,
     renderContactDetail: renderContactDetail,
   };
