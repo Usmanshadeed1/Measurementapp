@@ -305,6 +305,9 @@
 .mm-steps-card.is-open .mm-tasklist{display:flex}
 .mm-steps-card.is-open .mm-crew-list{display:flex}
 .mm-steps-card.is-open .mm-task-actions{display:flex}
+/* Direct children of a panel are set to display:block when it opens, which
+   would flatten this one out of its column layout. */
+.mm-steps-card.is-open .mm-docadd{display:flex}
 
 @media (max-width: 620px){
   .mm-steps-card .mm-steps-head{padding:14px;min-height:56px;gap:10px}
@@ -373,3 +376,36 @@
   .mm-callrow{flex-direction:column;align-items:stretch}
   .mm-callbtn{width:100%}
 }
+
+/* Documents & photos on a job. Paperwork gets an icon, pictures get a
+   thumbnail, so the two are told apart at a glance in one list. */
+.mm-docgroup{margin-top:14px}
+.mm-docgroup-head{display:flex;align-items:center;gap:8px;font-weight:700;
+  font-size:0.9em;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--text2);margin-bottom:8px}
+.mm-docgroup-count{background:var(--surface2);border-radius:999px;
+  padding:1px 8px;font-size:0.92em}
+.mm-doclist{display:flex;flex-direction:column;gap:8px}
+.mm-doc{display:flex;align-items:center;gap:8px;
+  border:1px solid var(--line);border-radius:10px;background:var(--surface2)}
+.mm-doc-main{display:flex;align-items:center;gap:12px;flex:1 1 auto;
+  min-width:0;padding:10px 12px;text-decoration:none;color:inherit;
+  min-height:56px}
+.mm-doc-main:hover .mm-doc-name{text-decoration:underline}
+.mm-doc-thumb{width:44px;height:44px;flex:0 0 auto;border-radius:6px;
+  object-fit:cover;background:var(--surface)}
+.mm-doc-icon{width:44px;height:44px;flex:0 0 auto;display:flex;
+  align-items:center;justify-content:center;font-size:1.5em;
+  border-radius:6px;background:var(--surface)}
+.mm-doc-text{display:flex;flex-direction:column;min-width:0}
+.mm-doc-name{font-weight:700;color:var(--text);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.mm-doc-sub{font-size:0.85em;color:var(--text2)}
+.mm-doc-del{flex:0 0 auto;width:44px;min-height:44px;background:none;
+  border:none;color:var(--text2);font-size:1.4em;line-height:1;cursor:pointer;
+  border-radius:8px}
+.mm-doc-del:hover{color:var(--danger-text);background:var(--danger-bg)}
+.mm-doc-del:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-docadd{display:flex;flex-direction:column;gap:10px;margin-bottom:6px;
+  padding:12px;border:1px dashed var(--line);border-radius:10px}
+.mm-opt{font-weight:400;color:var(--text2)}
