@@ -13,7 +13,7 @@
              border:1px solid var(--border);border-radius:16px;
              padding:32px 28px;box-shadow:var(--card-shadow)}
 
-.mm-auth-brand{font-size:.78em;font-weight:800;letter-spacing:.14em;
+.mm-auth-brand{font-size:0.86em;font-weight:800;letter-spacing:.14em;
                text-transform:uppercase;color:var(--accent);margin-bottom:22px}
 .mm-auth-title{font-size:1.5em;font-weight:800;color:var(--text);margin-bottom:22px}
 
@@ -36,9 +36,9 @@
 /* ---- Who is signed in, in the header ---- */
 .mm-whoami{display:flex;flex-direction:column;line-height:1.2;text-align:right;
            margin-right:4px;min-width:0}
-.mm-whoami-name{font-size:.82em;font-weight:700;color:var(--text);
+.mm-whoami-name{font-size:0.86em;font-weight:700;color:var(--text);
                 overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
-.mm-whoami-role{font-size:.68em;font-weight:700;letter-spacing:.06em;
+.mm-whoami-role{font-size:0.86em;font-weight:700;letter-spacing:.06em;
                 text-transform:uppercase;color:var(--accent)}
 .mm-signout{font-size:1.2em;line-height:1}
 

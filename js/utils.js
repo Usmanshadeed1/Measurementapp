@@ -4,7 +4,10 @@
 window.MM = window.MM || {};
 
 (function () {
-  var FONT_SIZES = [15, 17, 19, 22, 25, 28, 32]; // px — wide range for low-vision users
+  // Steps a person can actually see. Seven near-identical sizes meant a tap
+  // changed almost nothing, so the control read as broken; five clear jumps
+  // make each press obvious. Index 1 is the default.
+  var FONT_SIZES = [17, 20, 24, 28, 34];
 
   function esc(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -26,13 +29,25 @@ window.MM = window.MM || {};
 
   // ---- Font size control -------------------------------------------------
   function getFontIndex() {
-    var i = parseInt(localStorage.getItem('mm_font_idx') || '2', 10);
-    return isNaN(i) ? 2 : i;
+    var i = parseInt(localStorage.getItem('mm_font_idx'), 10);
+    if (isNaN(i)) return 1;
+    // The scale shrank from seven steps to five; an old saved index could
+    // otherwise point past the end and silently clamp to the largest size.
+    return Math.max(0, Math.min(FONT_SIZES.length - 1, i));
   }
   function applyFont(i) {
     i = Math.max(0, Math.min(FONT_SIZES.length - 1, i));
     localStorage.setItem('mm_font_idx', i);
-    document.getElementById('mm-app').style.fontSize = FONT_SIZES[i] + 'px';
+    // Set on the root rather than #mm-app so the sign-in screen, which lives
+    // outside it, scales with everything else.
+    document.documentElement.style.fontSize = FONT_SIZES[i] + 'px';
+    var app = document.getElementById('mm-app');
+    if (app) app.style.fontSize = FONT_SIZES[i] + 'px';
+    // The buttons stop responding at either end; saying so beats a dead tap.
+    document.querySelectorAll('.mm-font-down').forEach(function (b) { b.disabled = i === 0; });
+    document.querySelectorAll('.mm-font-up').forEach(function (b) {
+      b.disabled = i === FONT_SIZES.length - 1;
+    });
   }
 
   // ---- Theme (dark / light) control ---------------------------------------

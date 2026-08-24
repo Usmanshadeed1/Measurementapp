@@ -27,9 +27,9 @@
   --success:#3ddc84;
 
   /* Type scale — base is intentionally large for low-vision users */
-  --font-base: 19px;
-  --font-min: 15px;
-  --font-max: 32px;
+  --font-base: 20px;
+  --font-min: 17px;
+  --font-max: 34px;
 
   /* Site header height — screens are positioned below this, not at inset:0 */
   --header-h: 60px;
@@ -69,6 +69,8 @@ html,body{
 }
 
 #mm-app{font-size:var(--font-base);line-height:1.5}
+/* Outside #mm-app, so it needs the base size stated to match. */
+#mm-auth{font-size:var(--font-base);line-height:1.5}
 
 /* Respect users who've asked the OS for reduced motion */
 @media (prefers-reduced-motion: reduce){
@@ -128,7 +130,8 @@ html,body{
   .mm-header-row{gap:8px;padding:0 10px}
   .mm-brand{font-size:.95em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex-shrink:1}
   .mm-header-controls{gap:4px}
-  .font-btn{padding:8px 9px;min-width:40px}
+  .font-btn:disabled{opacity:.35;cursor:not-allowed}
+.font-btn{padding:8px 9px;min-width:40px}
 }
 
 .back-btn{
@@ -173,7 +176,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap}
 .section-header .mm-btn-sm{white-space:nowrap}
 .mm-btn-row{display:flex;gap:8px;flex-wrap:wrap}
-.section-title{font-size:.85em;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.section-title{font-size:0.86em;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
 
 .mm-empty{text-align:center;color:var(--empty);font-size:.95em;padding:24px 0}
 
@@ -204,7 +207,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
 .mm-modal-lg #mm-import-body{overflow-y:auto;flex:1;min-height:0}
 
 .mm-field-group{margin-bottom:14px}
-.mm-hint{font-size:.85em;color:var(--text2);margin-bottom:14px;line-height:1.4}
+.mm-hint{font-size:0.86em;color:var(--text2);margin-bottom:14px;line-height:1.4}
 .mm-radio-row{display:flex;gap:18px;margin-top:6px;flex-wrap:wrap}
 .mm-radio-row label{display:flex;align-items:center;gap:8px;font-size:.98em;color:var(--text);min-height:44px}
 .mm-radio-row input[type="radio"]{width:20px;height:20px}
@@ -218,7 +221,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
   cursor:pointer;min-height:50px;text-align:left;
 }
 .mm-tag-select-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.mm-tag-select-btn .mm-tag-select-arrow{color:var(--text2);font-size:.8em;transition:transform .15s;flex-shrink:0;margin-left:10px}
+.mm-tag-select-btn .mm-tag-select-arrow{color:var(--text2);font-size:0.86em;transition:transform .15s;flex-shrink:0;margin-left:10px}
 .mm-tag-select.open .mm-tag-select-btn .mm-tag-select-arrow{transform:rotate(180deg)}
 #mm-ct-tags-summary{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
 #mm-ct-tags-summary.has-selection{color:var(--text)}
@@ -244,9 +247,9 @@ textarea.mm-input{min-height:90px;resize:vertical}
 .mm-divider{height:1px;background:var(--divider);margin:18px 0}
 
 .mm-field-display{margin-bottom:12px}
-.mm-field-display .flabel{font-size:.78em;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.mm-field-display .flabel{font-size:0.86em;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
 .mm-field-display .fvalue{font-size:1.05em;color:var(--text);margin-top:2px}
-.mm-field-display .fvalue.mono{font-family:ui-monospace,Consolas,monospace;font-size:.8em;color:var(--empty);word-break:break-all}
+.mm-field-display .fvalue.mono{font-family:ui-monospace,Consolas,monospace;font-size:0.86em;color:var(--empty);word-break:break-all}
 
 .info-actions{display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--divider)}
 .crud-edit-btn{flex:1;padding:10px;background:var(--card2);color:var(--accent);border:1px solid var(--input-border);border-radius:8px;font-size:.92em;font-weight:700;cursor:pointer;min-height:44px}
@@ -267,7 +270,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
 .mm-acc-hdr-text{flex:1;min-width:0}
 .mm-acc-title{font-size:1.02em;font-weight:700;color:var(--text)}
 .mm-acc-sub{font-size:.9em;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mm-acc-arrow{color:var(--text2);font-size:.85em;margin-left:10px;transition:transform .2s;flex-shrink:0}
+.mm-acc-arrow{color:var(--text2);font-size:0.86em;margin-left:10px;transition:transform .2s;flex-shrink:0}
 .mm-acc.open>.mm-acc-hdr .mm-acc-arrow{transform:rotate(180deg)}
 .mm-acc-body{display:none;padding:4px 16px 16px;border-top:1px solid var(--divider)}
 .mm-acc.open>.mm-acc-body{display:block}
@@ -275,7 +278,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
 
 .acc-save-row{display:none}
 .mm-sub .acc-save-row{display:flex;gap:8px;margin-top:4px;margin-bottom:0;flex-wrap:wrap}
-.mm-acc-badge{background:var(--accent-strong);color:#fff;padding:3px 8px;border-radius:4px;font-size:.78em;font-weight:700}
+.mm-acc-badge{background:var(--accent-strong);color:#fff;padding:3px 8px;border-radius:4px;font-size:0.86em;font-weight:700}
 
 .float-save{
   position:fixed;bottom:20px;right:20px;padding:14px 20px;background:var(--accent-strong);color:#fff;
@@ -301,7 +304,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
 .mm-media-tag{
   /* Sits over an arbitrary photo, so colors are fixed dark regardless of theme. */
   position:absolute;left:6px;bottom:6px;max-width:calc(100% - 12px);background:rgba(0,0,0,.75);
-  color:#fff;font-size:.72em;font-weight:700;padding:3px 7px;border-radius:4px;
+  color:#fff;font-size:0.86em;font-weight:700;padding:3px 7px;border-radius:4px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .mm-lightbox{
@@ -326,7 +329,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
 /* ===== CSV Import wizard ===== */
 .mm-import-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;position:sticky;top:0;background:var(--card2);padding-bottom:4px;z-index:1}
 .mm-import-step{
-  padding:6px 12px;border-radius:20px;font-size:.8em;font-weight:700;
+  padding:6px 12px;border-radius:20px;font-size:0.86em;font-weight:700;
   background:var(--input-bg);color:var(--text2);border:1px solid var(--input-border);
 }
 .mm-import-step.active{background:var(--accent-strong);border-color:var(--accent-strong);color:#fff}
@@ -340,7 +343,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
   padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;
 }
 .mm-import-map-header{font-weight:700;color:var(--text);font-size:.95em}
-.mm-import-map-sample{font-size:.8em;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.mm-import-map-sample{font-size:0.86em;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
 @media (min-width: 560px){
   .mm-import-map-row{display:grid;grid-template-columns:1fr 1fr;align-items:center}
 }
@@ -359,7 +362,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
 .mm-import-progress-label{margin-top:10px;font-size:.9em;color:var(--text2)}
 
 .mm-import-detail-list{max-height:35vh;overflow-y:auto;margin-top:6px;border:1px solid var(--border);border-radius:10px}
-.mm-import-detail-row{padding:10px 12px;font-size:.85em;border-bottom:1px solid var(--divider)}
+.mm-import-detail-row{padding:10px 12px;font-size:0.86em;border-bottom:1px solid var(--divider)}
 .mm-import-detail-row:last-child{border-bottom:none}
 .mm-import-detail-created{color:var(--success)}
 .mm-import-detail-skipped{color:var(--text2)}
