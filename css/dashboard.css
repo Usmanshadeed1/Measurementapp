@@ -311,3 +311,11 @@
   .mm-steps-card > *:not(.mm-steps-head){padding-left:14px;padding-right:14px}
   .mm-steps-card.is-open > *:last-child{padding-bottom:14px}
 }
+
+/* Phone and email in the job details are still links — tapping calls or
+   emails — but they read as data, not navigation, so they take the same
+   colour as every other value on the panel. */
+.mm-field-display .fvalue a{color:var(--text);text-decoration:none}
+.mm-field-display .fvalue a:hover{text-decoration:underline}
+.mm-field-display .fvalue a:focus-visible{outline:3px solid var(--accent);
+                                          outline-offset:2px;border-radius:4px}
