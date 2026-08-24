@@ -4,12 +4,23 @@ A plain-language reference for what this app does, where its data lives,
 and how the pieces connect. Written for discussion, not as a spec —
 update it as we make decisions.
 
+Last updated: 24 August 2026.
+
 ## The one core idea
 
-**This app has no database of its own.** Every piece of data you see —
-Jobs, Rooms, Walls, Photos, everything — lives inside your client's GHL
-account. The app is a custom frontend that reads and writes to GHL's
-API. If GHL doesn't have it, the app can't show it.
+**Two systems, each holding what it is good at.**
+
+**GoHighLevel** holds the customer-facing record: Contacts, Jobs
+(Opportunities), Rooms, Walls, Photos, Notes, and the pipeline the
+client already works in. Anything the client can see in GHL lives there.
+
+**Supabase** holds what GHL structurally cannot do: staff logins and
+roles, tasks attached to a *job*, task templates, job access, and the
+activity history. This was added once it became clear GHL had no way
+to store them (see "Why we added a second database" below).
+
+The app is a custom frontend over both. If neither system can store
+something, the app cannot show it.
 
 ## What a "Job" actually is
 
@@ -75,7 +86,7 @@ Every save/delete talks to GHL immediately — there's no local-only state
 and no offline queue. If the request fails, you'll see an error popup
 and nothing is saved.
 
-## Where the code lives (post-rebuild structure)
+## Where the code lives
 
 | File | What it's responsible for |
 |---|---|
@@ -87,19 +98,35 @@ and nothing is saved.
 | `js/entities.js` | The 4 leaf-level accordions: Plumbing, Electrical, Appliance, Opening |
 | `js/walls.js` | Wall and Island accordions (these contain the entities above) |
 | `js/lighting.js` | Lighting Fixture accordion |
-| `js/contacts.js` | Contacts tab: read-only list + detail view, pulled from GHL's `/contacts/` endpoint (separate from Opportunities) |
-| `js/app.js` | Screens, navigation, tab bar, Jobs list, Room detail, wiring everything together, app boot |
-| `netlify/functions/ghl-proxy.js` | Server-side proxy — holds the real GHL API token so it's never exposed in the browser |
-| `netlify.toml` | Tells Netlify to rewrite `/api/*` calls to that proxy function |
+| `js/contacts.js` | Contacts tab: list, detail view, and admin-only editing |
+| `js/dashboard.js` | The dashboard work list: stage groups, filters, search, staff and stage pickers |
+| `js/jobsteps.js` | The 7-step date chain that drives the pipeline |
+| `js/newjob.js` | Creating another job for an existing customer |
+| `js/notes.js` | Per-job notes, kept in GHL against the opportunity |
+| `js/tasks.js` | Tasks on a job |
+| `js/tasklists.js` | Reusable task-list templates |
+| `js/mytasks.js` | A worker's own task list — their home screen |
+| `js/jobaccess.js` | Which jobs a worker may open |
+| `js/activity.js` | Activity history, with worker and customer filters |
+| `js/auth.js` | Supabase login, roles, and token refresh |
+| `js/measure.js` | Room Measurement picker (screen kept, nav link removed) |
+| `js/app.js` | Screens, navigation, Job detail, wiring everything together, app boot |
+| `api/proxy.js` | Server-side proxy — holds the real GHL token so it never reaches the browser |
+| `vercel.json` | Rewrites every `/api/*` call to that proxy |
+| `netlify/functions/ghl-proxy.js` | The same proxy for Netlify, kept so the project can host on either platform |
 
 ## Why there's a proxy function at all
 
 The original single-file version called GHL directly from the browser
 with the API token hardcoded in plain text — visible to anyone who
 viewed the page source. Now the browser calls our own `/api/*` on the
-same domain, which Netlify silently forwards to the proxy function,
-which attaches the real token server-side. The token lives only in
-Netlify's environment variables (`GHL_API_KEY`), never in any file.
+same domain, which the host silently forwards to the proxy function,
+which attaches the real token server-side. The token lives only in the
+host's environment variables (`GHL_API_KEY`), never in any file.
+
+The app now runs on **Vercel** (`measurementapp.vercel.app`) after
+Netlify's free tier ran out of deploy credits. Both proxies are kept in
+the repo so it can move back if needed.
 
 ## Contacts tab
 
@@ -215,14 +242,118 @@ import paths are hitting the same underlying contact data, so importing
 a file twice (once via each path) will always look like a duplicate
 conflict on the second pass.
 
+## Why we added a second database
+
+Three things the client asked for turned out to be impossible in GHL,
+each tested against the live account rather than assumed:
+
+- **Staff logins.** GHL has no SSO endpoint, so staff cannot sign into
+  this app with their GHL credentials.
+- **Tasks attached to a job.** A GHL task belongs to a *contact*. See
+  the findings section below.
+- **A full change history.** GHL keeps 60 days of audit data, and every
+  write from this app uses one shared token, so every change would look
+  identical anyway.
+
+Supabase covers exactly those gaps and nothing more. Customer-facing
+data stays in GHL so the client keeps working the way they already do.
+
+## What has been built
+
+**Dashboard** — one work list grouped by pipeline stage, built from the
+stages GHL actually returns rather than a hardcoded list, so adding a
+stage in GHL shows up here automatically. Search, filters, staff
+assignment, and stage changes are all done from the row.
+
+**Jobs** — a 7-step date chain drives the pipeline. Entering a date
+moves the job to the matching stage, which fires the same GHL workflows
+as dragging the card in GHL. Overview, progress, history, notes, tasks
+and crew are accordions.
+
+**+ New** — adds a customer (GHL's workflow then creates their first
+job) or adds another job for an existing customer, named
+`Customer Name - Address` to match what the workflow produces.
+
+**Tasks** — created per job, assigned to staff, chained so one task can
+depend on another, and built from reusable task-list templates.
+
+**Staff** — email/password logins with two roles. Admins see everything;
+workers see only jobs they are on, either by being assigned to the job
+or by holding a task on it. The database enforces this, not just the UI.
+
+**Contact Customer** — opens the customer in GoHighLevel, where calling,
+texting and email all live. Explained under "Calling and messaging".
+
+**Room measurement** — the original tool, unchanged.
+
+## Calling and messaging
+
+**Why the app does not place calls itself.** GoHighLevel has no API for
+making a call — the entire phone-system API is: list numbers, buy
+numbers. A plain `tel:` link dials from the staff member's own SIM, so
+the customer sees a personal number and GHL never records the call.
+
+**What the app does instead.** The green **Contact Customer** button
+opens that customer in GoHighLevel. The staff member is signed in there
+as themselves, so the call, text or email goes out on their own business
+number and is recorded against them. A smaller **Direct call** button
+sits beside it for a quick call where none of that matters.
+
+**Verified by reading the live account (August 2026):**
+
+| Question | Answer |
+|---|---|
+| Can the app read message history? | Yes — SMS, email, calls, webchat |
+| Is the sender recorded? | Yes, when sent from GHL's own app |
+| Are staff using separate numbers? | Yes — two different sender numbers seen in one thread |
+| Could the app send SMS/email? | Yes — it can choose the sender number or address |
+| Can messages be split per job? | **No** — see below |
+| Can the app record *who* sent it? | **No** — the send API accepts no user field |
+
+**The limit worth telling the client:** a conversation belongs to the
+**customer**, not the job. One test customer has three jobs and exactly
+one conversation thread. Checked across every contact: never more than
+one thread each. So if messaging is ever built into the app, a customer's
+Kitchen and Bathroom messages will appear together and cannot be
+separated.
+
+## Findings: tasks cannot be linked to a job in GHL
+
+The client asked for tasks to sync both ways with GoHighLevel. They
+cannot, and the reason is worth keeping because it will come up again.
+
+GoHighLevel's own interface *does* show a task attached to an
+opportunity — there is an "Associated objects" panel on the task. But
+that link is not reachable through the API:
+
+- Task endpoints exist only under `/contacts/{id}/tasks`.
+- The `TaskCreate` webhook carries `contactId` and no opportunity.
+- Task search filters by contact; sending `opportunityId` is rejected
+  outright: *"property opportunityId should not exist"*.
+- Attempting to create a task↔opportunity association returns GHL's own
+  error: *"Only 'contact, opportunity, business' object key(s) can be
+  used as standard object key for creating associations"*.
+
+The association API itself works — the same call correctly returns the
+Room↔Job links this app creates. It returns nothing for tasks because
+tasks are not part of that system.
+
+**This is not a scopes problem.** All four association scopes were added
+and are what made the testing above possible.
+
+**Consequence:** tasks created in GHL cannot be pulled into the app
+against the right job, and tasks created in the app cannot be pushed
+onto the opportunity. This is why tasks live in Supabase, attached to
+the job — which is what the business actually needs.
+
 ## Known gaps / things not built yet
 
-- No "create a new Job" flow from inside the app (must be done in GHL directly)
-- No filter for Job status (Open/Won/Lost) — shows everything
-- Contacts can be viewed, created, and bulk-imported via CSV, but not
-  edited or deleted from the app, and there's no link from a contact to
-  their Job even if one exists
-- CSV import has no Smartlist/Workflow enrollment options yet, and
-  isn't resumable if interrupted mid-run
-- No leads dashboard, filters, or reporting — this is purely the
-  measurement capture tool, unchanged in scope from the original build
+- Messaging inside the app — possible, with the two limits noted above
+- Call recordings — readable in principle, endpoint not yet confirmed
+- Cascade dates: shifting one task does not shift the ones after it
+- CSV import has no Smartlist/Workflow enrollment options, and isn't
+  resumable if interrupted mid-run
+- Task reminders/notifications
+- The GHL token exposed early in the project has still not been rotated
+- The proxy has no authentication of its own: anyone who knows the URL
+  can call the GHL API through it

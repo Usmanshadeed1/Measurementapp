@@ -341,6 +341,17 @@
    GoHighLevel dials from the business number and records the call; the
    direct dial uses the phone's own SIM and is only for a quick call. */
 .mm-callrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+/* These sit inside a field row, whose plain-link rule is more specific than
+   the button classes below and would otherwise strip them back to text. */
+.mm-field-display .fvalue .mm-callbtn{text-decoration:none}
+.mm-field-display .fvalue .mm-callbtn-ghl{color:#fff}
+:root:not([data-theme="light"]) .mm-field-display .fvalue .mm-callbtn-ghl{color:#08301c}
+:root[data-theme="dark"] .mm-field-display .fvalue .mm-callbtn-ghl{color:#08301c}
+:root[data-theme="light"] .mm-field-display .fvalue .mm-callbtn-ghl{color:#fff}
+.mm-field-display .fvalue .mm-callbtn-direct{color:var(--text);
+  background:var(--surface2);border:1px solid var(--line)}
+.mm-field-display .fvalue .mm-callbtn-direct:hover{border-color:var(--accent);
+  color:var(--accent)}
 .mm-callbtn{display:inline-flex;align-items:center;justify-content:center;
   gap:6px;min-height:44px;padding:0 14px;border-radius:8px;
   font-weight:700;font-size:0.9em;text-decoration:none;

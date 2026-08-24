@@ -102,8 +102,11 @@
     try { localStorage.setItem('mm_job_panels', JSON.stringify(panelOpen)); } catch (e) { /* private mode */ }
   }
 
-  function wirePanels() {
-    document.querySelectorAll('#screen-job .mm-steps-card').forEach(function (card, i) {
+  // The contact screen uses the same panels, so the scope is a parameter
+  // rather than being hardcoded to the job screen.
+  function wirePanels(scope) {
+    var root = scope || '#screen-job';
+    document.querySelectorAll(root + ' .mm-steps-card').forEach(function (card, i) {
       var head = card.querySelector('.mm-steps-head');
       if (!head || head.dataset.wired) return;
 

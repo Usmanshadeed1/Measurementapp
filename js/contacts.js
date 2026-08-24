@@ -171,7 +171,7 @@ window.MM = window.MM || {};
       editBtn.onclick = function () { openEdit(c); };
     }
     var el = document.getElementById('mm-contact-info');
-    el.innerHTML =
+    var details =
       field('Name', name) +
       fieldHtml('Phone', c.phone
         ? U.esc(U.phone(c.phone)) + U.callButtons(c.phone, c.id)
@@ -182,8 +182,18 @@ window.MM = window.MM || {};
       field('Tags', fmtTags(c.tags)) +
       field('Created', fmtDate(c.dateAdded || c.createdAt)) +
       field('Contact ID', c.id);
-    if (!el.innerHTML) el.innerHTML = '<div class="mm-empty">No details on file.</div>';
+
+    // An accordion, matching the job screen: the details are worth having but
+    // the customer's jobs are usually what someone came here for.
+    el.innerHTML =
+      '<div class="mm-steps-head">' +
+        '<span class="mm-steps-title">Contact details</span>' +
+      '</div>' +
+      (details || '<div class="mm-empty">No details on file.</div>');
+    el.classList.add('mm-steps-card');
+
     renderJobs(c.id);
+    if (window.MM.wireJobPanels) window.MM.wireJobPanels('#screen-contact');
   }
 
   // ---- This customer's jobs ------------------------------------------------
