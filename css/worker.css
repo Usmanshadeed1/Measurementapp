@@ -64,23 +64,33 @@
    A timeline, grouped by day. Every row answers the same three things in the
    same order: what happened, who did it, when.
    ========================================================================== */
-/* Two dropdowns and a clear button, labelled: an unlabelled select reading
-   "Everyone" gives no clue that it filters by person. */
-.mm-hist-controls{display:flex;gap:12px;align-items:flex-end;
-                  flex-wrap:wrap;margin-bottom:18px}
-.mm-hist-field{display:flex;flex-direction:column;gap:5px;flex:1 1 200px;min-width:0}
-.mm-hist-field .mm-label{margin:0}
-.mm-hist-controls .mm-btn-sm{flex:0 0 auto;min-height:48px}
+/* Search and both filters on one line. Full-width stacked selects made
+   three simple filters look like a form to fill in, when they are controls
+   you glance at and change. The labels move to title/aria so the row stays
+   compact without becoming unlabelled. */
+.mm-hist-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.mm-hist-bar .mm-search-bar{flex:1 1 220px;margin-bottom:0;min-width:0}
+.mm-hist-select{flex:0 1 auto;width:auto;min-width:150px;max-width:220px;
+                padding-top:11px;padding-bottom:11px}
+
+.mm-hist-clear{flex:0 0 auto;background:transparent;color:var(--accent);
+               border:1px solid var(--control-border);border-radius:10px;
+               padding:11px 16px;font-family:inherit;font-weight:700;
+               cursor:pointer;min-height:46px;white-space:nowrap}
+.mm-hist-clear:hover{border-color:var(--accent);background:var(--card)}
+.mm-hist-clear:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 /* The in-job panel filters by worker only — the customer is already the job
    you are looking at. */
-.mm-hist-jobfilter{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;
-                   max-width:280px}
-.mm-hist-jobfilter .mm-label{margin:0}
+.mm-hist-jobfilter{margin-bottom:14px;max-width:260px}
+.mm-hist-jobfilter .mm-label{margin:0 0 5px}
 
 @media (max-width: 620px){
-  .mm-hist-field{flex:1 1 100%}
-  .mm-hist-controls .mm-btn-sm{width:100%}
+  /* The search keeps its own line; the two filters share the next one, so
+     nothing is squeezed to an unreadable width. */
+  .mm-hist-bar .mm-search-bar{flex:1 1 100%}
+  .mm-hist-select{flex:1 1 0;min-width:0;max-width:none}
+  .mm-hist-clear{flex:1 1 100%}
   .mm-hist-jobfilter{max-width:none}
 }
 

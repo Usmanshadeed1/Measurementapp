@@ -251,7 +251,7 @@ window.MM = window.MM || {};
       return sel.value;
     }
 
-    filterActor = fill(whoSel, people, filterActor, 'Everyone') || '';
+    filterActor = fill(whoSel, people, filterActor, 'All workers') || '';
     filterJob = fill(jobSel, jobs, filterJob, 'All customers') || '';
   }
 
