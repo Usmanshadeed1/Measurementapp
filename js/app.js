@@ -111,10 +111,14 @@
       if (!head || head.dataset.wired) return;
 
       var id = card.id || ('panel' + i);
-      // Default: the first panel in each pane is open, the rest closed.
+      // Default state, used only until the person opens or closes it once:
+      // data-open="0" forces closed, otherwise the first panel in the pane
+      // opens so the screen does not arrive as a wall of shut drawers.
       if (!(id in panelOpen)) {
-        panelOpen[id] = card.parentElement &&
-          card.parentElement.querySelector('.mm-steps-card') === card;
+        panelOpen[id] = card.dataset.open === '0'
+          ? false
+          : !!(card.parentElement &&
+               card.parentElement.querySelector('.mm-steps-card') === card);
       }
 
       head.dataset.wired = '1';

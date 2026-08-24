@@ -409,3 +409,20 @@
 .mm-docadd{display:flex;flex-direction:column;gap:10px;margin-bottom:6px;
   padding:12px;border:1px dashed var(--line);border-radius:10px}
 .mm-opt{font-weight:400;color:var(--text2)}
+
+/* Add button sits above the list; download and delete sit on each row.
+   All three are 44px so they stay thumb-sized on a phone. */
+.mm-doc-actions{display:flex;justify-content:flex-end;margin-bottom:4px}
+.mm-steps-card.is-open .mm-doc-actions{display:flex}
+.mm-doc-dl{flex:0 0 auto;width:44px;min-height:44px;background:none;
+  border:none;color:var(--accent);font-size:1.15em;line-height:1;
+  cursor:pointer;border-radius:8px}
+.mm-doc-dl:hover{background:var(--surface)}
+.mm-doc-dl:disabled{opacity:.5;cursor:wait}
+.mm-doc-dl:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media(max-width:480px){
+  /* The name column gives up its width first so both buttons stay reachable. */
+  .mm-doc-main{padding:10px;gap:10px}
+  .mm-doc-actions{justify-content:stretch}
+  .mm-doc-actions .mm-btn-sm{width:100%}
+}

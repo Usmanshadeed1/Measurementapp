@@ -23,6 +23,7 @@ window.MM = window.MM || {};
 
   var currentJob = null;
   var items = [];
+  var adding = false;   // is the upload form showing?
 
   // The paperwork a remodelling job actually collects. "Photo" is here so a
   // picture taken outside the measurement flow still has somewhere to go.
@@ -112,7 +113,14 @@ window.MM = window.MM || {};
           ? '<span class="mm-steps-badge mm-steps-badge-done">' + visible + '</span>'
           : '<span class="mm-steps-badge mm-steps-badge-todo">None yet</span>') +
       '</div>' +
-      (showDocs ? uploadBox() : '') +
+      (showDocs
+        ? '<div class="mm-doc-actions">' +
+            (adding
+              ? ''
+              : '<button class="mm-btn-sm mm-btn-primary" id="mm-doc-new">+ Add Document</button>') +
+          '</div>'
+        : '') +
+      (showDocs && adding ? uploadBox() : '') +
       (errMsg ? '<p class="mm-task-error">' + U.esc(errMsg) + '</p>' : '') +
       (showDocs ? group('Documents', docs, 'No documents yet.') : '') +
       group('Photos', pics, 'No photos on this job yet.') +
@@ -153,11 +161,25 @@ window.MM = window.MM || {};
           '</span>' +
         '</span>' +
       '</a>' +
+      '<button type="button" class="mm-doc-dl" data-dl="' + U.esc(url) + '" ' +
+        'data-name="' + U.esc(fileName(rec)) + '" ' +
+        'title="Download" aria-label="Download ' + U.esc(labelOf(rec)) + '">&#11015;</button>' +
       (auth.isAdmin()
         ? '<button type="button" class="mm-doc-del" data-del="' + U.esc(rec.id) + '" ' +
           'data-vid="' + (rec.__isVideo ? '1' : '') + '" aria-label="Delete this file">&times;</button>'
         : '') +
     '</div>';
+  }
+
+  // The saved file keeps the description as its name so a downloaded folder
+  // reads as "signed by customer.pdf" rather than a CDN hash.
+  function fileName(rec) {
+    var url = (U.pv(rec, 'file_url') || '').split('?')[0];
+    var ext = (url.match(/\.([a-z0-9]{1,5})$/i) || [])[1] || '';
+    var base = labelOf(rec).replace(/[\/:*?"<>|]+/g, '-').trim() || 'file';
+    return ext && base.toLowerCase().slice(-ext.length - 1) !== '.' + ext.toLowerCase()
+      ? base + '.' + ext
+      : base;
   }
 
   function uploadBox() {
@@ -178,7 +200,10 @@ window.MM = window.MM || {};
         '<label class="mm-label" for="mm-doc-file">File</label>' +
         '<input class="mm-input" type="file" id="mm-doc-file">' +
       '</div>' +
-      '<button class="mm-btn-sm mm-btn-primary" id="mm-doc-upload">Upload</button>' +
+      '<div class="mm-btn-row">' +
+        '<button class="mm-btn-sm mm-btn-secondary" id="mm-doc-cancel">Cancel</button>' +
+        '<button class="mm-btn-sm mm-btn-primary" id="mm-doc-upload">Upload</button>' +
+      '</div>' +
     '</div>';
   }
 
@@ -189,9 +214,53 @@ window.MM = window.MM || {};
     if (el) el.textContent = msg || '';
   }
 
+  // Saving a file to the device.
+  //
+  // A plain download attribute is ignored here: the files sit on
+  // GoHighLevel's CDN, another origin, and browsers refuse to rename a
+  // cross-origin download. Fetching the bytes and saving them from a blob
+  // keeps the proper filename. If that fetch is blocked, the file still
+  // opens in a new tab, which is what the row already did.
+  function download(url, name, btn) {
+    docError('');
+    var old = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '&hellip;';
+    function restore() { btn.disabled = false; btn.innerHTML = old; }
+
+    fetch(url)
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(function (blob) {
+        var href = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = href; a.download = name || 'file';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(href); }, 10000);
+        restore();
+      })
+      .catch(function () {
+        restore();
+        window.open(url, '_blank', 'noopener');
+      });
+  }
+
   function bind(el) {
+    var add = el.querySelector('#mm-doc-new');
+    if (add) add.addEventListener('click', function () { adding = true; render(); });
+
+    var cancel = el.querySelector('#mm-doc-cancel');
+    if (cancel) cancel.addEventListener('click', function () { adding = false; render(); });
+
     var up = el.querySelector('#mm-doc-upload');
     if (up) up.addEventListener('click', upload);
+
+    el.querySelectorAll('[data-dl]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        download(b.getAttribute('data-dl'), b.getAttribute('data-name'), b);
+      });
+    });
 
     el.querySelectorAll('[data-del]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -232,8 +301,7 @@ window.MM = window.MM || {};
           jobName: jobLabel(currentJob),
           detail: label,
         });
-        fileEl.value = '';
-        document.getElementById('mm-doc-name').value = '';
+        adding = false;   // back to the list, where the new file now is
         return load();
       })
       .catch(function (e) {
