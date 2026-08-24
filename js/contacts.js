@@ -27,10 +27,34 @@ window.MM = window.MM || {};
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
+  // A contact created a moment ago, held here until GHL's search index
+  // catches up. Without it the list refreshes to a copy that does not yet
+  // include the new person, which reads as the save having failed.
+  var justAdded = [];
+  var lastPick = null;
+
+  function addOptimistic(c) {
+    if (!c || !c.id) return;
+    justAdded = justAdded.filter(function (x) { return x.id !== c.id; });
+    justAdded.unshift(c);
+  }
+
+  function mergeJustAdded(contacts) {
+    if (!justAdded.length) return contacts;
+    var have = {};
+    contacts.forEach(function (c) { have[c.id] = true; });
+    // Anything GHL now returns on its own is dropped from the holding list,
+    // so it cannot linger after the index has caught up.
+    justAdded = justAdded.filter(function (c) { return !have[c.id]; });
+    return justAdded.concat(contacts);
+  }
+
   function loadContacts(query, onPickContact) {
     var el = document.getElementById('mm-contacts-list');
+    if (onPickContact) lastPick = onPickContact;
     el.innerHTML = '<div class="mm-empty">Loading contacts...</div>';
-    api.searchContacts(query).then(function (contacts) {
+    api.searchContacts(query).then(function (raw) {
+      var contacts = query ? raw : mergeJustAdded(raw);
       if (!contacts.length) { el.innerHTML = '<div class="mm-empty">No contacts found.</div>'; return; }
       el.innerHTML = '';
       contacts.forEach(function (c) {
@@ -135,8 +159,17 @@ window.MM = window.MM || {};
       });
   }
 
+  // Show the new contact straight away, then confirm against GHL once its
+  // index has caught up.
+  function contactAdded(c) {
+    addOptimistic(c);
+    loadContacts(undefined, lastPick);
+    setTimeout(function () { loadContacts(undefined, lastPick); }, 4000);
+  }
+
   window.MM.contacts = {
     onOpenJob: function (fn) { onOpenJob = fn; },
+    contactAdded: contactAdded,
     loadContacts: loadContacts,
     renderContactDetail: renderContactDetail,
   };

@@ -452,10 +452,12 @@
     if (selectedTags.length) p.tags = selectedTags.slice();
 
     btn.textContent = 'Saving...'; btn.disabled = true;
-    api.createContact(p).then(function () {
+    api.createContact(p).then(function (created) {
       closeModal('mm-modal-contact');
       U.fbk(btn, 'Save Contact');
-      loadContacts();
+      // GHL returns the created contact, so it can be shown immediately
+      // rather than waiting for its search index to include it.
+      C.contactAdded(created || p);
     }).catch(function (e) {
       alert(e.message);
       btn.textContent = 'Save Contact'; btn.disabled = false;
