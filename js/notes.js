@@ -6,10 +6,16 @@
 // customer with two jobs keeps separate notes on each — which is what the
 // business needs, since a note about the kitchen is not about the bathroom.
 //
-// GHL also cannot record who wrote a note through the API: every write uses
-// one shared integration token, so `userId` comes back null. The app stamps
-// the author's name into the note text instead, which is the only way to
-// keep that information.
+// GHL cannot record who wrote a note through the API: every write uses one
+// shared integration token, so `userId` comes back null. The app stamps the
+// author's name into the note text instead, which is the only way to keep
+// that information.
+//
+// Notes are deliberately NOT written to the activity history. The app can
+// only see notes it creates itself — GHL offers no webhook for notes, no
+// account-wide notes endpoint, and no dateUpdated field, so a note written
+// in GoHighLevel could never be captured. A history holding some notes and
+// silently missing others would read as complete when it is not.
 window.MM = window.MM || {};
 
 (function () {
@@ -116,11 +122,9 @@ window.MM = window.MM || {};
 
     api.addNote(cid, body, currentJob.id)
       .then(function () {
-        window.MM.activity.log('note', 'Added a note', {
-          jobId: currentJob.id,
-          jobName: (currentJob.contact && currentJob.contact.name) || currentJob.name,
-          detail: text.length > 80 ? text.slice(0, 80) + '…' : text,
-        });
+        // Not logged to history on purpose — see the note at the top of
+        // this file. The Notes panel is the record, and it shows every note
+        // whether it was written here or in GoHighLevel.
         box.value = '';
         return load();
       })
@@ -136,15 +140,7 @@ window.MM = window.MM || {};
     noteError('');
     btn.disabled = true; btn.textContent = 'Deleting...';
     api.deleteNote(cid, noteId)
-      .then(function () {
-        var gone = notes.find(function (n) { return n.id === noteId; });
-        window.MM.activity.log('note', 'Deleted a note', {
-          jobId: currentJob.id,
-          jobName: (currentJob.contact && currentJob.contact.name) || currentJob.name,
-          detail: gone ? plain(gone) : null,
-        });
-        return load();
-      })
+      .then(function () { return load(); })
       .catch(function (e) {
         btn.disabled = false; btn.textContent = 'Delete';
         noteError('Could not delete: ' + e.message);
