@@ -68,15 +68,19 @@
    three simple filters look like a form to fill in, when they are controls
    you glance at and change. The labels move to title/aria so the row stays
    compact without becoming unlabelled. */
-.mm-hist-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+/* Every control on this row is 50px tall — the height .mm-input sets — so
+   they line up. The inputs also carry a default bottom margin meant for
+   stacked forms, which is cleared here or they sit off-centre. */
+.mm-hist-bar{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin-bottom:18px}
 .mm-hist-bar .mm-search-bar{flex:1 1 220px;margin-bottom:0;min-width:0}
-.mm-hist-select{flex:0 1 auto;width:auto;min-width:150px;max-width:220px;
-                padding-top:11px;padding-bottom:11px}
+.mm-hist-bar .mm-input,
+.mm-hist-bar .mm-select{margin-bottom:0}
+.mm-hist-select{flex:0 1 auto;width:auto;min-width:150px;max-width:220px}
 
 .mm-hist-clear{flex:0 0 auto;background:transparent;color:var(--accent);
-               border:1px solid var(--control-border);border-radius:10px;
-               padding:11px 16px;font-family:inherit;font-weight:700;
-               cursor:pointer;min-height:46px;white-space:nowrap}
+               border:1.5px solid var(--control-border);border-radius:10px;
+               padding:0 18px;font-family:inherit;font-weight:700;
+               cursor:pointer;min-height:50px;white-space:nowrap}
 .mm-hist-clear:hover{border-color:var(--accent);background:var(--card)}
 .mm-hist-clear:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
