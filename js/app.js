@@ -454,10 +454,9 @@
     btn.textContent = 'Saving...'; btn.disabled = true;
     api.createContact(p).then(function (created) {
       closeModal('mm-modal-contact');
-      U.fbk(btn, 'Save Contact');
-      // GHL returns the created contact, so it can be shown immediately
-      // rather than waiting for its search index to include it.
-      C.contactAdded(created || p);
+      // The list shows its own loader while GHL's index catches up, so the
+      // button confirms only once the contact is actually visible.
+      C.contactAdded(created || p, function () { U.fbk(btn, 'Save Contact'); });
     }).catch(function (e) {
       alert(e.message);
       btn.textContent = 'Save Contact'; btn.disabled = false;

@@ -27,34 +27,13 @@ window.MM = window.MM || {};
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  // A contact created a moment ago, held here until GHL's search index
-  // catches up. Without it the list refreshes to a copy that does not yet
-  // include the new person, which reads as the save having failed.
-  var justAdded = [];
   var lastPick = null;
-
-  function addOptimistic(c) {
-    if (!c || !c.id) return;
-    justAdded = justAdded.filter(function (x) { return x.id !== c.id; });
-    justAdded.unshift(c);
-  }
-
-  function mergeJustAdded(contacts) {
-    if (!justAdded.length) return contacts;
-    var have = {};
-    contacts.forEach(function (c) { have[c.id] = true; });
-    // Anything GHL now returns on its own is dropped from the holding list,
-    // so it cannot linger after the index has caught up.
-    justAdded = justAdded.filter(function (c) { return !have[c.id]; });
-    return justAdded.concat(contacts);
-  }
 
   function loadContacts(query, onPickContact) {
     var el = document.getElementById('mm-contacts-list');
     if (onPickContact) lastPick = onPickContact;
     el.innerHTML = '<div class="mm-empty">Loading contacts...</div>';
-    api.searchContacts(query).then(function (raw) {
-      var contacts = query ? raw : mergeJustAdded(raw);
+    api.searchContacts(query).then(function (contacts) {
       if (!contacts.length) { el.innerHTML = '<div class="mm-empty">No contacts found.</div>'; return; }
       el.innerHTML = '';
       contacts.forEach(function (c) {
@@ -159,12 +138,46 @@ window.MM = window.MM || {};
       });
   }
 
-  // Show the new contact straight away, then confirm against GHL once its
-  // index has caught up.
-  function contactAdded(c) {
-    addOptimistic(c);
-    loadContacts(undefined, lastPick);
-    setTimeout(function () { loadContacts(undefined, lastPick); }, 4000);
+  // GHL's contact search index lags a few seconds behind a write, so a
+  // refresh fired immediately comes back without the new person. Rather than
+  // inventing a row and correcting it later, wait for GHL and say so — then
+  // the list only ever shows what is really there.
+  function contactAdded(newContact, onDone) {
+    var el = document.getElementById('mm-contacts-list');
+    if (el) {
+      el.innerHTML = '<div class="mm-loading">' +
+        '<span class="mm-spinner" aria-hidden="true"></span>' +
+        '<span>Saving ' + U.esc(contactName(newContact)) + '&hellip;</span></div>';
+    }
+
+    var attempts = 0;
+    (function check() {
+      attempts += 1;
+      api.searchContacts()
+        .then(function (contacts) {
+          var found = newContact && newContact.id &&
+            contacts.some(function (c) { return c.id === newContact.id; });
+          // Give up after ~8s and show whatever GHL has: the contact was
+          // created either way, and a spinner that never stops is worse than
+          // a list that is briefly a moment behind.
+          if (found || attempts >= 5) {
+            loadContacts(undefined, lastPick);
+            if (onDone) onDone();
+            return;
+          }
+          setTimeout(check, 1600);
+        })
+        .catch(function () {
+          loadContacts(undefined, lastPick);
+          if (onDone) onDone();
+        });
+    })();
+  }
+
+  function contactName(c) {
+    if (!c) return 'contact';
+    return U.titleCase(c.contactName ||
+      [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name) || 'contact';
   }
 
   window.MM.contacts = {

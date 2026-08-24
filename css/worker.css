@@ -153,3 +153,19 @@
 .mm-crew-list{display:flex;flex-direction:column;gap:2px;
               background:var(--input-bg);border:1px solid var(--input-border);
               border-radius:10px;padding:8px;max-height:240px;overflow-y:auto}
+
+/* ---- Waiting for a write to land ----
+   GHL's search index lags a write by a few seconds. Saying so beats either a
+   frozen screen or a list that rearranges itself once the user has moved on. */
+.mm-loading{display:flex;align-items:center;justify-content:center;gap:12px;
+            padding:36px 20px;color:var(--text2);font-size:0.92em}
+.mm-spinner{width:20px;height:20px;flex:0 0 auto;border-radius:50%;
+            border:2.5px solid var(--border);border-top-color:var(--accent);
+            animation:mm-spin .7s linear infinite}
+@keyframes mm-spin{to{transform:rotate(360deg)}}
+
+/* Someone who has asked for less motion gets a static ring rather than a
+   spinning one; the message still says what is happening. */
+@media (prefers-reduced-motion: reduce){
+  .mm-spinner{animation:none;border-top-color:var(--accent)}
+}
