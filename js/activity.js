@@ -17,6 +17,8 @@ window.MM = window.MM || {};
   var rows = [];
   var filterText = '';
   var filterActor = '';
+  var filterJob = '';        // main page only; inside a job it is implied
+  var jobFilterActor = '';   // the in-job panel keeps its own worker filter
   var jobFilter = null;   // set when viewing one job's history
 
   function db(method, path, body, quiet) { return auth.dbFetch(method, path, body, quiet); }
@@ -77,9 +79,12 @@ window.MM = window.MM || {};
     return isNaN(d.getTime()) ? '' : d.toLocaleString();
   }
 
-  function matches(r) {
-    if (filterActor && r.actor_id !== filterActor) return false;
-    if (!filterText) return true;
+  function matches(r, opts) {
+    opts = opts || {};
+    var actor = opts.inJob ? jobFilterActor : filterActor;
+    if (actor && r.actor_id !== actor) return false;
+    if (!opts.inJob && filterJob && r.job_id !== filterJob) return false;
+    if (opts.inJob || !filterText) return true;
     var hay = (r.label + ' ' + (r.detail || '') + ' ' + r.actor_name + ' ' +
                (r.job_name || '')).toLowerCase();
     return hay.indexOf(filterText.toLowerCase()) > -1;
@@ -90,7 +95,7 @@ window.MM = window.MM || {};
     var el = document.getElementById(containerId);
     if (!el) return;
 
-    var shown = rows.filter(matches);
+    var shown = rows.filter(function (r) { return matches(r, opts); });
     if (!rows.length) {
       el.innerHTML = '<p class="mm-task-empty">Nothing has happened here yet.</p>';
       return;
@@ -151,15 +156,45 @@ window.MM = window.MM || {};
 
     loadFor(job.id)
       .then(function () {
+        // Only the people who appear in this job's history: offering staff
+        // with nothing to show would be a list of dead ends.
+        var seen = {}, people = [];
+        rows.forEach(function (r) {
+          if (r.actor_id && !seen[r.actor_id]) {
+            seen[r.actor_id] = true;
+            people.push({ id: r.actor_id, name: r.actor_name });
+          }
+        });
+        people.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+
         el.innerHTML =
           '<div class="mm-steps-head">' +
             '<span class="mm-steps-title">History</span>' +
             '<span class="mm-steps-badge mm-steps-badge-done">' + rows.length + ' change' +
               (rows.length === 1 ? '' : 's') + '</span>' +
           '</div>' +
+          (people.length > 1
+            ? '<div class="mm-hist-jobfilter">' +
+                '<label class="mm-label" for="mm-jobhist-who">Show changes by</label>' +
+                '<select class="mm-select" id="mm-jobhist-who">' +
+                  '<option value="">Everyone</option>' +
+                  people.map(function (p) {
+                    return '<option value="' + U.esc(p.id) + '">' + U.esc(p.name) + '</option>';
+                  }).join('') +
+                '</select>' +
+              '</div>'
+            : '') +
           '<div id="mm-job-history-list"></div>';
-        filterText = ''; filterActor = '';
-        render('mm-job-history-list');
+
+        jobFilterActor = '';
+        render('mm-job-history-list', { inJob: true });
+
+        var sel = document.getElementById('mm-jobhist-who');
+        if (sel) sel.addEventListener('change', function () {
+          jobFilterActor = this.value;
+          render('mm-job-history-list', { inJob: true });
+        });
+
         if (window.MM.wireJobPanels) window.MM.wireJobPanels();
       })
       .catch(function (e) {
@@ -173,18 +208,51 @@ window.MM = window.MM || {};
   function loadPage() {
     var el = document.getElementById('mm-hist-body');
     el.innerHTML = '<div class="mm-empty">Loading...</div>';
-    return Promise.all([loadFor(null), window.MM.tasks.loadStaff()])
-      .then(function (res) {
-        var staff = res[1] || [];
-        var sel = document.getElementById('mm-hist-who');
-        sel.innerHTML = '<option value="">Everyone</option>' +
-          staff.map(function (s) {
-            return '<option value="' + U.esc(s.id) + '">' + U.esc(s.name) + '</option>';
-          }).join('');
-        sel.value = filterActor;
+    return loadFor(null)
+      .then(function () {
+        fillFilters();
         render('mm-hist-body', { showJob: true });
       })
       .catch(function (e) { el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>'; });
+  }
+
+  // Both dropdowns are built from the history itself, not from the full
+  // staff and customer lists — a filter that returns nothing is a dead end,
+  // and the narrowing below keeps the two in step with each other.
+  function fillFilters() {
+    var whoSel = document.getElementById('mm-hist-who');
+    var jobSel = document.getElementById('mm-hist-job');
+
+    var people = {}, jobs = {};
+    rows.forEach(function (r) {
+      // Each list is built from the rows the OTHER filter still allows, so
+      // picking a person cannot leave a customer selected who has nothing
+      // of theirs to show.
+      if ((!filterJob || r.job_id === filterJob) && r.actor_id) {
+        people[r.actor_id] = r.actor_name;
+      }
+      if ((!filterActor || r.actor_id === filterActor) && r.job_id) {
+        jobs[r.job_id] = r.job_name || 'Unnamed job';
+      }
+    });
+
+    function fill(sel, map, current, allLabel) {
+      if (!sel) return;
+      var keys = Object.keys(map).sort(function (a, b) {
+        return String(map[a]).toLowerCase() < String(map[b]).toLowerCase() ? -1 : 1;
+      });
+      sel.innerHTML = '<option value="">' + allLabel + '</option>' +
+        keys.map(function (k) {
+          return '<option value="' + U.esc(k) + '">' + U.esc(map[k]) + '</option>';
+        }).join('');
+      // A selection that no longer exists in the narrowed list is cleared
+      // rather than left pointing at nothing.
+      sel.value = map[current] ? current : '';
+      return sel.value;
+    }
+
+    filterActor = fill(whoSel, people, filterActor, 'Everyone') || '';
+    filterJob = fill(jobSel, jobs, filterJob, 'All customers') || '';
   }
 
   function initPage() {
@@ -197,8 +265,21 @@ window.MM = window.MM || {};
         render('mm-hist-body', { showJob: true });
       }, 200);
     });
+
     document.getElementById('mm-hist-who').addEventListener('change', function () {
       filterActor = this.value;
+      fillFilters();
+      render('mm-hist-body', { showJob: true });
+    });
+    document.getElementById('mm-hist-job').addEventListener('change', function () {
+      filterJob = this.value;
+      fillFilters();
+      render('mm-hist-body', { showJob: true });
+    });
+    document.getElementById('mm-hist-clear').addEventListener('click', function () {
+      filterText = ''; filterActor = ''; filterJob = '';
+      search.value = '';
+      fillFilters();
       render('mm-hist-body', { showJob: true });
     });
   }

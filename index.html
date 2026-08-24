@@ -179,14 +179,21 @@
       <span class="section-title">History</span>
     </div>
     <p class="mm-view-note">Everything that has happened, newest first — who did it and when.</p>
+    <div class="mm-search-bar">
+      <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
+      <label for="mm-hist-search" class="sr-only">Search the history</label>
+      <input class="mm-input" id="mm-hist-search" placeholder="Search by job, task or what changed...">
+    </div>
     <div class="mm-hist-controls">
-      <div class="mm-search-bar">
-        <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
-        <label for="mm-hist-search" class="sr-only">Search the history</label>
-        <input class="mm-input" id="mm-hist-search" placeholder="Search by job, task or what changed...">
+      <div class="mm-hist-field">
+        <label class="mm-label" for="mm-hist-who">Worker</label>
+        <select class="mm-select" id="mm-hist-who"><option value="">Everyone</option></select>
       </div>
-      <label class="sr-only" for="mm-hist-who">Filter by person</label>
-      <select class="mm-select" id="mm-hist-who"><option value="">Everyone</option></select>
+      <div class="mm-hist-field">
+        <label class="mm-label" for="mm-hist-job">Customer</label>
+        <select class="mm-select" id="mm-hist-job"><option value="">All customers</option></select>
+      </div>
+      <button class="mm-btn-sm mm-btn-secondary" id="mm-hist-clear">Clear</button>
     </div>
     <div id="mm-hist-body"></div>
   </div>

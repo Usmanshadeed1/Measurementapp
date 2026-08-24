@@ -64,9 +64,25 @@
    A timeline, grouped by day. Every row answers the same three things in the
    same order: what happened, who did it, when.
    ========================================================================== */
-.mm-hist-controls{display:grid;grid-template-columns:1fr 200px;gap:12px;
-                  align-items:start;margin-bottom:18px}
-.mm-hist-controls .mm-search-bar{margin-bottom:0}
+/* Two dropdowns and a clear button, labelled: an unlabelled select reading
+   "Everyone" gives no clue that it filters by person. */
+.mm-hist-controls{display:flex;gap:12px;align-items:flex-end;
+                  flex-wrap:wrap;margin-bottom:18px}
+.mm-hist-field{display:flex;flex-direction:column;gap:5px;flex:1 1 200px;min-width:0}
+.mm-hist-field .mm-label{margin:0}
+.mm-hist-controls .mm-btn-sm{flex:0 0 auto;min-height:48px}
+
+/* The in-job panel filters by worker only — the customer is already the job
+   you are looking at. */
+.mm-hist-jobfilter{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;
+                   max-width:280px}
+.mm-hist-jobfilter .mm-label{margin:0}
+
+@media (max-width: 620px){
+  .mm-hist-field{flex:1 1 100%}
+  .mm-hist-controls .mm-btn-sm{width:100%}
+  .mm-hist-jobfilter{max-width:none}
+}
 
 .mm-act-day{margin-bottom:22px}
 .mm-act-daylabel{font-size:0.86em;font-weight:800;text-transform:uppercase;
@@ -96,7 +112,6 @@
              white-space:nowrap;padding-top:2px}
 
 @media (max-width: 620px){
-  .mm-hist-controls{grid-template-columns:1fr}
   .mm-act{gap:10px}
   /* The timestamp drops under the text rather than squeezing the label. */
   .mm-act-when{display:block;width:100%;padding-top:4px}
