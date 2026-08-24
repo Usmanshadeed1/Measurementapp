@@ -379,10 +379,21 @@ window.MM = window.MM || {};
           });
       })
       .then(function () {
-        window.MM.activity.log(editing ? 'task_edited' : 'task_added',
-          (editing ? 'Changed the task ' : 'Added the task ') + '"' + title + '"',
+        // Read the mode before closing: closeEditor() clears `editing`, so
+        // asking afterwards always reported an edit as a new task.
+        var wasEdit = !!editing;
+        window.MM.activity.log(wasEdit ? 'task_edited' : 'task_added',
+          (wasEdit ? 'Changed the task ' : 'Added the task ') + '"' + title + '"',
           { jobId: currentJob.id, jobName: jobLabel(currentJob) });
-        closeEditor(); return refreshJob();
+        closeEditor();
+        // The task is already saved at this point. A failure to redraw the
+        // list must not look like the save failed, so it is handled here
+        // rather than falling through to the catch below — which would try
+        // to re-enable a button on a modal that has just closed, leaving it
+        // stuck on "Saving...".
+        return refreshJob().catch(function (e) {
+          taskError('Saved, but the list could not refresh: ' + e.message);
+        });
       })
       .catch(function (e) {
         btn.disabled = false; btn.textContent = 'Save task';

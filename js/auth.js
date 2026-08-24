@@ -49,7 +49,41 @@ window.MM = window.MM || {};
   // needs a SELECT policy, so on a table where a person may write but not
   // read — the activity log — asking for it turns a successful insert into a
   // failed request.
+  // Supabase access tokens last an hour. The app used to refresh only at page
+  // load, so anyone who left a tab open came back to "JWT expired" on their
+  // next save — and the raw wording told them nothing. Refreshing before each
+  // request when the token is close to expiry keeps the session alive without
+  // the user ever seeing it.
+  var refreshing = null;
+
+  function tokenExpiresAt() {
+    if (!session) return 0;
+    if (session.expires_at) return session.expires_at * 1000;
+    return 0;
+  }
+
+  function ensureFreshToken() {
+    if (!session || !session.refresh_token) return Promise.resolve();
+    var exp = tokenExpiresAt();
+    // Renew with five minutes to spare, so a slow request cannot land after
+    // the token has died.
+    if (exp && Date.now() < exp - 5 * 60 * 1000) return Promise.resolve();
+    // One refresh at a time; several calls firing at once would otherwise
+    // each spend the refresh token and invalidate the others.
+    if (refreshing) return refreshing;
+    refreshing = authFetch('/token?grant_type=refresh_token',
+                           { refresh_token: session.refresh_token })
+      .then(function (s) { saveSession(s); })
+      .catch(function () { /* handled on the next 401 */ })
+      .then(function () { refreshing = null; });
+    return refreshing;
+  }
+
   function dbFetch(method, path, body, quiet) {
+    return ensureFreshToken().then(function () { return doDbFetch(method, path, body, quiet); });
+  }
+
+  function doDbFetch(method, path, body, quiet) {
     var headers = {
       apikey: ANON_KEY,
       Authorization: 'Bearer ' + (session ? session.access_token : ANON_KEY),
@@ -76,8 +110,15 @@ window.MM = window.MM || {};
       var data;
       try { data = t ? JSON.parse(t) : {}; } catch (e) { data = { raw: t }; }
       if (!r.ok) {
-        throw new Error(data.msg || data.message || data.error_description ||
-                        data.error || 'Request failed (' + r.status + ')');
+        var msg = data.msg || data.message || data.error_description ||
+                  data.error || 'Request failed (' + r.status + ')';
+        // A dead session should send the person to the login screen with a
+        // sentence they can act on, not the API's own wording.
+        if (r.status === 401 || /JWT expired|invalid claim/i.test(msg)) {
+          sessionDied();
+          throw new Error('Your session has expired. Please sign in again.');
+        }
+        throw new Error(msg);
       }
       return data;
     });
@@ -117,6 +158,17 @@ window.MM = window.MM || {};
         });
       })
       .then(function () { return loadProfile(); });
+  }
+
+  // Shown once, so several failing requests do not stack up alerts.
+  var diedShown = false;
+  function sessionDied() {
+    if (diedShown) return;
+    diedShown = true;
+    saveSession(null);
+    profile = null;
+    show('signin');
+    setError('Your session has expired. Please sign in again.');
   }
 
   function signOut() {
