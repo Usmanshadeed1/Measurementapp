@@ -208,6 +208,30 @@ window.MM = window.MM || {};
       .then(function (d) { return d.opportunity; });
   }
 
+  // Creates a job in New Lead with its Property Address already filled — the
+  // field most existing jobs are missing, because they predate the workflow
+  // action that sets it.
+  function createOpportunity(fields) {
+    var body = {
+      locationId: LOC,
+      pipelineId: SALES_PIPELINE_ID,
+      pipelineStageId: STAGE.newLead,
+      status: 'open',
+      name: fields.name,
+      contactId: fields.contactId,
+    };
+    return apiFetch('POST', '/opportunities/', body)
+      .then(function (d) {
+        var opp = d.opportunity;
+        if (!fields.address || !opp) return opp;
+        // The address is a custom field, so it is a second call — but doing
+        // it here means every job made in the app has one from the start.
+        return setOpportunityField(opp.id, ADDR_FIELD_ID, fields.address)
+          .then(function () { return opp; })
+          .catch(function () { return opp; });
+      });
+  }
+
   // Moves a job to another pipeline stage. Verified to fire the same GHL
   // workflows as dragging the card in GHL's own board, so all the stage
   // automation keeps working when the move is made from this app.
@@ -311,7 +335,7 @@ window.MM = window.MM || {};
     STAGE_AFTER_PRICING: STAGE_AFTER_PRICING, STAGE_PROPOSAL_SENT: STAGE_PROPOSAL_SENT,
     STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
     STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
-    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
+    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, createOpportunity: createOpportunity, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact, updateContact: updateContact,

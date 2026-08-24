@@ -3,7 +3,7 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists, ACT = window.MM.activity, MY = window.MM.mytasks, ACCESS = window.MM.jobaccess, MEASURE = window.MM.measure, NOTES = window.MM.notes;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists, ACT = window.MM.activity, MY = window.MM.mytasks, ACCESS = window.MM.jobaccess, MEASURE = window.MM.measure, NOTES = window.MM.notes, NEWJOB = window.MM.newjob;
 
   var job = null, room = null, editRoom = null, contactSearchTimer = null;
 
@@ -416,7 +416,9 @@
     if (!tagSelectWrap.contains(e.target)) closeTagPanel();
   });
 
-  document.getElementById('mm-add-contact-btn').addEventListener('click', function () {
+  // Opening the blank contact form. Reachable two ways — the Contacts page
+  // and the + New button on the dashboard — so it lives in one place.
+  function openAddContact() {
     contactFieldIds.forEach(function (id) { document.getElementById(id).value = ''; });
     document.getElementById('mm-ct-type').value = 'lead';
     document.getElementById('mm-ct-country').value = 'US';
@@ -432,7 +434,8 @@
       allTagNames = [];
       tagSelectPanel.innerHTML = '<div class="mm-empty">Could not load tags.</div>';
     });
-  });
+  }
+  document.getElementById('mm-add-contact-btn').addEventListener('click', openAddContact);
   document.getElementById('mm-cancel-contact-btn').addEventListener('click', function () { closeModal('mm-modal-contact'); });
   document.getElementById('mm-modal-contact').addEventListener('click', function (e) { if (e.target === this) closeModal('mm-modal-contact'); });
   document.getElementById('mm-save-contact-btn').addEventListener('click', function () {
@@ -606,6 +609,25 @@
   C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
   C.initEdit(function () { loadContacts(); });
   document.getElementById('mm-measure-refresh').addEventListener('click', function () { MEASURE.load(); });
+
+  // + New — one button, because on a phone there is only room for one. It
+  // asks which of the two things is being added rather than guessing.
+  NEWJOB.init(function () { DASH.loadDashboard(); });
+  document.getElementById('mm-new-btn').addEventListener('click', function () {
+    openModal('mm-modal-new');
+  });
+  document.getElementById('mm-new-contact').addEventListener('click', function () {
+    closeModal('mm-modal-new');
+    openAddContact();
+  });
+  document.getElementById('mm-new-job').addEventListener('click', function () {
+    closeModal('mm-modal-new');
+    NEWJOB.open();
+  });
+  document.getElementById('mm-new-cancel').addEventListener('click', function () { closeModal('mm-modal-new'); });
+  document.getElementById('mm-modal-new').addEventListener('click', function (e) {
+    if (e.target === this) closeModal('mm-modal-new');
+  });
 
   window.MM.auth.init(function () {
     var admin = window.MM.auth.isAdmin();

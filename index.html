@@ -104,7 +104,10 @@
   <div class="mm-content">
     <div class="section-header">
       <span class="section-title">Jobs</span>
-      <button class="mm-btn-sm mm-btn-secondary" id="mm-dash-refresh">Refresh</button>
+      <div class="mm-btn-row">
+        <button class="mm-btn-sm mm-btn-secondary" id="mm-dash-refresh">Refresh</button>
+        <button class="mm-btn-sm mm-btn-primary mm-admin-only" id="mm-new-btn">+ New</button>
+      </div>
     </div>
 
     <div class="mm-stats" id="mm-dash-stats"></div>
@@ -213,6 +216,57 @@
       <input class="mm-input" id="mm-contact-search" placeholder="Search by name, phone, or email...">
     </div>
     <div id="mm-contacts-list"><div class="mm-empty">Loading contacts...</div></div>
+  </div>
+</div>
+
+<!-- What are we adding? — the fork behind the + New button -->
+<div class="mm-modal-overlay" id="mm-modal-new">
+  <div class="mm-modal mm-modal-narrow" role="dialog" aria-modal="true" aria-labelledby="mm-new-title">
+    <div class="mm-modal-title" id="mm-new-title">What would you like to add?</div>
+    <div class="mm-assign-list">
+      <button type="button" class="mm-assign-opt" id="mm-new-contact">
+        <span><span class="mm-pick-name">New customer</span>
+        <span class="mm-pick-desc">Someone new. Their first job is created automatically.</span></span>
+      </button>
+      <button type="button" class="mm-assign-opt" id="mm-new-job">
+        <span><span class="mm-pick-name">New job</span>
+        <span class="mm-pick-desc">Another property for a customer you already have.</span></span>
+      </button>
+    </div>
+    <button class="mm-btn mm-btn-secondary" id="mm-new-cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- New job for an existing customer -->
+<div class="mm-modal-overlay" id="mm-modal-newjob">
+  <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-nj-title">
+    <div class="mm-modal-title" id="mm-nj-title">New job</div>
+
+    <div id="mm-nj-step1">
+      <div class="mm-search-bar">
+        <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
+        <label for="mm-nj-search" class="sr-only">Search customers by name, phone, or email</label>
+        <input class="mm-input" id="mm-nj-search" placeholder="Search customers...">
+      </div>
+      <div class="mm-assign-list" id="mm-nj-list"></div>
+    </div>
+
+    <div id="mm-nj-step2" style="display:none">
+      <div id="mm-nj-chosen"></div>
+      <div class="mm-field-group">
+        <label class="mm-label" for="mm-nj-address">Property address *</label>
+        <input class="mm-input" id="mm-nj-address" placeholder="e.g. 3535 1st St N, Ewing NJ">
+      </div>
+      <div class="mm-nj-previewbox">
+        <span class="mm-nj-previewlabel">Job name</span>
+        <span class="mm-nj-previewval" id="mm-nj-preview"></span>
+      </div>
+      <p class="mm-assign-error" id="mm-nj-error" role="alert"></p>
+      <div class="mm-btn-row">
+        <button class="mm-btn mm-btn-secondary" id="mm-nj-cancel">Cancel</button>
+        <button class="mm-btn mm-btn-primary" id="mm-nj-create">Create job</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -479,6 +533,7 @@
 <script src="js/lighting.js"></script>
 <script src="js/contacts.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/newjob.js"></script>
 <script src="js/jobsteps.js"></script>
 <script src="js/notes.js"></script>
 <script src="js/tasks.js"></script>
