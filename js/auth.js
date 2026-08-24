@@ -165,6 +165,13 @@ window.MM = window.MM || {};
       el.innerHTML = '<span class="mm-whoami-name">' + esc(profile.name) + '</span>' +
         '<span class="mm-whoami-role">' + esc(profile.role) + '</span>';
     }
+    // The phone menu carries the same identity, spelled out rather than
+    // abbreviated, since it has the room.
+    var m = document.getElementById('mm-whoami-mobile');
+    if (m && profile) {
+      m.innerHTML = 'Signed in as <strong>' + esc(profile.name) + '</strong> (' +
+        esc(profile.role) + ')';
+    }
   }
   function setError(msg) {
     var el = document.getElementById('mm-auth-error');

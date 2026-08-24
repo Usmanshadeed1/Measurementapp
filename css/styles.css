@@ -121,17 +121,38 @@ html,body{
 .mm-mobile-nav .mm-nav-link{padding:14px;border-radius:8px}
 .mm-mobile-nav.open{display:flex}
 
+/* The brand shows a home icon on a phone and the full wordmark on desktop:
+   at 400px wide, a wordmark plus six controls leaves nothing for either. */
+.mm-brand{display:inline-flex;align-items:center;gap:8px}
+.mm-brand-icon{display:none;font-size:1.5em;line-height:1}
+
+/* Controls that are not navigation live in the menu on a phone. */
+.mm-mobile-foot{margin-top:10px;padding-top:12px;border-top:1px solid var(--divider)}
+.mm-mobile-who{font-size:0.86em;color:var(--text2);margin-bottom:10px;padding:0 14px}
+.mm-mobile-who strong{color:var(--text);font-weight:700}
+.mm-mobile-tools{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px}
+.mm-mobile-tools .font-btn{flex:0 0 auto;min-height:44px}
+.mm-signout-m{margin-left:auto}
+
 @media (max-width: 720px){
   .mm-nav{display:none}
   .mm-hamburger{display:flex}
+  .mm-brand-icon{display:inline}
+  .mm-brand-text{display:none}
+  /* Only the menu button stays in the bar; everything else moved inside it. */
+  .mm-header-controls > .font-btn,
+  .mm-header-controls > .mm-whoami{display:none}
+}
+
+@media (min-width: 721px){
+  .mm-mobile-foot{display:none}
 }
 
 @media (max-width: 420px){
   .mm-header-row{gap:8px;padding:0 10px}
   .mm-brand{font-size:.95em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex-shrink:1}
   .mm-header-controls{gap:4px}
-  .font-btn:disabled{opacity:.35;cursor:not-allowed}
-.font-btn{padding:8px 9px;min-width:40px}
+  .font-btn{padding:8px 9px;min-width:40px}
 }
 
 .back-btn{
@@ -261,6 +282,7 @@ textarea.mm-input{min-height:90px;resize:vertical}
   padding:8px 12px;font-size:.95em;font-weight:800;cursor:pointer;min-width:44px;min-height:44px;
 }
 .font-btn:active{background:var(--border)}
+.font-btn:disabled{opacity:.35;cursor:not-allowed}
 
 /* Accordion */
 .mm-acc{border-radius:12px;margin-bottom:14px;border:1px solid var(--border);overflow:hidden;background:var(--card);box-shadow:var(--card-shadow)}

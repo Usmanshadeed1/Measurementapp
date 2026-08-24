@@ -62,7 +62,10 @@
 <!-- SITE HEADER — shared across every screen -->
 <header class="mm-header">
   <div class="mm-header-row">
-    <a href="#" class="mm-brand" data-tab="dashboard">Measurement App</a>
+    <a href="#" class="mm-brand" data-tab="dashboard">
+      <span class="mm-brand-icon" aria-hidden="true">&#8962;</span>
+      <span class="mm-brand-text">Measurement App</span>
+    </a>
     <nav class="mm-nav" aria-label="Main">
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
       <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
@@ -89,6 +92,15 @@
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists">Task Lists</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
+    <div class="mm-mobile-foot">
+      <div class="mm-mobile-who" id="mm-whoami-mobile"></div>
+      <div class="mm-mobile-tools">
+        <button class="font-btn mm-theme-toggle" aria-label="Switch to light mode">&#9728;</button>
+        <button class="font-btn mm-font-down" aria-label="Decrease text size">A-</button>
+        <button class="font-btn mm-font-up" aria-label="Increase text size">A+</button>
+        <button class="font-btn mm-signout-m" aria-label="Sign out">Sign out</button>
+      </div>
+    </div>
   </nav>
 </header>
 

@@ -55,6 +55,12 @@
   }
   hamburgerBtn.addEventListener('click', toggleMobileNav);
 
+  // Sign out appears twice — in the header on desktop, in the menu on a
+  // phone — so both need wiring to the same handler.
+  document.querySelectorAll('.mm-signout-m').forEach(function (b) {
+    b.addEventListener('click', function () { window.MM.auth.signOut(); });
+  });
+
   // Prevent accidental scroll-wheel changes on number inputs
   document.addEventListener('wheel', function (e) { if (document.activeElement && document.activeElement.type === 'number') e.preventDefault(); }, { passive: false });
 
