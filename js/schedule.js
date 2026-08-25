@@ -1,19 +1,13 @@
 // js/schedule.js
-// The Schedule — everything with a date, on one calendar.
+// The Schedule — every job task with a date, on one calendar.
 //
-// Two kinds of thing land here, and they are deliberately drawn as different
-// species rather than two colours of the same chip:
+// A task is a stretch of days, not a moment: "Install cabinets, Mon to Wed".
+// So a task appears on every day it covers rather than only on its due date,
+// which is what makes an overloaded week visible at a glance.
 //
-//   Measurement visits  a moment. One day, from the job's appointment date.
-//   Job tasks           a stretch. A bar spanning start date to end date.
-//
-// That distinction is the whole point of the screen: you are looking for a
-// clash between someone's visit and the work they are already committed to,
-// and a bar tells you about the days in between in a way a dot cannot.
-//
-// Tasks only exist once a job reaches Material Ordering, which is a rule set
-// elsewhere and deliberately left alone. Early-stage jobs therefore show only
-// their measurement visit, and that is the honest picture.
+// Tasks exist once a job reaches Material Ordering, a rule owned elsewhere and
+// deliberately left alone. Earlier-stage jobs therefore have nothing here, and
+// that is the honest picture rather than a gap to paper over.
 //
 // Who sees what follows the rest of the app: an admin sees everyone, a worker
 // sees only the jobs they are on.
@@ -24,17 +18,21 @@ window.MM = window.MM || {};
   var TASKS = window.MM.tasks, ACCESS = window.MM.jobaccess;
 
   var view = 'week';
-  var cursor = startOfDay(new Date());   // the date the view is centred on
-  var tasks = [], appts = [], staff = [], jobs = [];
+  var cursor = startOfDay(new Date());   // the day the view is centred on
+  var tasks = [], staff = [], jobs = [];
   var loaded = false;
   var onOpenJob = null;
 
-  var filters = { worker: '', job: '', status: 'open', appts: true };
+  var filters = { worker: '', job: '', status: 'open' };
+
+  // How many chips fit before a cell needs a "+n more". Week columns are tall,
+  // month cells are not.
+  var WEEK_MAX = 4, MONTH_MAX = 3;
 
   // ---- Dates ---------------------------------------------------------------
-  // All day maths runs on local midnight. Task dates are plain YYYY-MM-DD
-  // strings with no timezone, so parsing them as UTC would shift a task onto
-  // the wrong day for anyone west of Greenwich.
+  // Day maths runs on local midnight. Task dates are plain YYYY-MM-DD strings
+  // with no timezone, so parsing them as UTC would land a task on the wrong
+  // day for anyone west of Greenwich.
 
   function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
   function parseDay(s) {
@@ -51,13 +49,18 @@ window.MM = window.MM || {};
   }
   function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
   function sameDay(a, b) { return a && b && key(a) === key(b); }
-  function startOfWeek(d) { return addDays(d, -d.getDay()); }        // Sunday
+  function startOfWeek(d) { return addDays(d, -d.getDay()); }
   function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
   function today() { return startOfDay(new Date()); }
 
   var DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function longDate(d) {
+    return d.toLocaleDateString(undefined,
+      { weekday: 'long', month: 'long', day: 'numeric' });
+  }
 
   // ---- Loading -------------------------------------------------------------
 
@@ -78,14 +81,14 @@ window.MM = window.MM || {};
         var ops = (res[2] || []).filter(function (o) {
           return o.pipelineId === api.SALES_PIPELINE_ID;
         });
-        // A worker only ever sees their own jobs, exactly as elsewhere.
         jobs = ACCESS.mineOnly(ops);
 
+        // A worker must not learn about a job through its tasks.
         var allowed = {};
         jobs.forEach(function (o) { allowed[o.id] = true; });
-        tasks = allTasks.filter(function (t) { return !t.job_id || allowed[t.job_id]; });
-
-        appts = jobs.map(toAppointment).filter(Boolean);
+        tasks = auth.isAdmin()
+          ? allTasks
+          : allTasks.filter(function (t) { return t.job_id && allowed[t.job_id]; });
 
         loaded = true;
         fillFilters();
@@ -96,38 +99,26 @@ window.MM = window.MM || {};
       });
   }
 
-  // The measurement visit, read off the job's appointment date.
-  function toAppointment(o) {
-    var raw = api.oppField(o, api.DATE_FIELD_IDS.appointment);
-    var d = parseDay(raw);
-    if (!d) return null;
-    return {
-      kind: 'appt',
-      id: 'appt-' + o.id,
-      jobId: o.id,
-      title: 'Measurement visit',
-      job: jobLabel(o),
-      date: d,
-      done: !!api.oppField(o, api.DATE_FIELD_IDS.measured),
-    };
-  }
-
   function jobLabel(o) {
     if (o.contact && o.contact.name) return U.titleCase(o.contact.name);
     var n = o.name || '';
     return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
 
-  // ---- Filtering -----------------------------------------------------------
+  // ---- Filters -------------------------------------------------------------
 
   function fillFilters() {
     var w = document.getElementById('mm-sc-worker');
-    if (w && w.options.length <= 1) {
-      staff.forEach(function (s) {
-        var o = document.createElement('option');
-        o.value = s.id; o.textContent = s.name;
-        w.appendChild(o);
-      });
+    if (w) {
+      // Only an admin has anyone else to filter by.
+      w.style.display = auth.isAdmin() ? '' : 'none';
+      if (w.options.length <= 1) {
+        staff.forEach(function (s) {
+          var o = document.createElement('option');
+          o.value = s.id; o.textContent = s.name;
+          w.appendChild(o);
+        });
+      }
     }
     var j = document.getElementById('mm-sc-job');
     if (j) {
@@ -142,38 +133,26 @@ window.MM = window.MM || {};
         });
       j.value = chosen;
     }
-    // A worker has no one to filter by but themselves.
-    var wrap = document.getElementById('mm-sc-worker');
-    if (wrap) wrap.style.display = auth.isAdmin() ? '' : 'none';
   }
 
-  function taskAssignees(t) {
+  function assigneesOf(t) {
     return (t.task_assignees || []).map(function (a) { return a.staff_id; });
+  }
+  function staffName(id) {
+    var s = staff.find(function (x) { return x.id === id; });
+    return s ? s.name : '';
   }
 
   function passes(item) {
     if (filters.job && item.jobId !== filters.job) return false;
-
-    if (item.kind === 'appt') {
-      if (!filters.appts) return false;
-      // A visit belongs to whoever is on the job, not to one assignee.
-      if (filters.worker) return false;
-      if (filters.status === 'done') return item.done;
-      if (filters.status === 'open') return !item.done;
-      if (filters.status === 'late') {
-        return !item.done && item.date < today();
-      }
-      return true;
-    }
-
-    if (filters.worker && taskAssignees(item.raw).indexOf(filters.worker) < 0) return false;
+    if (filters.worker && assigneesOf(item.raw).indexOf(filters.worker) < 0) return false;
     if (filters.status === 'done') return !!item.done;
     if (filters.status === 'open') return !item.done;
     if (filters.status === 'late') return !item.done && item.end < today();
     return true;
   }
 
-  // Tasks become spans; a task with only one date is a single day.
+  // A task with only one of the two dates is treated as a single day.
   function toSpan(t) {
     var s = parseDay(t.start_date), e = parseDay(t.end_date);
     if (!s && !e) return null;
@@ -181,23 +160,18 @@ window.MM = window.MM || {};
     if (!e) e = s;
     if (e < s) { var tmp = s; s = e; e = tmp; }
     return {
-      kind: 'task', id: 't-' + t.id, raw: t,
+      id: 't-' + t.id, raw: t,
       jobId: t.job_id, title: t.title || 'Task',
-      job: t.job_name || '', start: s, end: e,
-      done: !!t.done_at,
+      job: t.job_name || '',
+      who: assigneesOf(t).map(staffName).filter(Boolean).join(', '),
+      start: s, end: e, done: !!t.done_at,
     };
   }
 
   function spans() { return tasks.map(toSpan).filter(Boolean).filter(passes); }
-  function visits() { return appts.filter(passes); }
 
-  // Everything happening on one day.
   function itemsOn(d) {
-    var out = visits().filter(function (a) { return sameDay(a.date, d); });
-    spans().forEach(function (s) {
-      if (d >= s.start && d <= s.end) out.push(s);
-    });
-    return out;
+    return spans().filter(function (s) { return d >= s.start && d <= s.end; });
   }
 
   // ---- Rendering -----------------------------------------------------------
@@ -205,11 +179,11 @@ window.MM = window.MM || {};
   function render() {
     if (!loaded) return;
     document.querySelectorAll('.mm-sched-view').forEach(function (b) {
-      b.classList.toggle('is-on', b.getAttribute('data-view') === view);
-      b.setAttribute('aria-selected', b.getAttribute('data-view') === view ? 'true' : 'false');
+      var on = b.getAttribute('data-view') === view;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
     document.getElementById('mm-sc-title').textContent = title();
-    renderLegend();
 
     var el = document.getElementById('mm-sc-body');
     if (view === 'day') el.innerHTML = dayView();
@@ -221,100 +195,101 @@ window.MM = window.MM || {};
   }
 
   function title() {
-    if (view === 'day') {
-      return cursor.toLocaleDateString(undefined,
-        { weekday: 'long', month: 'long', day: 'numeric' });
-    }
+    if (view === 'day') return longDate(cursor);
     if (view === 'week') {
       var s = startOfWeek(cursor), e = addDays(s, 6);
-      var sameMonth = s.getMonth() === e.getMonth();
+      var same = s.getMonth() === e.getMonth();
       return MONTHS[s.getMonth()].slice(0, 3) + ' ' + s.getDate() + ' – ' +
-        (sameMonth ? '' : MONTHS[e.getMonth()].slice(0, 3) + ' ') + e.getDate() +
+        (same ? '' : MONTHS[e.getMonth()].slice(0, 3) + ' ') + e.getDate() +
         ', ' + e.getFullYear();
     }
     if (view === 'month') return MONTHS[cursor.getMonth()] + ' ' + cursor.getFullYear();
     return 'Everything scheduled';
   }
 
-  function renderLegend() {
-    var el = document.getElementById('mm-sc-legend');
-    if (!el) return;
-    el.innerHTML =
-      '<span class="mm-lg"><i class="mm-lg-appt"></i>Measurement visit</span>' +
-      '<span class="mm-lg"><i class="mm-lg-task"></i>Job task</span>' +
-      '<span class="mm-lg"><i class="mm-lg-late"></i>Overdue</span>';
+  function isLate(item) { return !item.done && item.end < today(); }
+
+  // Where a task sits in its own run of days. A task spanning Mon–Wed should
+  // say so on Tuesday rather than looking like three separate jobs.
+  function dayNote(item, d) {
+    var span = Math.round((item.end - item.start) / 86400000) + 1;
+    if (span <= 1) return '';
+    var n = Math.round((d - item.start) / 86400000) + 1;
+    return 'Day ' + n + ' of ' + span;
   }
 
-  function chipClass(item) {
-    if (item.kind === 'appt') {
-      return 'mm-ev mm-ev-appt' + (item.done ? ' is-done' :
-        (item.date < today() ? ' is-late' : ''));
-    }
-    return 'mm-ev mm-ev-task' + (item.done ? ' is-done' :
-      (item.end < today() ? ' is-late' : ''));
-  }
-
-  function chip(item, showJob) {
-    var when = item.kind === 'appt' ? 'Visit' : '';
-    return '<button type="button" class="' + chipClass(item) + '" ' +
-        'data-job="' + U.esc(item.jobId || '') + '">' +
+  function chip(item, opts) {
+    opts = opts || {};
+    var cls = 'mm-ev' + (item.done ? ' is-done' : (isLate(item) ? ' is-late' : ''));
+    var sub = opts.showWho && item.who ? item.who : item.job;
+    return '<button type="button" class="' + cls + '" data-open="' + U.esc(item.jobId || '') + '">' +
       '<span class="mm-ev-title">' + U.esc(item.title) + '</span>' +
-      (showJob && item.job ? '<span class="mm-ev-job">' + U.esc(item.job) + '</span>' : '') +
-      (when ? '<span class="mm-ev-when">' + when + '</span>' : '') +
+      (sub ? '<span class="mm-ev-job">' + U.esc(sub) + '</span>' : '') +
+      (opts.note ? '<span class="mm-ev-when">' + U.esc(opts.note) + '</span>' : '') +
     '</button>';
+  }
+
+  // A day's chips, capped, with a "+n more" that opens the day.
+  function chipStack(d, max, opts) {
+    var rows = itemsOn(d);
+    if (!rows.length) return '<span class="mm-sc-none">Nothing scheduled</span>';
+    var shown = rows.slice(0, max);
+    var rest = rows.length - shown.length;
+    return shown.map(function (i) {
+      return chip(i, { note: dayNote(i, d), showWho: opts && opts.showWho });
+    }).join('') +
+      (rest > 0
+        ? '<button type="button" class="mm-sc-more" data-day="' + key(d) + '">+' +
+          rest + ' more</button>'
+        : '');
   }
 
   // ---- Day -----------------------------------------------------------------
 
   function dayView() {
     var rows = itemsOn(cursor);
-    if (!rows.length) return emptyDay();
+    if (!rows.length) return emptyState();
     return '<div class="mm-sc-day">' +
-      rows.map(function (i) { return chip(i, true); }).join('') +
-      '</div>';
+      rows.map(function (i) {
+        return chip(i, { note: dayNote(i, cursor), showWho: true });
+      }).join('') + '</div>';
   }
 
-  function emptyDay() {
+  function emptyState() {
     return '<div class="mm-sc-empty">' +
       '<p class="mm-sc-empty-title">Nothing scheduled</p>' +
-      '<p class="mm-sc-empty-sub">Tasks appear once a job reaches Material Ordering. ' +
-      'Measurement visits show as soon as a date is set.</p></div>';
+      '<p class="mm-sc-empty-sub">Tasks appear here once a job reaches Material ' +
+      'Ordering and someone gives the task a date.</p></div>';
   }
 
   // ---- Week ----------------------------------------------------------------
 
   function weekView() {
     var s = startOfWeek(cursor), t = today();
-    var days = [];
-    for (var i = 0; i < 7; i++) days.push(addDays(s, i));
-
-    return '<div class="mm-sc-week">' + days.map(function (d) {
-      var rows = itemsOn(d);
-      var isToday = sameDay(d, t);
-      return '<section class="mm-sc-col' + (isToday ? ' is-today' : '') + '">' +
-        '<header class="mm-sc-colhead">' +
+    var out = '';
+    for (var i = 0; i < 7; i++) {
+      var d = addDays(s, i);
+      var n = itemsOn(d).length;
+      out += '<section class="mm-sc-col' + (sameDay(d, t) ? ' is-today' : '') + '">' +
+        '<button type="button" class="mm-sc-colhead" data-day="' + key(d) + '">' +
           '<span class="mm-sc-dow">' + DAY_SHORT[d.getDay()] + '</span>' +
           '<span class="mm-sc-dnum">' + d.getDate() + '</span>' +
-          (rows.length ? '<span class="mm-sc-cnt">' + rows.length + '</span>' : '') +
-        '</header>' +
-        '<div class="mm-sc-colbody">' +
-          (rows.length
-            ? rows.map(function (i) { return chip(i, true); }).join('')
-            : '<span class="mm-sc-none">&mdash;</span>') +
-        '</div>' +
+          (n ? '<span class="mm-sc-cnt">' + n + '</span>' : '') +
+        '</button>' +
+        '<div class="mm-sc-colbody">' + chipStack(d, WEEK_MAX, { showWho: true }) + '</div>' +
       '</section>';
-    }).join('') + '</div>';
+    }
+    return '<div class="mm-sc-week">' + out + '</div>';
   }
 
   // ---- Month ---------------------------------------------------------------
   //
-  // Desktop shows the chips themselves. A phone shows a dot per day and the
-  // chosen day's list underneath: a month grid with readable chips does not
-  // fit a phone, and shrinking them to fit makes them unreadable instead.
+  // A cell is a div, not a button: it holds chips, and a button inside a
+  // button is invalid and lays out unpredictably. The date sits on its own
+  // button so the whole cell is still one tap away from its day.
 
   function monthView() {
-    var first = startOfMonth(cursor);
-    var gridStart = startOfWeek(first);
+    var gridStart = startOfWeek(startOfMonth(cursor));
     var t = today();
     var cells = '';
 
@@ -322,73 +297,64 @@ window.MM = window.MM || {};
       var d = addDays(gridStart, i);
       var rows = itemsOn(d);
       var out = d.getMonth() !== cursor.getMonth();
-      var late = rows.some(function (x) {
-        return !x.done && (x.kind === 'appt' ? x.date : x.end) < t;
-      });
+      var late = rows.some(isLate);
 
       cells +=
-        '<button type="button" class="mm-sc-cell' +
-            (out ? ' is-out' : '') + (sameDay(d, t) ? ' is-today' : '') +
-            (sameDay(d, cursor) ? ' is-sel' : '') + '" data-day="' + key(d) + '">' +
-          '<span class="mm-sc-cellnum">' + d.getDate() + '</span>' +
+        '<div class="mm-sc-cell' + (out ? ' is-out' : '') +
+            (sameDay(d, t) ? ' is-today' : '') + '">' +
+          '<button type="button" class="mm-sc-cellnum' +
+              (rows.length ? ' has-items' : '') + '" data-day="' + key(d) + '" ' +
+              'aria-label="' + U.esc(longDate(d)) +
+              (rows.length ? ', ' + rows.length + ' scheduled' : ', nothing scheduled') + '">' +
+            d.getDate() +
+          '</button>' +
           (rows.length
-            ? '<span class="mm-sc-dots">' +
+            ? '<div class="mm-sc-dots">' +
                 rows.slice(0, 4).map(function (x) {
-                  return '<i class="mm-sc-dot mm-sc-dot-' +
-                    (x.kind === 'appt' ? 'appt' : 'task') +
-                    (x.done ? ' is-done' : '') + '"></i>';
+                  return '<i class="mm-sc-dot' + (x.done ? ' is-done' : '') +
+                    (isLate(x) ? ' is-late' : '') + '"></i>';
                 }).join('') +
-                (rows.length > 4 ? '<span class="mm-sc-more">+' + (rows.length - 4) + '</span>' : '') +
-              '</span>' +
-              '<span class="mm-sc-cellevents">' +
-                rows.slice(0, 3).map(function (x) { return chip(x, false); }).join('') +
-                (rows.length > 3
-                  ? '<span class="mm-sc-more">+' + (rows.length - 3) + ' more</span>' : '') +
-              '</span>'
+                (rows.length > 4 ? '<span class="mm-sc-dotmore">+' + (rows.length - 4) + '</span>' : '') +
+              '</div>' +
+              '<div class="mm-sc-cellevents">' +
+                rows.slice(0, MONTH_MAX).map(function (x) { return chip(x, {}); }).join('') +
+                (rows.length > MONTH_MAX
+                  ? '<button type="button" class="mm-sc-more" data-day="' + key(d) + '">+' +
+                    (rows.length - MONTH_MAX) + ' more</button>'
+                  : '') +
+              '</div>'
             : '') +
-        '</button>';
+        '</div>';
     }
 
-    var sel = itemsOn(cursor);
     return '<div class="mm-sc-month">' +
         '<div class="mm-sc-dowrow">' +
           DAY_SHORT.map(function (n) { return '<span>' + n + '</span>'; }).join('') +
         '</div>' +
         '<div class="mm-sc-grid">' + cells + '</div>' +
-      '</div>' +
-      '<div class="mm-sc-daypanel">' +
-        '<h3 class="mm-sc-dayhead">' +
-          cursor.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) +
-        '</h3>' +
-        (sel.length
-          ? sel.map(function (i) { return chip(i, true); }).join('')
-          : '<p class="mm-sc-none-lg">Nothing scheduled.</p>') +
       '</div>';
   }
 
   // ---- List ----------------------------------------------------------------
 
   function listView() {
-    var all = visits().map(function (a) { return { d: a.date, item: a }; })
-      .concat(spans().map(function (s) { return { d: s.start, item: s }; }));
+    var rows = spans().slice().sort(function (a, b) { return a.start - b.start; });
+    if (!rows.length) return emptyState();
 
-    if (!all.length) return emptyDay();
-    all.sort(function (a, b) { return a.d - b.d; });
-
-    var out = '', lastKey = '';
-    all.forEach(function (r) {
-      var k = key(r.d);
-      if (k !== lastKey) {
-        lastKey = k;
-        var rel = relative(r.d);
+    var out = '', last = '';
+    rows.forEach(function (r) {
+      var k = key(r.start);
+      if (k !== last) {
+        last = k;
         out += '<div class="mm-sc-lhead">' +
           '<span class="mm-sc-ldate">' +
-            r.d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) +
+            r.start.toLocaleDateString(undefined,
+              { weekday: 'short', month: 'short', day: 'numeric' }) +
           '</span>' +
-          (rel ? '<span class="mm-sc-lrel">' + rel + '</span>' : '') +
+          '<span class="mm-sc-lrel">' + relative(r.start) + '</span>' +
         '</div>';
       }
-      out += chip(r.item, true);
+      out += chip(r, { showWho: true, note: dayNote(r, r.start) });
     });
     return '<div class="mm-sc-list">' + out + '</div>';
   }
@@ -402,23 +368,50 @@ window.MM = window.MM || {};
     return 'In ' + diff + ' days';
   }
 
+  // ---- The day popup -------------------------------------------------------
+  //
+  // Everything on one day, without leaving the view you were reading. This is
+  // what "+n more" and a tapped date both open, so a busy day is never
+  // truncated with no way to see the rest.
+
+  function openDay(d) {
+    var rows = itemsOn(d);
+    document.getElementById('mm-sc-poptitle').textContent = longDate(d);
+    document.getElementById('mm-sc-popcount').textContent =
+      rows.length ? rows.length + (rows.length === 1 ? ' task' : ' tasks') : 'Nothing scheduled';
+
+    var body = document.getElementById('mm-sc-popbody');
+    body.innerHTML = rows.length
+      ? rows.map(function (i) {
+          return chip(i, { showWho: true, note: dayNote(i, d) });
+        }).join('')
+      : '<p class="mm-sc-none-lg">Nothing scheduled for this day.</p>';
+
+    bind(body);
+    document.getElementById('mm-modal-schedday').classList.add('open');
+  }
+
+  function closeDay() {
+    document.getElementById('mm-modal-schedday').classList.remove('open');
+  }
+
   // ---- Interaction ---------------------------------------------------------
 
   function bind(el) {
-    el.querySelectorAll('[data-job]').forEach(function (b) {
+    el.querySelectorAll('[data-open]').forEach(function (b) {
       b.addEventListener('click', function (e) {
         e.stopPropagation();
-        var id = b.getAttribute('data-job');
-        var o = jobs.find(function (j) { return j.id === id; });
-        if (o && onOpenJob) onOpenJob(o);
+        var o = jobs.find(function (j) { return j.id === b.getAttribute('data-open'); });
+        if (!o) return;
+        closeDay();
+        if (onOpenJob) onOpenJob(o);
       });
     });
     el.querySelectorAll('[data-day]').forEach(function (b) {
-      b.addEventListener('click', function () {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
         var d = parseDay(b.getAttribute('data-day'));
-        if (!d) return;
-        cursor = d;
-        render();
+        if (d) openDay(d);
       });
     });
   }
@@ -455,24 +448,28 @@ window.MM = window.MM || {};
     document.getElementById('mm-sc-status').addEventListener('change', function () {
       filters.status = this.value; render();
     });
-    document.getElementById('mm-sc-appts').addEventListener('change', function () {
-      filters.appts = this.checked; render();
-    });
     document.getElementById('mm-sc-clear').addEventListener('click', function () {
-      filters = { worker: '', job: '', status: 'open', appts: true };
+      filters = { worker: '', job: '', status: 'open' };
       document.getElementById('mm-sc-worker').value = '';
       document.getElementById('mm-sc-job').value = '';
       document.getElementById('mm-sc-status').value = 'open';
-      document.getElementById('mm-sc-appts').checked = true;
       cursor = today();
       render();
     });
 
-    // Arrow keys move through the calendar, as they do in a desktop calendar.
+    document.getElementById('mm-sc-popclose').addEventListener('click', closeDay);
+    document.getElementById('mm-modal-schedday').addEventListener('click', function (e) {
+      if (e.target === this) closeDay();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeDay();
+    });
+
+    // Arrow keys page the calendar, as they do in a desktop calendar.
     document.getElementById('screen-schedule').addEventListener('keydown', function (e) {
       if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
-      if (e.key === 'ArrowLeft') { step(-1); }
-      else if (e.key === 'ArrowRight') { step(1); }
+      if (e.key === 'ArrowLeft') step(-1);
+      else if (e.key === 'ArrowRight') step(1);
       else return;
       e.preventDefault();
     });

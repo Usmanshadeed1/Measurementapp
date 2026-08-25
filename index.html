@@ -233,14 +233,24 @@
         <option value="done">Done</option>
         <option value="late">Overdue</option>
       </select>
-      <label class="mm-sched-toggle">
-        <input type="checkbox" id="mm-sc-appts" checked> Measurement visits
-      </label>
       <button class="mm-btn-sm mm-btn-secondary" id="mm-sc-clear">Clear</button>
     </div>
 
-    <div class="mm-sched-legend" id="mm-sc-legend"></div>
     <div id="mm-sc-body"><div class="mm-empty">Loading...</div></div>
+  </div>
+</div>
+
+<!-- One day in full — opened from a date or a "+n more" -->
+<div class="mm-modal-overlay" id="mm-modal-schedday">
+  <div class="mm-modal mm-sc-pop" role="dialog" aria-modal="true" aria-labelledby="mm-sc-poptitle">
+    <div class="mm-sc-pophead">
+      <div>
+        <h2 class="mm-sc-poptitle" id="mm-sc-poptitle"></h2>
+        <p class="mm-sc-popcount" id="mm-sc-popcount"></p>
+      </div>
+      <button class="mm-sc-popclose" id="mm-sc-popclose" aria-label="Close">&times;</button>
+    </div>
+    <div class="mm-sc-popbody" id="mm-sc-popbody"></div>
   </div>
 </div>
 
