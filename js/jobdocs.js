@@ -302,7 +302,11 @@ window.MM = window.MM || {};
           detail: label,
         });
         adding = false;   // back to the list, where the new file now is
-        return load();
+        // GHL's search index lags a write by a second or two, so reloading
+        // straight away can come back without the file just uploaded.
+        btn.textContent = 'Saving...';
+        return new Promise(function (done) { setTimeout(done, 2500); })
+          .then(load);
       })
       .catch(function (e) {
         btn.disabled = false; btn.textContent = 'Upload';

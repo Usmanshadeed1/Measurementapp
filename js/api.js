@@ -117,13 +117,37 @@ window.MM = window.MM || {};
     return apiFetch('POST', '/associations/relations', { locationId: LOC, associationId: aId, firstRecordId: f, secondRecordId: s });
   }
 
+  // Vercel refuses any request body over 4.5MB, and every upload goes through
+  // the proxy so the API token stays server-side. The platform returns a raw
+  // FUNCTION_PAYLOAD_TOO_LARGE page for those, which told the user nothing, so
+  // the size is checked here and explained in plain words instead.
+  var MAX_UPLOAD_MB = 4.4;
+
   function uploadMediaFile(file) {
+    if (file && file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      var mb = (file.size / (1024 * 1024)).toFixed(1);
+      return Promise.reject(new Error(
+        'This file is ' + mb + 'MB. The largest that can be uploaded is ' +
+        MAX_UPLOAD_MB + 'MB.' + String.fromCharCode(10, 10) +
+        'For a video, record a shorter clip or use your ' +
+        'phone’s lower quality setting, then try again.'
+      ));
+    }
     var fd = new FormData();
     fd.append('file', file);
     fd.append('locationId', LOC);
     return fetch('/api/medias/upload-file', { method: 'POST', body: fd })
       .then(function (r) {
-        if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
+        if (!r.ok) {
+          return r.text().then(function (t) {
+            // The platform's own rejection, if a file slips past the check above.
+            if (r.status === 413 || /PAYLOAD_TOO_LARGE/i.test(t)) {
+              throw new Error('That file is too large to upload. The limit is ' +
+                MAX_UPLOAD_MB + 'MB.');
+            }
+            throw new Error(t);
+          });
+        }
         return r.json();
       })
       .then(function (d) {
@@ -143,14 +167,31 @@ window.MM = window.MM || {};
     return makeRec(type, p);
   }
 
+  // GHL's record search has no server-side filter for these custom fields, so
+  // every record is fetched and matched here. It pages through rather than
+  // reading the first 100: once the account passes that many photos, a plain
+  // single-page read would silently drop the older ones.
   function queryMediaByField(type, fieldKey, fieldValue) {
-    return apiFetch('POST', '/objects/' + type + '/records/search', { locationId: LOC, page: 1, pageLimit: 100 })
-      .then(function (d) {
-        var recs = d.records || d.data || [];
-        if (!Array.isArray(recs) || !recs.length) console.log('Search response for ' + type + ' (no records array found or empty):', d);
-        return recs.filter(function (r) { return r.properties[fieldKey] === fieldValue; });
-      })
-      .catch(function (e) { console.log('Search failed for ' + type + ':', e.message); return []; });
+    var out = [];
+
+    function page(n) {
+      return apiFetch('POST', '/objects/' + type + '/records/search',
+                      { locationId: LOC, page: n, pageLimit: 100 })
+        .then(function (d) {
+          var recs = d.records || d.data || [];
+          if (!Array.isArray(recs)) return out;
+          recs.forEach(function (r) {
+            if (r.properties && r.properties[fieldKey] === fieldValue) out.push(r);
+          });
+          // A short page means the end; the cap stops a runaway loop if the
+          // API ever keeps returning full pages.
+          if (recs.length < 100 || n >= 20) return out;
+          return page(n + 1);
+        });
+    }
+
+    return page(1)
+      .catch(function (e) { console.log('Search failed for ' + type + ':', e.message); return out; });
   }
 
   function deleteMedia(type, id) { return deleteRec(type, id); }

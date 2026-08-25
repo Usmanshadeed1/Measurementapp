@@ -516,9 +516,9 @@
   var jobRooms = [];
 
   function loadJobMedia() {
-    if (!job || !job.id) return;
+    if (!job || !job.id) return Promise.resolve();
     var el = document.getElementById('mm-job-media'); el.innerHTML = '<div class="mm-empty">Loading...</div>';
-    Promise.all([
+    return Promise.all([
       api.queryMediaByField(api.PHOTO, 'job_id', job.id),
       api.queryMediaByField(api.VIDEO, 'job_id', job.id),
       api.rels(job.id, api.A.rO).then(function (ids) { return Promise.all(ids.map(function (id) { return api.getRec('custom_objects.room', id); })); }).catch(function () { return []; }),
@@ -651,7 +651,15 @@
               url, job.id, roomId || null
             );
           })
-          .then(function () { loadJobMedia(); })
+          // GHL's search index runs a second or two behind a write, so an
+          // immediate reload can come back without the file that was just
+          // uploaded. Waiting briefly is what stops it needing a manual
+          // refresh to appear.
+          .then(function () {
+            btn.textContent = 'Saving...';
+            return new Promise(function (done) { setTimeout(done, 2500); });
+          })
+          .then(function () { return loadJobMedia(); })
           .catch(function (e) { alert(e.message); })
           .then(function () { btn.innerHTML = label; btn.disabled = false; });
       });
