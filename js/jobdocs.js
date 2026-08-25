@@ -86,9 +86,13 @@ window.MM = window.MM || {};
     ]).then(function (res) {
       var photos = (res[0] || []);
       var videos = (res[1] || []).map(function (v) { v.__isVideo = true; return v; });
-      items = photos.concat(videos).sort(function (a, b) {
-        return String(U.pv(b, 'date_taken')).localeCompare(String(U.pv(a, 'date_taken')));
-      });
+      // The search index lags a delete by a moment and will still hand back a
+      // record that is already gone, making the row reappear on its own.
+      items = photos.concat(videos)
+        .filter(function (r) { return !justDeleted[r.id]; })
+        .sort(function (a, b) {
+          return String(U.pv(b, 'date_taken')).localeCompare(String(U.pv(a, 'date_taken')));
+        });
       render();
     }).catch(function (e) {
       items = [];
@@ -358,20 +362,50 @@ window.MM = window.MM || {};
       });
   }
 
+  // Ids currently being deleted. The list redraws while a delete is still in
+  // flight, and the redrawn row carries the same id — so without this a second
+  // click sends the same DELETE again and GoHighLevel answers 404 for a record
+  // that the first call had already removed. The file was gone either way,
+  // which is why a refresh always looked correct.
+  var deleting = {};
+
+  // Ids deleted in this session, kept so the lagging search index cannot
+  // resurrect a row that has already gone.
+  var justDeleted = {};
+
   function remove(id, isVid, btn) {
+    if (deleting[id]) return;
+    deleting[id] = true;
     btn.disabled = true;
     docError('');
+
     api.deleteMedia(isVid ? api.VIDEO : api.PHOTO, id)
       .then(function () {
         window.MM.activity.log('doc_removed', 'Removed a file from this job', {
           jobId: currentJob.id, jobName: jobLabel(currentJob),
         });
+        // Drop it locally and redraw at once: the delete has succeeded, and
+        // GoHighLevel's search index takes a moment to stop returning it.
+        justDeleted[id] = true;
+        items = items.filter(function (r) { return r.id !== id; });
+        render();
         return load();
       })
       .catch(function (e) {
-        btn.disabled = false;
+        // A record that is already gone is the outcome that was wanted.
+        if (/not found/i.test(e.message) || /404/.test(e.message)) {
+          justDeleted[id] = true;
+          items = items.filter(function (r) { return r.id !== id; });
+          render();
+          return load();
+        }
+        // The row may have been redrawn since, so re-enable by id rather
+        // than through a button reference that could now be detached.
+        var live = document.querySelector('[data-del="' + id + '"]');
+        if (live) live.disabled = false;
         docError('Could not delete: ' + e.message);
-      });
+      })
+      .then(function () { delete deleting[id]; });
   }
 
   function jobLabel(o) {
