@@ -16,6 +16,8 @@
   --sc-late:#a3181f;
 }
 
+#screen-schedule{overflow-x:hidden}
+
 /* ---- Toolbar ------------------------------------------------------------ */
 /* One row on desktop: pager left, view switch right, both on the same
    44px baseline so nothing floats a few pixels off its neighbours. */
@@ -50,17 +52,19 @@
 
 .mm-sched-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;
   margin-bottom:14px}
-.mm-sched-filters .mm-select{height:44px;min-height:44px;width:auto;
-  min-width:150px;flex:0 1 auto}
-.mm-sched-filters .mm-btn-sm{height:44px;flex:0 0 auto}
+/* Height comes from the base .mm-select padding; overriding it here clipped
+   the label. Only the width and the stray bottom margin need changing. */
+.mm-sched-filters .mm-select{width:auto;min-width:160px;flex:0 1 auto;
+  margin-bottom:0;padding-top:10px;padding-bottom:10px;min-height:48px}
+.mm-sched-filters .mm-btn-sm{min-height:48px;flex:0 0 auto}
 
 /* ---- Chips -------------------------------------------------------------- */
 
-.mm-ev{display:flex;flex-direction:column;align-items:flex-start;gap:1px;
-  width:100%;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer;
+.mm-ev{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  width:100%;text-align:left;padding:10px 12px;border-radius:8px;cursor:pointer;
   background:var(--card2);border:1px solid var(--border);
   border-left:3px solid var(--sc-task);color:var(--text);min-height:44px;
-  justify-content:center;min-width:0}
+  min-width:0}
 .mm-ev:hover{border-color:var(--accent)}
 .mm-ev:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .mm-ev.is-late{border-left-color:var(--sc-late);
@@ -164,9 +168,13 @@
 
 /* ---- Day popup ---------------------------------------------------------- */
 
-.mm-sc-pop{max-width:520px;width:100%}
+/* The modal itself scrolls by default. Here the header must stay put while
+   only the list moves, so this one becomes a fixed-height column with a
+   single scrolling region — two nested scrollers were squeezing the chips. */
+.mm-sc-pop{max-width:520px;width:100%;display:flex;flex-direction:column;
+  overflow:hidden;max-height:min(86vh,720px)}
 .mm-sc-pophead{display:flex;align-items:flex-start;justify-content:space-between;
-  gap:12px;padding-bottom:12px;margin-bottom:12px;
+  gap:12px;padding-bottom:12px;margin-bottom:12px;flex:0 0 auto;
   border-bottom:1px solid var(--divider)}
 .mm-sc-poptitle{font-size:1.1em;font-weight:700;line-height:1.3}
 .mm-sc-popcount{font-size:0.85em;color:var(--text2);margin-top:2px}
@@ -175,8 +183,14 @@
   border-radius:8px}
 .mm-sc-popclose:hover{background:var(--card2);color:var(--text)}
 .mm-sc-popclose:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.mm-sc-popbody{display:flex;flex-direction:column;gap:8px;
-  max-height:60vh;overflow-y:auto}
+.mm-sc-popbody{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;
+  min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding-right:4px}
+/* Chips in the popup have room to breathe: this is the detail view, so the
+   text wraps here rather than being cut off. */
+.mm-sc-popbody .mm-ev{flex:0 0 auto}
+.mm-sc-popbody .mm-ev-title{white-space:normal;line-height:1.35}
+.mm-sc-popbody .mm-ev-job{white-space:normal}
 
 /* ---- Tablet ------------------------------------------------------------- */
 
@@ -185,8 +199,11 @@
      week turns into a swipeable row of readable day cards. */
   .mm-sc-week{grid-auto-flow:column;grid-auto-columns:74%;
     grid-template-columns:none;overflow-x:auto;scroll-snap-type:x mandatory;
-    padding-bottom:8px}
-  .mm-sc-col{scroll-snap-align:start}
+    padding-bottom:8px;
+    /* Without this the grid sizes to its children and pushes the whole page
+       sideways instead of scrolling inside itself. */
+    max-width:100%;min-width:0}
+  .mm-sc-col{scroll-snap-align:start;min-width:0}
 }
 
 /* ---- Phone -------------------------------------------------------------- */
@@ -209,6 +226,5 @@
   .mm-sc-cellnum{min-width:26px;height:26px;font-size:0.85em}
   .mm-sc-grid,.mm-sc-dowrow{gap:3px}
   .mm-sc-week{grid-auto-columns:86%}
-  .mm-sc-pop{max-width:none}
-  .mm-sc-popbody{max-height:70vh}
+  .mm-sc-pop{max-width:none;max-height:88vh}
 }
