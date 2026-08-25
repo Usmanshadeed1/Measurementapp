@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="css/auth.css">
 <link rel="stylesheet" href="css/tasks.css">
 <link rel="stylesheet" href="css/worker.css">
+<link rel="stylesheet" href="css/schedule.css">
 </head>
 <body>
 
@@ -69,6 +70,7 @@
     <nav class="mm-nav" aria-label="Main">
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
       <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
+      <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists">Task Lists</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -87,6 +89,7 @@
   <nav class="mm-mobile-nav" id="mm-mobile-nav" aria-label="Main (mobile)">
     <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
     <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
+    <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="tasklists">Task Lists</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -197,6 +200,47 @@
       <button class="mm-hist-clear" id="mm-hist-clear" title="Clear filters">Clear</button>
     </div>
     <div id="mm-hist-body"></div>
+  </div>
+</div>
+
+<!-- SCHEDULE — measurement visits and job tasks on one calendar -->
+<div class="screen" id="screen-schedule">
+  <div class="mm-content">
+    <div class="mm-sched-bar">
+      <div class="mm-sched-nav">
+        <button class="mm-sched-arrow" id="mm-sc-prev" aria-label="Previous">&#8249;</button>
+        <button class="mm-sched-today" id="mm-sc-today">Today</button>
+        <button class="mm-sched-arrow" id="mm-sc-next" aria-label="Next">&#8250;</button>
+        <h2 class="mm-sched-title" id="mm-sc-title">&nbsp;</h2>
+      </div>
+      <div class="mm-sched-views" role="tablist" aria-label="Calendar view">
+        <button class="mm-sched-view" data-view="day" role="tab">Day</button>
+        <button class="mm-sched-view is-on" data-view="week" role="tab">Week</button>
+        <button class="mm-sched-view" data-view="month" role="tab">Month</button>
+        <button class="mm-sched-view" data-view="list" role="tab">List</button>
+      </div>
+    </div>
+
+    <div class="mm-sched-filters">
+      <label class="sr-only" for="mm-sc-worker">Filter by worker</label>
+      <select class="mm-select" id="mm-sc-worker"><option value="">Everyone</option></select>
+      <label class="sr-only" for="mm-sc-job">Filter by job</label>
+      <select class="mm-select" id="mm-sc-job"><option value="">All jobs</option></select>
+      <label class="sr-only" for="mm-sc-status">Filter by status</label>
+      <select class="mm-select" id="mm-sc-status">
+        <option value="open">To do</option>
+        <option value="all">Everything</option>
+        <option value="done">Done</option>
+        <option value="late">Overdue</option>
+      </select>
+      <label class="mm-sched-toggle">
+        <input type="checkbox" id="mm-sc-appts" checked> Measurement visits
+      </label>
+      <button class="mm-btn-sm mm-btn-secondary" id="mm-sc-clear">Clear</button>
+    </div>
+
+    <div class="mm-sched-legend" id="mm-sc-legend"></div>
+    <div id="mm-sc-body"><div class="mm-empty">Loading...</div></div>
   </div>
 </div>
 
@@ -560,6 +604,7 @@
 <script src="js/jobaccess.js"></script>
 <script src="js/measure.js"></script>
 <script src="js/mytasks.js"></script>
+<script src="js/schedule.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/import.js"></script>
 <script src="js/app.js"></script>

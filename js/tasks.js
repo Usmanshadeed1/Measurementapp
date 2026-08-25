@@ -43,6 +43,25 @@ window.MM = window.MM || {};
     return db('GET', '/tasks?done_at=is.null&select=*,task_assignees(staff_id)' +
                      '&order=end_date.asc.nullslast');
   }
+  // Every task that has a date, done or not. The schedule needs the completed
+  // ones too, so it can answer "what did that week actually look like".
+  function loadAllTasksForSchedule() {
+    var sel = '/tasks?select=*,task_assignees(staff_id)';
+    return db('GET', sel + '&or=(start_date.not.is.null,end_date.not.is.null)' +
+                     '&order=start_date.asc.nullslast')
+      // The or() filter is the only unusual part of this query. If a database
+      // ever rejects it, fetching everything and dropping the undated rows in
+      // the browser gives the same answer rather than an empty calendar.
+      .catch(function () {
+        return db('GET', sel + '&order=start_date.asc.nullslast')
+          .then(function (rows) {
+            return (rows || []).filter(function (t) {
+              return t.start_date || t.end_date;
+            });
+          });
+      });
+  }
+
   function loadTemplates() {
     return db('GET', '/task_templates?select=*&order=position');
   }
@@ -528,6 +547,7 @@ window.MM = window.MM || {};
   window.MM.tasks = {
     init: init, showForJob: showForJob,
     loadMyTasks: loadMyTasks, loadAllOpenTasks: loadAllOpenTasks,
+    loadAllTasksForSchedule: loadAllTasksForSchedule,
     loadStaff: loadStaff, taskRow: taskRow, taskState: taskState,
     assigneeIds: assigneeIds, staffNames: staffNames,
   };

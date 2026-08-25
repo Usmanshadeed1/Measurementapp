@@ -3,7 +3,8 @@
 // and wiring the Walls/Islands/Lighting/Media loaders together.
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
-  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists, ACT = window.MM.activity, MY = window.MM.mytasks, ACCESS = window.MM.jobaccess, MEASURE = window.MM.measure, NOTES = window.MM.notes, NEWJOB = window.MM.newjob, DOCS = window.MM.jobdocs;
+  var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, TASKS = window.MM.tasks, TLISTS = window.MM.tasklists, ACT = window.MM.activity, MY = window.MM.mytasks, ACCESS = window.MM.jobaccess, MEASURE = window.MM.measure, NOTES = window.MM.notes, NEWJOB = window.MM.newjob, DOCS = window.MM.jobdocs,
+      SCHED = window.MM.schedule;
 
   var job = null, room = null, editRoom = null, contactSearchTimer = null;
 
@@ -20,13 +21,14 @@
   function goToTab(tab) {
     // A worker has one screen. Anything else is refused here as well as
     // being hidden, so a stale link or a back button cannot get them in.
-    var workerTabs = { mytasks: 1, measure: 1 };
+    var workerTabs = { mytasks: 1, measure: 1, schedule: 1 };
     if (!window.MM.auth.isAdmin() && !workerTabs[tab]) tab = 'mytasks';
 
     if (tab === 'dashboard') { showScreen('dashboard'); DASH.loadDashboard(); }
     else if (tab === 'tasklists') { showScreen('tasklists'); TLISTS.load(); }
     else if (tab === 'mytasks') { showScreen('mytasks'); MY.load(); }
     else if (tab === 'measure') { showScreen('measure'); MEASURE.load(); }
+    else if (tab === 'schedule') { showScreen('schedule'); SCHED.load(); }
     else if (tab === 'history') { showScreen('history'); ACT.loadPage(); }
     else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
     setActiveNavLink(tab);
@@ -703,6 +705,7 @@
   ACT.initPage();
   MY.onOpenJob(pickJob);
   MEASURE.init(pickJob);
+  SCHED.init(function (o) { pickJob(o, 'overview', 'schedule'); });
   C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
   C.initEdit(function () { loadContacts(); });
   document.getElementById('mm-measure-refresh').addEventListener('click', function () { MEASURE.load(); });
