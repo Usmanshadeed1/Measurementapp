@@ -709,6 +709,11 @@
   C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
   C.initEdit(function () { loadContacts(); });
   document.getElementById('mm-measure-refresh').addEventListener('click', function () { MEASURE.load(); });
+  // A shortcut to the Schedule from the jobs list, for the common jump
+  // between "what is in the pipeline" and "what is happening this week".
+  document.getElementById('mm-dash-schedule').addEventListener('click', function () {
+    goToTab('schedule');
+  });
 
   // + New — one button, because on a phone there is only room for one. It
   // asks which of the two things is being added rather than guessing.
