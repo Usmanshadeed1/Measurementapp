@@ -412,7 +412,11 @@
 
 /* Add button sits above the list; download and delete sit on each row.
    All three are 44px so they stay thumb-sized on a phone. */
-.mm-doc-actions{display:flex;justify-content:flex-end;margin-bottom:4px}
+.mm-doc-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;
+  margin-bottom:4px}
+/* Sits under the file input rather than beside it, so the tap target stays
+   full width on a phone where the camera is what actually gets used. */
+.mm-doc-cam{margin-top:8px;width:100%}
 .mm-steps-card.is-open .mm-doc-actions{display:flex}
 .mm-doc-dl{flex:0 0 auto;width:44px;min-height:44px;background:none;
   border:none;color:var(--accent);font-size:1.15em;line-height:1;
@@ -423,6 +427,7 @@
 @media(max-width:480px){
   /* The name column gives up its width first so both buttons stay reachable. */
   .mm-doc-main{padding:10px;gap:10px}
-  .mm-doc-actions{justify-content:stretch}
+  /* Stacked full-width: two side-by-side buttons would each be too narrow. */
+  .mm-doc-actions{flex-direction:column;align-items:stretch}
   .mm-doc-actions .mm-btn-sm{width:100%}
 }

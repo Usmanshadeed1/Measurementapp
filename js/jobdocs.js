@@ -23,7 +23,10 @@ window.MM = window.MM || {};
 
   var currentJob = null;
   var items = [];
-  var adding = false;   // is the upload form showing?
+  // false when the form is hidden, otherwise which kind is being added:
+  // 'doc' for paperwork, 'photo' for a picture or clip. The two differ only
+  // in what the form defaults to — both save the same way.
+  var adding = false;
 
   // The paperwork a remodelling job actually collects. "Photo" is here so a
   // picture taken outside the measurement flow still has somewhere to go.
@@ -117,10 +120,11 @@ window.MM = window.MM || {};
         ? '<div class="mm-doc-actions">' +
             (adding
               ? ''
-              : '<button class="mm-btn-sm mm-btn-primary" id="mm-doc-new">+ Add Document</button>') +
+              : '<button class="mm-btn-sm mm-btn-primary" id="mm-doc-new">+ Add Document</button>' +
+                '<button class="mm-btn-sm mm-btn-primary" id="mm-photo-new">+ Add Photo/Video</button>') +
           '</div>'
         : '') +
-      (showDocs && adding ? uploadBox() : '') +
+      (showDocs && adding ? uploadBox(adding) : '') +
       (errMsg ? '<p class="mm-task-error">' + U.esc(errMsg) + '</p>' : '') +
       (showDocs ? group('Documents', docs, 'No documents yet.') : '') +
       group('Photos', pics, 'No photos on this job yet.') +
@@ -182,13 +186,19 @@ window.MM = window.MM || {};
       : base;
   }
 
-  function uploadBox() {
+  function uploadBox(mode) {
+    var isPic = mode === 'photo';
+    // A picture is nearly always a Site Photo, so that is preselected; the
+    // list stays available in case it is a scanned plan or a drawing.
+    var preset = isPic ? 'Site Photo' : 'Contract';
+
     return '<div class="mm-docadd">' +
       '<div class="mm-field-group">' +
         '<label class="mm-label" for="mm-doc-type">Type</label>' +
         '<select class="mm-select" id="mm-doc-type">' +
           TYPES.map(function (t) {
-            return '<option value="' + U.esc(t) + '">' + U.esc(t) + '</option>';
+            return '<option value="' + U.esc(t) + '"' +
+              (t === preset ? ' selected' : '') + '>' + U.esc(t) + '</option>';
           }).join('') +
         '</select>' +
       '</div>' +
@@ -198,7 +208,13 @@ window.MM = window.MM || {};
       '</div>' +
       '<div class="mm-field-group">' +
         '<label class="mm-label" for="mm-doc-file">File</label>' +
-        '<input class="mm-input" type="file" id="mm-doc-file">' +
+        '<input class="mm-input" type="file" id="mm-doc-file"' +
+          (isPic ? ' accept="image/*,video/*"' : '') + '>' +
+        (isPic
+          // Straight to the camera, for someone standing in the room.
+          ? '<button type="button" class="mm-btn-sm mm-btn-secondary mm-doc-cam" ' +
+            'id="mm-doc-camera">&#128247; Use camera</button>'
+          : '') +
       '</div>' +
       '<div class="mm-btn-row">' +
         '<button class="mm-btn-sm mm-btn-secondary" id="mm-doc-cancel">Cancel</button>' +
@@ -248,7 +264,35 @@ window.MM = window.MM || {};
 
   function bind(el) {
     var add = el.querySelector('#mm-doc-new');
-    if (add) add.addEventListener('click', function () { adding = true; render(); });
+    if (add) add.addEventListener('click', function () { adding = 'doc'; render(); });
+
+    var addPic = el.querySelector('#mm-photo-new');
+    if (addPic) addPic.addEventListener('click', function () { adding = 'photo'; render(); });
+
+    // The camera writes its picture into the same file input the Upload
+    // button reads, so there is only one save path either way.
+    var cam = el.querySelector('#mm-doc-camera');
+    if (cam) cam.addEventListener('click', function () {
+      var shot = document.createElement('input');
+      shot.type = 'file';
+      shot.accept = 'image/*,video/*';
+      shot.capture = 'environment';
+      shot.addEventListener('change', function () {
+        if (!shot.files || !shot.files[0]) return;
+        var target = document.getElementById('mm-doc-file');
+        try {
+          var dt = new DataTransfer();
+          dt.items.add(shot.files[0]);
+          target.files = dt.files;
+          upload();
+        } catch (e) {
+          // Older browsers will not let a file list be assigned; fall back to
+          // asking the person to pick the photo they just took.
+          docError('Photo taken. Choose it with the File button to upload.');
+        }
+      });
+      shot.click();
+    });
 
     var cancel = el.querySelector('#mm-doc-cancel');
     if (cancel) cancel.addEventListener('click', function () { adding = false; render(); });
@@ -339,6 +383,7 @@ window.MM = window.MM || {};
   function showForJob(job) {
     currentJob = job;
     items = [];
+    adding = false;   // a half-filled form should not follow you to another job
     var el = document.getElementById('mm-job-docs');
     if (el) {
       el.innerHTML = '<div class="mm-steps-head">' +
