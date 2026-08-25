@@ -512,6 +512,9 @@
     }).catch(function (e) { el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>'; });
   }
 
+  // Rooms on the open job, filled in by loadJobMedia.
+  var jobRooms = [];
+
   function loadJobMedia() {
     if (!job || !job.id) return;
     var el = document.getElementById('mm-job-media'); el.innerHTML = '<div class="mm-empty">Loading...</div>';
@@ -521,6 +524,8 @@
       api.rels(job.id, api.A.rO).then(function (ids) { return Promise.all(ids.map(function (id) { return api.getRec('custom_objects.room', id); })); }).catch(function () { return []; }),
     ]).then(function (results) {
       var photos = results[0] || [], videos = results[1] || [], rooms = (results[2] || []).filter(Boolean);
+      // Kept for the room picker behind the Camera/Upload buttons below.
+      jobRooms = rooms.map(function (r) { return { id: r.id, name: U.pv(r, 'name') || 'Room' }; });
       var roomNameById = {}; rooms.forEach(function (r) { roomNameById[r.id] = U.pv(r, 'name') || 'Room'; });
       return Promise.all(rooms.map(function (r) {
         return api.rels(r.id, api.A.wR).then(function (ids) { return Promise.all(ids.map(function (id) { return api.getRec('custom_objects.wall', id); })); }).catch(function () { return []; });
@@ -589,6 +594,82 @@
     }).then(function (rec) { MD.addMediaThumb(rec, isVid); MD.addJobMediaThumb(rec, isVid, room.id, '', room); input.value = ''; })
       .catch(function (e) { alert(e.message); })
       .then(function () { btn.textContent = '📁 Upload'; btn.disabled = false; });
+  });
+
+  // ---- Adding a photo or video from the job screen -------------------------
+  //
+  // The room screen files a photo against the room being measured. This adds
+  // one from the job, where no room is implied — so it asks which room first.
+  // Left to default to "Unassigned", that group grows into a pile nobody ever
+  // sorts, and a photo whose location is unknown is not much use later.
+
+  function pickRoom(onPicked) {
+    // Nothing to choose between on a job with no rooms yet.
+    if (!jobRooms.length) { onPicked(null); return; }
+
+    var list = document.getElementById('mm-pr-list');
+    list.innerHTML =
+      jobRooms.map(function (r) {
+        return '<button type="button" class="mm-assign-opt" data-room="' + U.esc(r.id) + '">' +
+          '<span class="mm-pick-name">' + U.esc(r.name) + '</span></button>';
+      }).join('') +
+      '<button type="button" class="mm-assign-opt" data-room="">' +
+        '<span><span class="mm-pick-name">No particular room</span>' +
+        '<span class="mm-pick-desc">Filed under Unassigned</span></span></button>';
+
+    list.querySelectorAll('[data-room]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        closeModal('mm-modal-photoroom');
+        onPicked(b.getAttribute('data-room') || null);
+      });
+    });
+    openModal('mm-modal-photoroom');
+  }
+
+  // Shared by both buttons; `capture` is what makes the phone open its camera
+  // rather than the file browser.
+  function addJobMedia(btn, label, capture) {
+    pickRoom(function (roomId) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,video/*';
+      if (capture) input.capture = 'environment';
+
+      input.addEventListener('change', function () {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        var isVid = file.type.indexOf('video') === 0;
+        var room = jobRooms.find(function (r) { return r.id === roomId; });
+        var where = room ? room.name : 'Job';
+
+        btn.textContent = 'Uploading...'; btn.disabled = true;
+        api.uploadMediaFile(file)
+          .then(function (url) {
+            return api.createPhotoOrVideo(
+              isVid ? api.VIDEO : api.PHOTO,
+              'Photo – ' + where + ' – ' + new Date().toISOString().split('T')[0],
+              url, job.id, roomId || null
+            );
+          })
+          .then(function () { loadJobMedia(); })
+          .catch(function (e) { alert(e.message); })
+          .then(function () { btn.innerHTML = label; btn.disabled = false; });
+      });
+      input.click();
+    });
+  }
+
+  document.getElementById('mm-jobmedia-camera').addEventListener('click', function () {
+    addJobMedia(this, '&#128247; Camera', true);
+  });
+  document.getElementById('mm-jobmedia-upload').addEventListener('click', function () {
+    addJobMedia(this, '&#128193; Upload', false);
+  });
+  document.getElementById('mm-pr-cancel').addEventListener('click', function () {
+    closeModal('mm-modal-photoroom');
+  });
+  document.getElementById('mm-modal-photoroom').addEventListener('click', function (e) {
+    if (e.target === this) closeModal('mm-modal-photoroom');
   });
 
   // Redraw the stage button whenever the stage changes, from either route:

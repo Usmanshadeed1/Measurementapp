@@ -219,6 +219,16 @@
   </div>
 </div>
 
+<!-- Which room is this photo of? — asked before a job-level upload, so the
+     picture is filed against a room instead of piling up as "Unassigned". -->
+<div class="mm-modal-overlay" id="mm-modal-photoroom">
+  <div class="mm-modal mm-modal-narrow" role="dialog" aria-modal="true" aria-labelledby="mm-pr-title">
+    <div class="mm-modal-title" id="mm-pr-title">Which room is this of?</div>
+    <div class="mm-assign-list" id="mm-pr-list" role="radiogroup" aria-label="Choose a room"></div>
+    <button class="mm-btn mm-btn-secondary" id="mm-pr-cancel">Cancel</button>
+  </div>
+</div>
+
 <!-- What are we adding? — the fork behind the + New button -->
 <div class="mm-modal-overlay" id="mm-modal-new">
   <div class="mm-modal mm-modal-narrow" role="dialog" aria-modal="true" aria-labelledby="mm-new-title">
@@ -470,7 +480,13 @@
       </div>
       <div id="mm-rooms-list"></div>
       <div class="mm-divider"></div>
-      <div class="section-header"><span class="section-title">Photos &amp; Videos</span></div>
+      <div class="section-header">
+        <span class="section-title">Photos &amp; Videos</span>
+        <div class="mm-btn-row">
+          <button class="mm-btn-sm mm-btn-primary" id="mm-jobmedia-camera">&#128247; Camera</button>
+          <button class="mm-btn-sm mm-btn-primary" id="mm-jobmedia-upload">&#128193; Upload</button>
+        </div>
+      </div>
       <div id="mm-job-media"></div>
     </div>
 
