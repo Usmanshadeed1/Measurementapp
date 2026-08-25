@@ -1,0 +1,101 @@
+/* ==========================================================================
+   Task List stored on the opportunity in GoHighLevel.
+
+   A parallel panel to the existing task list, so the two can be compared on
+   real work. Everything here is prefixed .mm-gt- and cannot collide with the
+   Supabase task styles.
+   ========================================================================== */
+
+.mm-gt-tag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;
+  font-size:0.62em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  vertical-align:middle;color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 16%,transparent)}
+
+.mm-gt-actions{display:flex;justify-content:flex-end;margin-bottom:10px}
+.mm-steps-card.is-open .mm-gt-actions{display:flex}
+
+.mm-gt-list{display:flex;flex-direction:column;gap:8px}
+.mm-steps-card.is-open .mm-gt-list{display:flex}
+
+/* ---- One task ----------------------------------------------------------- */
+
+.mm-gt{display:flex;align-items:flex-start;gap:10px;padding:12px;
+  border:1px solid var(--border);border-radius:10px;background:var(--card2);
+  border-left:3px solid var(--accent);min-width:0}
+.mm-gt.is-done{opacity:.6;border-left-color:var(--success)}
+.mm-gt.is-late{border-left-color:var(--danger-text)}
+
+.mm-gt-check{flex:0 0 auto;width:28px;height:28px;margin-top:2px;border-radius:8px;
+  border:2px solid var(--control-border);background:none;color:var(--success);
+  font-size:1em;line-height:1;cursor:pointer;display:flex;
+  align-items:center;justify-content:center}
+.mm-gt-check:hover{border-color:var(--success)}
+.mm-gt-check:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-gt.is-done .mm-gt-check{border-color:var(--success);
+  background:color-mix(in srgb,var(--success) 18%,transparent)}
+
+.mm-gt-main{flex:1 1 auto;min-width:0}
+.mm-gt-title{font-weight:700;line-height:1.3;word-break:break-word}
+.mm-gt.is-done .mm-gt-title{text-decoration:line-through}
+
+.mm-gt-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px;
+  font-size:0.82em;color:var(--text2)}
+.mm-gt-when.is-late{color:var(--danger-text);font-weight:700}
+.mm-gt-who{padding:2px 8px;border-radius:999px;background:var(--card);
+  border:1px solid var(--border)}
+.mm-gt-status{padding:2px 8px;border-radius:999px;font-weight:700;font-size:0.92em}
+.mm-gt-status-todo{color:var(--text2);background:var(--card);
+  border:1px solid var(--border)}
+.mm-gt-status-doing{color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.mm-gt-status-done{color:var(--success);
+  background:color-mix(in srgb,var(--success) 18%,transparent)}
+.mm-gt-notes{margin-top:6px;font-size:0.85em;color:var(--text2);
+  word-break:break-word}
+
+/* ---- Checklist inside a task -------------------------------------------- */
+
+.mm-gt-items{display:flex;flex-direction:column;gap:3px;margin-top:8px;
+  padding-left:10px;border-left:2px solid var(--divider)}
+.mm-steps-card.is-open .mm-gt-items{display:flex}
+.mm-gt-itemhead{font-size:0.72em;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text2);font-weight:700;margin-bottom:2px}
+.mm-gt-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+  min-height:36px;padding:4px 6px;border:none;border-radius:6px;background:none;
+  color:var(--text);font-size:0.88em;cursor:pointer}
+.mm-gt-item:hover{background:var(--card)}
+.mm-gt-item:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-gt-item.is-done{color:var(--text2);text-decoration:line-through}
+.mm-gt-tick{flex:0 0 auto;width:18px;height:18px;border-radius:5px;
+  border:2px solid var(--control-border);display:flex;align-items:center;
+  justify-content:center;font-size:0.72em;color:var(--success)}
+.mm-gt-item.is-done .mm-gt-tick{border-color:var(--success);
+  background:color-mix(in srgb,var(--success) 18%,transparent)}
+
+/* ---- Row buttons -------------------------------------------------------- */
+
+.mm-gt-side{display:flex;flex-direction:column;gap:4px;flex:0 0 auto}
+.mm-gt-icon{width:36px;height:36px;border:none;border-radius:8px;background:none;
+  color:var(--text2);font-size:1em;line-height:1;cursor:pointer}
+.mm-gt-icon:hover{background:var(--card);color:var(--text)}
+.mm-gt-icon:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-gt-del:hover{background:var(--danger-bg);color:var(--danger-text)}
+
+/* ---- The form ----------------------------------------------------------- */
+
+.mm-gt-form{display:flex;flex-direction:column;gap:2px;margin-bottom:12px;
+  padding:14px;border:1px dashed var(--control-border);border-radius:10px;
+  background:var(--card)}
+.mm-steps-card.is-open .mm-gt-form{display:flex}
+.mm-gt-form .mm-input,.mm-gt-form .mm-select{margin-bottom:10px}
+.mm-gt-row{display:flex;gap:10px}
+.mm-gt-row .mm-field-group{flex:1 1 0;min-width:0}
+.mm-gt-form .mm-btn-row{margin-top:4px}
+
+@media (max-width: 620px){
+  /* Two date pickers side by side are too narrow to tap on a phone. */
+  .mm-gt-row{flex-direction:column;gap:0}
+  .mm-gt{padding:10px;gap:8px}
+  .mm-gt-side{flex-direction:row}
+  .mm-gt-actions .mm-btn-sm{width:100%}
+}
