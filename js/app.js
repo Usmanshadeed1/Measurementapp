@@ -514,9 +514,6 @@
     }).catch(function (e) { el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>'; });
   }
 
-  // Rooms on the open job, filled in by loadJobMedia.
-  var jobRooms = [];
-
   function loadJobMedia() {
     if (!job || !job.id) return Promise.resolve();
     var el = document.getElementById('mm-job-media'); el.innerHTML = '<div class="mm-empty">Loading...</div>';
@@ -526,8 +523,6 @@
       api.rels(job.id, api.A.rO).then(function (ids) { return Promise.all(ids.map(function (id) { return api.getRec('custom_objects.room', id); })); }).catch(function () { return []; }),
     ]).then(function (results) {
       var photos = results[0] || [], videos = results[1] || [], rooms = (results[2] || []).filter(Boolean);
-      // Kept for the room picker behind the Camera/Upload buttons below.
-      jobRooms = rooms.map(function (r) { return { id: r.id, name: U.pv(r, 'name') || 'Room' }; });
       var roomNameById = {}; rooms.forEach(function (r) { roomNameById[r.id] = U.pv(r, 'name') || 'Room'; });
       return Promise.all(rooms.map(function (r) {
         return api.rels(r.id, api.A.wR).then(function (ids) { return Promise.all(ids.map(function (id) { return api.getRec('custom_objects.wall', id); })); }).catch(function () { return []; });
