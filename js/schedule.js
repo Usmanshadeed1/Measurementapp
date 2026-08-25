@@ -192,6 +192,7 @@ window.MM = window.MM || {};
     else el.innerHTML = listView();
 
     bind(el);
+    if (view === 'week') trackWeekScroll(el);
   }
 
   function title() {
@@ -279,7 +280,11 @@ window.MM = window.MM || {};
         '<div class="mm-sc-colbody">' + chipStack(d, WEEK_MAX, { showWho: true }) + '</div>' +
       '</section>';
     }
-    return '<div class="mm-sc-week">' + out + '</div>';
+    // On a phone the seven days become a sideways scroller, which is
+    // invisible until someone happens to swipe. The hint says so, and is
+    // hidden on desktop where all seven columns are already on screen.
+    return '<p class="mm-sc-swipe">Swipe across to see the rest of the week &rarr;</p>' +
+      '<div class="mm-sc-week">' + out + '</div>';
   }
 
   // ---- Month ---------------------------------------------------------------
@@ -396,6 +401,32 @@ window.MM = window.MM || {};
   }
 
   // ---- Interaction ---------------------------------------------------------
+
+  // The fade at the right edge means "there is more this way", so it must
+  // come off once the last day is reached, or the week looks permanently
+  // unfinished. Also drives the wording of the hint above it.
+  function trackWeekScroll(el) {
+    var wk = el.querySelector('.mm-sc-week');
+    var hint = el.querySelector('.mm-sc-swipe');
+    if (!wk) return;
+
+    function update() {
+      var more = wk.scrollWidth - wk.clientWidth - wk.scrollLeft > 8;
+      wk.classList.toggle('has-more', more);
+      // Only the wording is set here. Whether the hint shows at all is the
+      // stylesheet's decision, so setting display would override the media
+      // query and leak it onto desktop.
+      if (hint) {
+        hint.textContent = more
+          ? 'Swipe across to see the rest of the week →'
+          : 'That is the whole week';
+      }
+    }
+
+    wk.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  }
 
   function bind(el) {
     el.querySelectorAll('[data-open]').forEach(function (b) {

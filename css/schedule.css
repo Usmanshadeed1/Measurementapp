@@ -98,6 +98,15 @@
 
 /* ---- Week --------------------------------------------------------------- */
 
+/* Shown only where the week actually scrolls sideways. A horizontal scroll is
+   invisible until someone happens to swipe, so it is worth saying out loud. */
+.mm-sc-swipe{display:none;align-items:center;gap:8px;margin-bottom:8px;
+  font-size:0.82em;color:var(--text2)}
+.mm-sc-swipe::before{content:"";flex:1 1 auto;height:1px;
+  background:repeating-linear-gradient(to right,var(--divider) 0 6px,
+    transparent 6px 12px)}
+
+
 .mm-sc-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;
   align-items:start}
 .mm-sc-col{background:var(--card);border:1px solid var(--border);
@@ -204,6 +213,14 @@
        sideways instead of scrolling inside itself. */
     max-width:100%;min-width:0}
   .mm-sc-col{scroll-snap-align:start;min-width:0}
+  .mm-sc-swipe{display:flex}
+  /* The card at the edge fades out, so it reads as continuing off-screen
+     rather than being cut off. Masking beats an overlay here: it cannot sit
+     on top of a card and swallow a tap. */
+  .mm-sc-week.has-more{
+    -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);
+    mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);
+  }
 }
 
 /* ---- Phone -------------------------------------------------------------- */
