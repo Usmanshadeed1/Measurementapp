@@ -212,7 +212,9 @@ window.MM = window.MM || {};
     }
 
     var body = {
-      name: name,
+      // A task stores its assignees as a comma-separated list, so a comma in
+      // a name would silently split that person in two.
+      name: name.replace(/,/g, ' '),
       email: (document.getElementById('mm-wk-email').value || '').trim() || null,
       phone: (document.getElementById('mm-wk-phone').value || '').trim() || null,
     };

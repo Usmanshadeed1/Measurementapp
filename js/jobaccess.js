@@ -39,7 +39,7 @@ window.MM = window.MM || {};
       var ids = new Set();
       (res[0] || []).forEach(function (r) { if (r.job_id) ids.add(r.job_id); });
       (res[1] || []).forEach(function (t) {
-        if (t.jobId && t.who && t.who === me.name) ids.add(t.jobId);
+        if (t.jobId && window.MM.ghltasks.isAssignedTo(t.who, me.name)) ids.add(t.jobId);
       });
       myJobIds = ids;
       return ids;

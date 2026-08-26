@@ -62,7 +62,7 @@ window.MM = window.MM || {};
       .then(function (res) {
         // A task now records its worker as a name, so that is what is matched.
         var mine = (res[0] || []).filter(function (t) {
-          return t.who && t.who === me.name;
+          return window.MM.ghltasks.isAssignedTo(t.who, me.name);
         });
         rows = mine;
         myJobs = res[1] || [];

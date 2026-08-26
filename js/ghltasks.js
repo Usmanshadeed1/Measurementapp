@@ -251,22 +251,42 @@ window.MM = window.MM || {};
 
   // ---- The form ------------------------------------------------------------
 
-  // Grouped, so it is clear at a glance whether the person will actually see
-  // the task: only someone with a login can open the app.
-  function whoOptions(current) {
-    function opts(list) {
-      return list.map(function (s) {
-        return '<option value="' + U.esc(s.name) + '"' +
-          (s.name === current ? ' selected' : '') + '>' + U.esc(s.name) + '</option>';
-      }).join('');
-    }
-    var withLogin = staff.filter(function (s) { return s.hasLogin; });
-    var nameOnly = staff.filter(function (s) { return !s.hasLogin; });
+  // Several people can share a task, so this is a list of tick boxes rather
+  // than a dropdown. Grouped by whether they can sign in: only someone with a
+  // login will actually see the task in the app.
+  function whoPicker(current) {
+    var chosen = namesOf(current);
 
-    return (withLogin.length
-        ? '<optgroup label="Has login">' + opts(withLogin) + '</optgroup>' : '') +
-      (nameOnly.length
-        ? '<optgroup label="Name only">' + opts(nameOnly) + '</optgroup>' : '');
+    function group(label, list) {
+      if (!list.length) return '';
+      return '<div class="mm-gt-whogroup">' +
+        '<div class="mm-gt-wholabel">' + U.esc(label) + '</div>' +
+        list.map(function (s) {
+          var on = chosen.indexOf(s.name) > -1;
+          return '<label class="mm-gt-whoitem' + (on ? ' is-on' : '') + '">' +
+            '<input type="checkbox" class="mm-gt-whobox" value="' + U.esc(s.name) + '"' +
+              (on ? ' checked' : '') + '>' +
+            '<span>' + U.esc(s.name) + '</span>' +
+          '</label>';
+        }).join('') +
+      '</div>';
+    }
+
+    if (!staff.length) {
+      return '<p class="mm-gt-whoempty">No workers yet. Add them on the ' +
+        'Workers page.</p>';
+    }
+    return '<div class="mm-gt-who-picker" id="mm-gt-who">' +
+      group('Has login', staff.filter(function (s) { return s.hasLogin; })) +
+      group('Name only', staff.filter(function (s) { return !s.hasLogin; })) +
+    '</div>';
+  }
+
+  // The field holds a comma-separated list, so both shapes read the same way.
+  function namesOf(v) {
+    return String(v || '').split(',')
+      .map(function (x) { return x.trim(); })
+      .filter(Boolean);
   }
 
   function form(i) {
@@ -292,23 +312,21 @@ window.MM = window.MM || {};
         '</div>' +
       '</div>' +
 
-      '<div class="mm-gt-row">' +
-        '<div class="mm-field-group">' +
-          '<label class="mm-label" for="mm-gt-who">Assigned to</label>' +
-          '<select class="mm-select" id="mm-gt-who">' +
-            '<option value="">Nobody yet</option>' +
-            whoOptions(t.who) +
-          '</select>' +
-        '</div>' +
-        '<div class="mm-field-group">' +
-          '<label class="mm-label" for="mm-gt-status">Status</label>' +
+      // The tick list needs the full width; a half-row would put the names in
+      // a column two words wide.
+      '<div class="mm-field-group">' +
+        '<span class="mm-label">Assigned to</span>' +
+        whoPicker(t.who) +
+      '</div>' +
+
+      '<div class="mm-field-group">' +
+        '<label class="mm-label" for="mm-gt-status">Status</label>' +
           '<select class="mm-select" id="mm-gt-status">' +
             STATUS.map(function (s) {
               return '<option value="' + s.v + '"' +
                 (s.v === (t.status || 'todo') ? ' selected' : '') + '>' + s.label + '</option>';
             }).join('') +
-          '</select>' +
-        '</div>' +
+        '</select>' +
       '</div>' +
 
       '<div class="mm-field-group">' +
@@ -342,7 +360,10 @@ window.MM = window.MM || {};
       title: (document.getElementById('mm-gt-title').value || '').trim(),
       start: document.getElementById('mm-gt-start').value || '',
       end: document.getElementById('mm-gt-end').value || '',
-      who: document.getElementById('mm-gt-who').value || '',
+      who: Array.prototype.slice
+        .call(document.querySelectorAll('.mm-gt-whobox:checked'))
+        .map(function (b) { return b.value; })
+        .join(', '),
       status: document.getElementById('mm-gt-status').value || 'todo',
       notes: (document.getElementById('mm-gt-notes').value || '').trim(),
       // Ticks survive an edit: a checklist item keeps its state if its text
@@ -370,6 +391,12 @@ window.MM = window.MM || {};
     var cancel = el.querySelector('#mm-gt-cancel');
     if (cancel) cancel.addEventListener('click', function () {
       adding = false; editing = null; render();
+    });
+
+    el.querySelectorAll('.mm-gt-whobox').forEach(function (b) {
+      b.addEventListener('change', function () {
+        b.closest('.mm-gt-whoitem').classList.toggle('is-on', b.checked);
+      });
     });
 
     var saveBtn = el.querySelector('#mm-gt-save');
@@ -493,8 +520,17 @@ window.MM = window.MM || {};
     });
   }
 
+  // A task can name several people, stored comma-separated. Anywhere that
+  // asks "is this task mine" has to split the list rather than compare the
+  // whole string, or a shared task belongs to nobody.
+  function isAssignedTo(who, name) {
+    if (!who || !name) return false;
+    return namesOf(who).some(function (n) { return n === name; });
+  }
+
   window.MM.ghltasks = {
     showForJob: showForJob,
+    isAssignedTo: isAssignedTo,
     setItemOnJob: setItemOnJob,
     loadAllJobTasks: loadAllJobTasks,
     setStatusOnJob: setStatusOnJob,

@@ -158,7 +158,8 @@ window.MM = window.MM || {};
 
   function passes(item) {
     if (filters.job && item.jobId !== filters.job) return false;
-    if (filters.worker && item.who !== filters.worker) return false;
+    if (filters.worker &&
+        !window.MM.ghltasks.isAssignedTo(item.who, filters.worker)) return false;
     if (filters.status === 'done') return !!item.done;
     if (filters.status === 'open') return !item.done;
     if (filters.status === 'late') return !item.done && item.end < today();
