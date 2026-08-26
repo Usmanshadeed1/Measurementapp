@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="css/worker.css">
 <link rel="stylesheet" href="css/schedule.css">
 <link rel="stylesheet" href="css/ghltasks.css">
+<link rel="stylesheet" href="css/workers.css">
 </head>
 <body>
 
@@ -72,6 +73,8 @@
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
       <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
       <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
+    <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
+      <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
     </nav>
@@ -243,6 +246,19 @@
       <button class="mm-sc-popclose" id="mm-sc-popclose" aria-label="Close">&times;</button>
     </div>
     <div class="mm-sc-popbody" id="mm-sc-popbody"></div>
+  </div>
+</div>
+
+<!-- WORKER LIST — everyone who can be assigned a task -->
+<div class="screen" id="screen-workers">
+  <div class="mm-content">
+    <div class="section-header">
+      <span class="section-title">Workers</span>
+      <button class="mm-btn-sm mm-btn-primary" id="mm-workers-add">+ Add Worker</button>
+    </div>
+    <p class="mm-view-note">Everyone here can be assigned a task. People with
+      a login also see their tasks in the app.</p>
+    <div id="mm-workers-body"><div class="mm-empty">Loading...</div></div>
   </div>
 </div>
 
@@ -591,6 +607,7 @@
 <script src="js/notes.js"></script>
 <script src="js/jobdocs.js"></script>
 <script src="js/ghltasks.js"></script>
+<script src="js/workerlist.js"></script>
 <script src="js/activity.js"></script>
 <script src="js/jobaccess.js"></script>
 <script src="js/measure.js"></script>

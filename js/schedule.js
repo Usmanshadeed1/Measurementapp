@@ -74,13 +74,13 @@ window.MM = window.MM || {};
 
     return Promise.all([
       window.MM.ghltasks.loadAllJobTasks(),
-      ACCESS.loadStaff().catch(function () { return []; }),
+      window.MM.workerlist.load().catch(function () { return null; }),
       api.fetchAllOpportunities().catch(function () { return []; }),
       ACCESS.loadMine(),
     ])
       .then(function (res) {
         var allTasks = res[0] || [];
-        staff = (res[1] || []).filter(function (s) { return s.role !== 'admin'; });
+        staff = window.MM.workerlist.assignableNames();
 
         var ops = (res[2] || []).filter(function (o) {
           return o.pipelineId === api.SALES_PIPELINE_ID;

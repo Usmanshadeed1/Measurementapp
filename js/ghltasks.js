@@ -128,10 +128,12 @@ window.MM = window.MM || {};
 
     return Promise.all([
       api.getOpportunity(job.id).catch(function () { return null; }),
-      window.MM.jobaccess.loadStaff().catch(function () { return []; }),
+      // The worker list is the single source for who can be assigned: both
+      // people with a login and the name-only ones.
+      window.MM.workerlist.load().catch(function () { return null; }),
     ]).then(function (res) {
       var opp = res[0];
-      staff = (res[1] || []).filter(function (s) { return s.role !== 'admin'; });
+      staff = window.MM.workerlist.assignableNames();
       tasks = parse(opp ? api.oppField(opp, FIELD_ID) : '');
       render();
     }).catch(function (e) {
@@ -249,6 +251,24 @@ window.MM = window.MM || {};
 
   // ---- The form ------------------------------------------------------------
 
+  // Grouped, so it is clear at a glance whether the person will actually see
+  // the task: only someone with a login can open the app.
+  function whoOptions(current) {
+    function opts(list) {
+      return list.map(function (s) {
+        return '<option value="' + U.esc(s.name) + '"' +
+          (s.name === current ? ' selected' : '') + '>' + U.esc(s.name) + '</option>';
+      }).join('');
+    }
+    var withLogin = staff.filter(function (s) { return s.hasLogin; });
+    var nameOnly = staff.filter(function (s) { return !s.hasLogin; });
+
+    return (withLogin.length
+        ? '<optgroup label="Has login">' + opts(withLogin) + '</optgroup>' : '') +
+      (nameOnly.length
+        ? '<optgroup label="Name only">' + opts(nameOnly) + '</optgroup>' : '');
+  }
+
   function form(i) {
     var t = i === null
       ? { title: '', start: '', end: '', who: '', status: 'todo', notes: '', items: [] }
@@ -277,10 +297,7 @@ window.MM = window.MM || {};
           '<label class="mm-label" for="mm-gt-who">Assigned to</label>' +
           '<select class="mm-select" id="mm-gt-who">' +
             '<option value="">Nobody yet</option>' +
-            staff.map(function (s) {
-              return '<option value="' + U.esc(s.name) + '"' +
-                (s.name === t.who ? ' selected' : '') + '>' + U.esc(s.name) + '</option>';
-            }).join('') +
+            whoOptions(t.who) +
           '</select>' +
         '</div>' +
         '<div class="mm-field-group">' +

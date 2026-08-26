@@ -1,0 +1,71 @@
+/* ==========================================================================
+   Worker list.
+
+   Two groups, told apart by a badge rather than by colour alone: someone with
+   a login can open the app and see their tasks, someone name-only cannot.
+   Getting that wrong means assigning work to a person who never sees it, so
+   the distinction is stated in words on every row.
+   ========================================================================== */
+
+.mm-wk-section{margin-bottom:28px}
+.mm-wk-sechead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.mm-wk-sectitle{font-size:1em;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--text2)}
+.mm-wk-count{background:var(--card2);border:1px solid var(--border);
+  border-radius:999px;padding:1px 9px;font-size:0.8em;color:var(--text2);
+  font-weight:700}
+.mm-wk-secnote{font-size:0.85em;color:var(--text2);margin-bottom:10px;
+  max-width:62ch;line-height:1.5}
+
+.mm-wk-list{display:flex;flex-direction:column;gap:8px}
+
+.mm-wk{display:flex;align-items:center;gap:12px;padding:12px 14px;
+  border:1px solid var(--border);border-radius:10px;background:var(--card);
+  min-width:0}
+
+.mm-wk-avatar{flex:0 0 auto;width:38px;height:38px;border-radius:999px;
+  display:flex;align-items:center;justify-content:center;font-weight:700;
+  font-size:0.82em;letter-spacing:.02em;
+  background:var(--card2);color:var(--text2);border:1px solid var(--border)}
+.mm-wk-avatar.is-login{background:color-mix(in srgb,var(--accent) 20%,transparent);
+  color:var(--accent);border-color:var(--accent)}
+
+.mm-wk-main{flex:1 1 auto;min-width:0}
+.mm-wk-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.mm-wk-sub{font-size:0.83em;color:var(--text2);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+
+.mm-wk-tag{flex:0 0 auto;padding:3px 10px;border-radius:999px;
+  font-size:0.72em;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;white-space:nowrap;
+  background:var(--card2);color:var(--text2);border:1px solid var(--border)}
+.mm-wk-tag.is-login{background:color-mix(in srgb,var(--accent) 16%,transparent);
+  color:var(--accent);border-color:var(--accent)}
+
+.mm-wk-side{display:flex;gap:4px;flex:0 0 auto}
+.mm-wk-icon{width:38px;height:38px;border:none;border-radius:8px;
+  background:none;color:var(--text2);font-size:1em;line-height:1;cursor:pointer}
+.mm-wk-icon:hover{background:var(--card2);color:var(--text)}
+.mm-wk-icon:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-wk-icon:disabled{opacity:.5;cursor:wait}
+.mm-wk-del:hover{background:var(--danger-bg);color:var(--danger-text)}
+
+/* ---- The form ----------------------------------------------------------- */
+
+.mm-wk-form{margin-bottom:24px;padding:16px;border-radius:10px;
+  background:var(--card);border:1px dashed var(--control-border)}
+.mm-wk-formtitle{font-size:1em;font-weight:700;margin-bottom:12px}
+.mm-wk-row{display:flex;gap:12px}
+.mm-wk-row .mm-field-group{flex:1 1 0;min-width:0}
+.mm-wk-formnote{font-size:0.82em;color:var(--text2);margin:2px 0 12px;
+  line-height:1.5}
+
+@media (max-width: 620px){
+  /* The badge drops under the name rather than squeezing the name to nothing. */
+  .mm-wk{flex-wrap:wrap;gap:10px;padding:12px}
+  .mm-wk-main{flex:1 1 60%}
+  .mm-wk-tag{order:3}
+  .mm-wk-side{order:4;margin-left:auto}
+  .mm-wk-row{flex-direction:column;gap:0}
+}
