@@ -232,7 +232,13 @@ window.MM = window.MM || {};
         b.disabled = true;
         var want = !t.items[j].done;
         window.MM.ghltasks.setItemOnJob(id[0], +id[1], j, want)
-          .then(function () { t.items[j].done = want; render(); })
+          .then(function () {
+            window.MM.activity.log(want ? 'task_done' : 'task_undone',
+              (want ? 'Ticked off "' : 'Reopened "') + t.items[j].title +
+              '" in ' + t.title, { jobId: t.jobId, jobName: t.jobName });
+            t.items[j].done = want;
+            render();
+          })
           .catch(function (e) {
             b.disabled = false;
             var err = document.getElementById('mm-my-error');
