@@ -130,19 +130,7 @@
 </div>
 
 <!-- TASK LISTS -->
-<div class="screen" id="screen-tasklists">
-  <div class="mm-content">
-    <div class="section-header">
-      <span class="section-title">Task Lists</span>
-      <button class="mm-btn-sm mm-btn-primary" id="mm-tl-newlist">+ New list</button>
-    </div>
-    <p class="mm-view-note">The standard run of work for a type of job. Build it once here, then add it to any job in one click.</p>
-    <div class="mm-filters" id="mm-tl-tabs" role="group" aria-label="Choose a task list"></div>
-    <div id="mm-tl-body"></div>
-    <p class="mm-task-error" id="mm-tl-error" role="alert"></p>
-    <div class="mm-tl-saved" id="mm-tl-saved">Saved</div>
-  </div>
-</div>
+
 
 <!-- ROOM MEASUREMENT — pick a job, go straight to measuring -->
 <div class="screen" id="screen-measure">
@@ -228,12 +216,30 @@
       <select class="mm-select" id="mm-sc-job"><option value="">All jobs</option></select>
       <label class="sr-only" for="mm-sc-status">Filter by status</label>
       <select class="mm-select" id="mm-sc-status">
-        <option value="open">To do</option>
         <option value="all">Everything</option>
+        <option value="open">To do</option>
         <option value="done">Done</option>
         <option value="late">Overdue</option>
       </select>
       <button class="mm-btn-sm mm-btn-secondary" id="mm-sc-clear">Clear</button>
+    </div>
+
+    <div class="mm-sc-dates">
+      <div class="mm-sc-quick" role="group" aria-label="Filter by date">
+        <button type="button" class="mm-sc-chip is-on" data-range="any">Any date</button>
+        <button type="button" class="mm-sc-chip" data-range="today">Today</button>
+        <button type="button" class="mm-sc-chip" data-range="7">Next 7 days</button>
+        <button type="button" class="mm-sc-chip" data-range="30">Next 30 days</button>
+        <button type="button" class="mm-sc-chip" data-range="month">This month</button>
+        <button type="button" class="mm-sc-chip" data-range="custom">Pick dates</button>
+      </div>
+      <div class="mm-sc-custom" id="mm-sc-custom" hidden>
+        <label class="mm-label" for="mm-sc-from">From</label>
+        <input class="mm-input" type="date" id="mm-sc-from">
+        <label class="mm-label" for="mm-sc-to">To</label>
+        <input class="mm-input" type="date" id="mm-sc-to">
+      </div>
+      <p class="mm-sc-rangenote" id="mm-sc-rangenote"></p>
     </div>
 
     <div id="mm-sc-body"><div class="mm-empty">Loading...</div></div>
@@ -598,9 +604,7 @@
 <script src="js/jobsteps.js"></script>
 <script src="js/notes.js"></script>
 <script src="js/jobdocs.js"></script>
-<script src="js/tasks.js"></script>
 <script src="js/ghltasks.js"></script>
-<script src="js/tasklists.js"></script>
 <script src="js/activity.js"></script>
 <script src="js/jobaccess.js"></script>
 <script src="js/measure.js"></script>

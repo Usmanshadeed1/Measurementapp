@@ -170,22 +170,9 @@ window.MM = window.MM || {};
         note: completed ? '' : (cabinets ? 'Saving this moves the job to Job Completed.' : ''),
       });
 
-    // The badge names the single next thing to do, so the panel answers that
-    // question without the reader working down the list.
-    var badge;
-    if (completed) badge = { cls: 'done', text: 'Completed' };
-    else if (cabinets) badge = { cls: 'todo', text: 'In production' };
-    else if (won) badge = { cls: 'todo', text: 'Order cabinets' };
-    else if (sent) badge = { cls: 'todo', text: 'Waiting for customer' };
-    else if (!measured) badge = { cls: 'todo', text: 'Needs measuring' };
-    else if (!design) badge = { cls: 'todo', text: 'Needs design' };
-    else if (!pricing) badge = { cls: 'todo', text: 'Needs pricing' };
-    else badge = { cls: 'todo', text: 'Ready to send' };
-
     el.innerHTML =
       '<div class="mm-steps-head">' +
         '<span class="mm-steps-title">Job progress</span>' +
-        '<span class="mm-steps-badge mm-steps-badge-' + badge.cls + '">' + U.esc(badge.text) + '</span>' +
       '</div>' +
       '<div class="mm-steps">' + html + '</div>' +
       (completed ? '<div class="mm-step-final">This job is finished and no longer appears on the active dashboard.</div>' : '') +

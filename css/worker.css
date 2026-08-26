@@ -182,3 +182,22 @@
              display:inline-flex;align-items:center;justify-content:center}
 .mm-icon-btn:hover{background:var(--card);border-color:var(--accent)}
 .mm-icon-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* Checklist inside a worker's task card. Read the same way as the admin
+   panel, so a step ticked here shows there and the other way round. */
+.mm-mytask-items{display:flex;flex-direction:column;gap:3px;margin-top:8px;
+  padding-left:10px;border-left:2px solid var(--divider)}
+.mm-mytask-itemhead{font-size:0.72em;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text2);font-weight:700;margin-bottom:2px}
+.mm-mytask-item{display:flex;align-items:center;gap:8px;width:100%;
+  text-align:left;min-height:40px;padding:4px 6px;border:none;border-radius:6px;
+  background:none;color:var(--text);font-size:0.9em;cursor:pointer}
+.mm-mytask-item:hover{background:var(--card2)}
+.mm-mytask-item:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-mytask-item:disabled{opacity:.5;cursor:wait}
+.mm-mytask-item.is-done{color:var(--text2);text-decoration:line-through}
+.mm-mytask-tick{flex:0 0 auto;width:20px;height:20px;border-radius:5px;
+  border:2px solid var(--control-border);display:flex;align-items:center;
+  justify-content:center;font-size:0.75em;color:var(--success)}
+.mm-mytask-item.is-done .mm-mytask-tick{border-color:var(--success);
+  background:color-mix(in srgb,var(--success) 18%,transparent)}

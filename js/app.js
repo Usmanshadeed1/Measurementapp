@@ -187,11 +187,14 @@
     showScreen('job');
     showJobTab(tab || 'overview');
 
-    // Tasks and crew are admin work; a worker opening a job is there to
-    // measure, so the tab would only be an empty panel for them.
+    // The crew panel is admin work, but the task list is not: a worker with a
+    // task on this job needs to open it and tick their steps off, and the
+    // calendar links straight here.
     var admin = window.MM.auth.isAdmin();
+    var crewEl = document.getElementById('mm-job-crew');
+    if (crewEl) crewEl.style.display = admin ? '' : 'none';
     var tasksTab = document.querySelector('#mm-jobtabs [data-jobtab="tasks"]');
-    if (tasksTab) tasksTab.style.display = admin ? '' : 'none';
+    if (tasksTab) tasksTab.style.display = '';
 
     var stage = DASH.stageNameFor(o);
     var c = o.contact || {};
@@ -659,7 +662,8 @@
   ACT.initPage();
   MY.onOpenJob(pickJob);
   MEASURE.init(pickJob);
-  SCHED.init(function (o) { pickJob(o, 'overview', 'schedule'); });
+  // A task on the calendar belongs to the Tasks tab, not the overview.
+  SCHED.init(function (o) { pickJob(o, 'tasks', 'schedule'); });
   C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
   C.initEdit(function () { loadContacts(); });
   document.getElementById('mm-measure-refresh').addEventListener('click', function () { MEASURE.load(); });

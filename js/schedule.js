@@ -15,7 +15,7 @@ window.MM = window.MM || {};
 
 (function () {
   var U = window.MM.utils, api = window.MM.api, auth = window.MM.auth;
-  var TASKS = window.MM.tasks, ACCESS = window.MM.jobaccess;
+  var ACCESS = window.MM.jobaccess;
 
   var view = 'week';
   var cursor = startOfDay(new Date());   // the day the view is centred on
@@ -23,7 +23,7 @@ window.MM = window.MM || {};
   var loaded = false;
   var onOpenJob = null;
 
-  var filters = { worker: '', job: '', status: 'open' };
+  var filters = { worker: '', job: '', status: 'all' };
 
   // How many chips fit before a cell needs a "+n more". Week columns are tall,
   // month cells are not.
@@ -70,7 +70,7 @@ window.MM = window.MM || {};
 
     return Promise.all([
       window.MM.ghltasks.loadAllJobTasks(),
-      TASKS.loadStaff().catch(function () { return []; }),
+      ACCESS.loadStaff().catch(function () { return []; }),
       api.fetchAllOpportunities().catch(function () { return []; }),
       ACCESS.loadMine(),
     ])
@@ -137,6 +137,51 @@ window.MM = window.MM || {};
 
   // A task in GoHighLevel stores the worker as plain text, so the filter
   // compares names rather than ids.
+  function applyRange(name) {
+    range = name;
+    var t = today();
+
+    if (name === 'today')      { rangeFrom = t; rangeTo = t; }
+    else if (name === '7')     { rangeFrom = t; rangeTo = addDays(t, 6); }
+    else if (name === '30')    { rangeFrom = t; rangeTo = addDays(t, 29); }
+    else if (name === 'month') {
+      rangeFrom = startOfMonth(t);
+      rangeTo = new Date(t.getFullYear(), t.getMonth() + 1, 0);
+    }
+    else if (name === 'custom') {
+      rangeFrom = parseDay(document.getElementById('mm-sc-from').value);
+      rangeTo = parseDay(document.getElementById('mm-sc-to').value);
+      // One box filled is a valid open-ended window: "from Monday onwards".
+      if (rangeFrom && rangeTo && rangeTo < rangeFrom) {
+        var swap = rangeFrom; rangeFrom = rangeTo; rangeTo = swap;
+      }
+    }
+    else { rangeFrom = null; rangeTo = null; }
+  }
+
+  // A task counts as inside the window if any part of its span overlaps it,
+  // so a job running Mon-Fri still shows when the window is Wednesday alone.
+  function inRange(item) {
+    if (!rangeFrom && !rangeTo) return true;
+    if (rangeTo && item.start > rangeTo) return false;
+    if (rangeFrom && item.end < rangeFrom) return false;
+    return true;
+  }
+
+  function rangeNote() {
+    if (!rangeFrom && !rangeTo) return '';
+    function f(d) {
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+    if (rangeFrom && rangeTo) {
+      return sameDay(rangeFrom, rangeTo)
+        ? 'Showing ' + f(rangeFrom)
+        : 'Showing ' + f(rangeFrom) + ' to ' + f(rangeTo);
+    }
+    return rangeFrom ? 'Showing ' + f(rangeFrom) + ' onwards'
+                     : 'Showing up to ' + f(rangeTo);
+  }
+
   function passes(item) {
     if (filters.job && item.jobId !== filters.job) return false;
     if (filters.worker && item.who !== filters.worker) return false;
@@ -162,7 +207,9 @@ window.MM = window.MM || {};
     };
   }
 
-  function spans() { return tasks.map(toSpan).filter(Boolean).filter(passes); }
+  function spans() {
+    return tasks.map(toSpan).filter(Boolean).filter(passes).filter(inRange);
+  }
 
   function itemsOn(d) {
     return spans().filter(function (s) { return d >= s.start && d <= s.end; });
@@ -178,6 +225,16 @@ window.MM = window.MM || {};
       b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
     document.getElementById('mm-sc-title').textContent = title();
+
+    document.querySelectorAll('.mm-sc-chip').forEach(function (b) {
+      var on = b.getAttribute('data-range') === range;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    var custom = document.getElementById('mm-sc-custom');
+    if (custom) custom.hidden = range !== 'custom';
+    var note = document.getElementById('mm-sc-rangenote');
+    if (note) note.textContent = rangeNote();
 
     var el = document.getElementById('mm-sc-body');
     if (view === 'day') el.innerHTML = dayView();
@@ -473,11 +530,33 @@ window.MM = window.MM || {};
     document.getElementById('mm-sc-status').addEventListener('change', function () {
       filters.status = this.value; render();
     });
+    document.querySelectorAll('.mm-sc-chip').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var name = b.getAttribute('data-range');
+        applyRange(name);
+        // Jumping the view to the window makes the change visible straight
+        // away, rather than leaving the calendar on a month with nothing in it.
+        if (rangeFrom && name !== 'custom') cursor = rangeFrom;
+        render();
+      });
+    });
+
+    ['mm-sc-from', 'mm-sc-to'].forEach(function (id) {
+      document.getElementById(id).addEventListener('change', function () {
+        applyRange('custom');
+        if (rangeFrom) cursor = rangeFrom;
+        render();
+      });
+    });
+
     document.getElementById('mm-sc-clear').addEventListener('click', function () {
-      filters = { worker: '', job: '', status: 'open' };
+      filters = { worker: '', job: '', status: 'all' };
+      applyRange('any');
+      document.getElementById('mm-sc-from').value = '';
+      document.getElementById('mm-sc-to').value = '';
       document.getElementById('mm-sc-worker').value = '';
       document.getElementById('mm-sc-job').value = '';
-      document.getElementById('mm-sc-status').value = 'open';
+      document.getElementById('mm-sc-status').value = 'all';
       cursor = today();
       render();
     });

@@ -89,13 +89,18 @@ window.MM = window.MM || {};
     }).join('\n');
   }
 
-  function save() {
+  function save(logAs, logText) {
     saving = true;
     render();
     return api.setOpportunityField(currentJob.id, FIELD_ID, serialise(tasks))
       .then(function () {
         saving = false;
         editing = null; adding = false;
+        if (logAs) {
+          window.MM.activity.log(logAs, logText, {
+            jobId: currentJob.id, jobName: jobLabelOf(currentJob),
+          });
+        }
         render();
       })
       .catch(function (e) {
@@ -123,7 +128,7 @@ window.MM = window.MM || {};
 
     return Promise.all([
       api.getOpportunity(job.id).catch(function () { return null; }),
-      window.MM.tasks.loadStaff().catch(function () { return []; }),
+      window.MM.jobaccess.loadStaff().catch(function () { return []; }),
     ]).then(function (res) {
       var opp = res[0];
       staff = (res[1] || []).filter(function (s) { return s.role !== 'admin'; });
@@ -364,8 +369,13 @@ window.MM = window.MM || {};
       row.notes = row.notes.replace(/[|\r\n]/g, ' ');
       row.items.forEach(function (it) { it.title = it.title.replace(/[|\r\n]/g, ' '); });
 
-      if (idx === null) tasks.push(row); else tasks[idx] = row;
-      save();
+      if (idx === null) {
+        tasks.push(row);
+        save('task_added', 'Added task "' + row.title + '"');
+      } else {
+        tasks[idx] = row;
+        save('task_edited', 'Edited task "' + row.title + '"');
+      }
     });
 
     el.querySelectorAll('[data-edit]').forEach(function (b) {
@@ -377,25 +387,31 @@ window.MM = window.MM || {};
     el.querySelectorAll('[data-del]').forEach(function (b) {
       b.addEventListener('click', function () {
         var i = +b.getAttribute('data-del');
+        var gone = tasks[i];
         tasks.splice(i, 1);
-        save();
+        save('task_removed', 'Removed task "' + (gone ? gone.title : '') + '"');
       });
     });
 
     el.querySelectorAll('[data-toggle]').forEach(function (b) {
       b.addEventListener('click', function () {
         var t = tasks[+b.getAttribute('data-toggle')];
-        t.status = t.status === 'done' ? 'todo' : 'done';
-        save();
+        var nowDone = t.status !== 'done';
+        t.status = nowDone ? 'done' : 'todo';
+        save(nowDone ? 'task_done' : 'task_undone',
+             (nowDone ? 'Finished "' : 'Reopened "') + t.title + '"');
       });
     });
 
     el.querySelectorAll('[data-item]').forEach(function (b) {
       b.addEventListener('click', function () {
         var p = b.getAttribute('data-item').split('.');
-        var it = tasks[+p[0]].items[+p[1]];
+        var parent = tasks[+p[0]];
+        var it = parent.items[+p[1]];
         it.done = !it.done;
-        save();
+        save(it.done ? 'task_done' : 'task_undone',
+             (it.done ? 'Ticked off "' : 'Reopened "') + it.title +
+             '" in ' + parent.title);
       });
     });
   }
@@ -449,8 +465,20 @@ window.MM = window.MM || {};
     });
   }
 
+  // Ticking one checklist item from another screen.
+  function setItemOnJob(jobId, taskIndex, itemIndex, done) {
+    return api.getOpportunity(jobId).then(function (opp) {
+      var rows = parse(api.oppField(opp, FIELD_ID));
+      var t = rows[taskIndex];
+      if (!t || !t.items[itemIndex]) throw new Error('That step is no longer there.');
+      t.items[itemIndex].done = done;
+      return api.setOpportunityField(jobId, FIELD_ID, serialise(rows));
+    });
+  }
+
   window.MM.ghltasks = {
     showForJob: showForJob,
+    setItemOnJob: setItemOnJob,
     loadAllJobTasks: loadAllJobTasks,
     setStatusOnJob: setStatusOnJob,
     statusLabel: statusLabel,

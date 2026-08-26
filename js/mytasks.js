@@ -8,7 +8,7 @@
 window.MM = window.MM || {};
 
 (function () {
-  var U = window.MM.utils, auth = window.MM.auth, TASKS = window.MM.tasks;
+  var U = window.MM.utils, auth = window.MM.auth;
 
   var rows = [];
 
@@ -172,6 +172,19 @@ window.MM = window.MM || {};
       stat('Overdue', late, late ? 'bad' : 'good');
   }
 
+  function checklist(t) {
+    var done = t.items.filter(function (x) { return x.done; }).length;
+    return '<div class="mm-mytask-items">' +
+      '<div class="mm-mytask-itemhead">' + done + ' of ' + t.items.length + '</div>' +
+      t.items.map(function (it, j) {
+        return '<button type="button" class="mm-mytask-item' +
+            (it.done ? ' is-done' : '') + '" data-sub="' + U.esc(t.id) + '.' + j + '">' +
+          '<span class="mm-mytask-tick">' + (it.done ? '&#10003;' : '') + '</span>' +
+          U.esc(it.title) + '</button>';
+      }).join('') +
+    '</div>';
+  }
+
   function taskCard(t) {
     var d = daysTo(t.end);
     var flag = d === null ? 'No date'
@@ -184,10 +197,10 @@ window.MM = window.MM || {};
     // The dates are spelled out as a range: a worker needs to know when they
     // can start as well as when it is due, and "Sep 12 - Sep 14" answers both
     // at a glance.
-    var range = t.start_date && t.end
-      ? fmt(t.start_date) + ' &rarr; ' + fmt(t.end)
+    var range = t.start && t.end
+      ? fmt(t.start) + ' &rarr; ' + fmt(t.end)
       : t.end ? 'Due ' + fmt(t.end)
-      : t.start_date ? 'From ' + fmt(t.start_date)
+      : t.start ? 'From ' + fmt(t.start)
       : 'No dates set';
 
     return '<div class="mm-mytask' + ((t.status === 'done') ? ' is-done' : '') + '">' +
@@ -200,16 +213,33 @@ window.MM = window.MM || {};
           '<span class="mm-mytask-joblabel">Job</span>' +
           '<span class="mm-mytask-jobname">' + U.esc(t.jobName || 'Not recorded') + '</span>' +
         '</div>' +
-        (t.job_address
-          ? '<div class="mm-mytask-addr">' + U.esc(t.job_address) + '</div>' : '') +
         '<div class="mm-mytask-dates">' + range + '</div>' +
         (t.notes ? '<div class="mm-mytask-notes">' + U.esc(t.notes) + '</div>' : '') +
+        ((t.items || []).length ? checklist(t) : '') +
       '</div>' +
       '<span class="mm-jflag mm-jflag-' + cls + '">' + U.esc(flag) + '</span>' +
     '</div>';
   }
 
   function bind(el) {
+    el.querySelectorAll('[data-sub]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var parts = b.getAttribute('data-sub').split('.');
+        var t = rows.find(function (x) { return x.id === parts[0]; });
+        if (!t) return;
+        var j = +parts[1];
+        var id = String(t.id).split(':');
+        b.disabled = true;
+        window.MM.ghltasks.setItemOnJob(id[0], +id[1], j, !t.items[j].done)
+          .then(load)
+          .catch(function (e) {
+            b.disabled = false;
+            var err = document.getElementById('mm-my-error');
+            if (err) err.textContent = 'Could not save: ' + e.message;
+          });
+      });
+    });
+
     el.querySelectorAll('[data-tick]').forEach(function (b) {
       b.addEventListener('click', function () {
         var id = b.getAttribute('data-tick');

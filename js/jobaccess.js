@@ -32,12 +32,15 @@ window.MM = window.MM || {};
 
     return Promise.all([
       db('GET', '/job_workers?staff_id=eq.' + me.id + '&select=job_id'),
-      db('GET', '/tasks?select=job_id,task_assignees!inner(staff_id)' +
-                '&task_assignees.staff_id=eq.' + me.id),
+      // Tasks now live on the opportunity in GoHighLevel and record their
+      // worker by name, so the second route reads them from there.
+      window.MM.ghltasks.loadAllJobTasks().catch(function () { return []; }),
     ]).then(function (res) {
       var ids = new Set();
       (res[0] || []).forEach(function (r) { if (r.job_id) ids.add(r.job_id); });
-      (res[1] || []).forEach(function (r) { if (r.job_id) ids.add(r.job_id); });
+      (res[1] || []).forEach(function (t) {
+        if (t.jobId && t.who && t.who === me.name) ids.add(t.jobId);
+      });
       myJobIds = ids;
       return ids;
     }).catch(function () {
@@ -169,5 +172,7 @@ window.MM = window.MM || {};
   window.MM.jobaccess = {
     loadMine: loadMine, canOpen: canOpen, mineOnly: mineOnly, count: count,
     showForJob: showForJob,
+    // The staff list is shared: the task panel and the calendar both need it.
+    loadStaff: loadStaff,
   };
 })();
