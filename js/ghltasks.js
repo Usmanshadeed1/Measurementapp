@@ -400,5 +400,59 @@ window.MM = window.MM || {};
     });
   }
 
-  window.MM.ghltasks = { showForJob: showForJob };
+  // Reads every job's task list in one pass. The Schedule and a worker's own
+  // list both need "all tasks everywhere", and a task now lives inside its
+  // job rather than in one table, so the jobs have to be walked.
+  //
+  // fetchAllOpportunities already returns customFields, so this needs no extra
+  // request per job.
+  function loadAllJobTasks() {
+    return api.fetchAllOpportunities().then(function (ops) {
+      var out = [];
+      (ops || []).forEach(function (o) {
+        if (o.pipelineId !== api.SALES_PIPELINE_ID) return;
+        var raw = api.oppField(o, FIELD_ID);
+        if (!raw) return;
+        parse(raw).forEach(function (t, i) {
+          out.push({
+            id: o.id + ':' + i,
+            jobId: o.id,
+            jobName: jobLabelOf(o),
+            title: t.title,
+            start: t.start,
+            end: t.end,
+            who: t.who,
+            status: t.status,
+            notes: t.notes,
+            items: t.items,
+          });
+        });
+      });
+      return out;
+    });
+  }
+
+  function jobLabelOf(o) {
+    if (o.contact && o.contact.name) return U.titleCase(o.contact.name);
+    var n = o.name || '';
+    return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
+  }
+
+  // Flipping a task done from another screen: read the job, change that one
+  // line, write the whole field back.
+  function setStatusOnJob(jobId, index, status) {
+    return api.getOpportunity(jobId).then(function (opp) {
+      var rows = parse(api.oppField(opp, FIELD_ID));
+      if (!rows[index]) throw new Error('That task is no longer there.');
+      rows[index].status = status;
+      return api.setOpportunityField(jobId, FIELD_ID, serialise(rows));
+    });
+  }
+
+  window.MM.ghltasks = {
+    showForJob: showForJob,
+    loadAllJobTasks: loadAllJobTasks,
+    setStatusOnJob: setStatusOnJob,
+    statusLabel: statusLabel,
+  };
 })();

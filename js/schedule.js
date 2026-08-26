@@ -69,7 +69,7 @@ window.MM = window.MM || {};
     el.innerHTML = '<div class="mm-empty">Loading the schedule...</div>';
 
     return Promise.all([
-      TASKS.loadAllTasksForSchedule(),
+      window.MM.ghltasks.loadAllJobTasks(),
       TASKS.loadStaff().catch(function () { return []; }),
       api.fetchAllOpportunities().catch(function () { return []; }),
       ACCESS.loadMine(),
@@ -88,7 +88,7 @@ window.MM = window.MM || {};
         jobs.forEach(function (o) { allowed[o.id] = true; });
         tasks = auth.isAdmin()
           ? allTasks
-          : allTasks.filter(function (t) { return t.job_id && allowed[t.job_id]; });
+          : allTasks.filter(function (t) { return t.jobId && allowed[t.jobId]; });
 
         loaded = true;
         fillFilters();
@@ -115,7 +115,7 @@ window.MM = window.MM || {};
       if (w.options.length <= 1) {
         staff.forEach(function (s) {
           var o = document.createElement('option');
-          o.value = s.id; o.textContent = s.name;
+          o.value = s.name; o.textContent = s.name;
           w.appendChild(o);
         });
       }
@@ -135,17 +135,11 @@ window.MM = window.MM || {};
     }
   }
 
-  function assigneesOf(t) {
-    return (t.task_assignees || []).map(function (a) { return a.staff_id; });
-  }
-  function staffName(id) {
-    var s = staff.find(function (x) { return x.id === id; });
-    return s ? s.name : '';
-  }
-
+  // A task in GoHighLevel stores the worker as plain text, so the filter
+  // compares names rather than ids.
   function passes(item) {
     if (filters.job && item.jobId !== filters.job) return false;
-    if (filters.worker && assigneesOf(item.raw).indexOf(filters.worker) < 0) return false;
+    if (filters.worker && item.who !== filters.worker) return false;
     if (filters.status === 'done') return !!item.done;
     if (filters.status === 'open') return !item.done;
     if (filters.status === 'late') return !item.done && item.end < today();
@@ -154,17 +148,17 @@ window.MM = window.MM || {};
 
   // A task with only one of the two dates is treated as a single day.
   function toSpan(t) {
-    var s = parseDay(t.start_date), e = parseDay(t.end_date);
+    var s = parseDay(t.start), e = parseDay(t.end);
     if (!s && !e) return null;
     if (!s) s = e;
     if (!e) e = s;
     if (e < s) { var tmp = s; s = e; e = tmp; }
     return {
-      id: 't-' + t.id, raw: t,
-      jobId: t.job_id, title: t.title || 'Task',
-      job: t.job_name || '',
-      who: assigneesOf(t).map(staffName).filter(Boolean).join(', '),
-      start: s, end: e, done: !!t.done_at,
+      id: t.id, raw: t,
+      jobId: t.jobId, title: t.title || 'Task',
+      job: t.jobName || '',
+      who: t.who || '',
+      start: s, end: e, done: t.status === 'done',
     };
   }
 

@@ -35,16 +35,16 @@ window.MM = window.MM || {};
   // Buckets in the order a person cares about them.
   var BUCKETS = [
     { id: 'late',  title: 'Overdue',
-      test: function (t) { var d = daysTo(t.end_date); return !t.done_at && d !== null && d < 0; } },
+      test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && d !== null && d < 0; } },
     { id: 'today', title: 'Due today',
-      test: function (t) { return !t.done_at && daysTo(t.end_date) === 0; } },
+      test: function (t) { return !(t.status === 'done') && daysTo(t.end) === 0; } },
     { id: 'soon',  title: 'Coming up',
-      test: function (t) { var d = daysTo(t.end_date); return !t.done_at && d !== null && d > 0 && d <= 7; } },
+      test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && d !== null && d > 0 && d <= 7; } },
     { id: 'later', title: 'Later',
-      test: function (t) { var d = daysTo(t.end_date); return !t.done_at && (d === null || d > 7); } },
+      test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && (d === null || d > 7); } },
     // Finished work stays on screen: a worker who ticked the wrong task needs
     // a way back, and seeing what they got through is worth something.
-    { id: 'done',  title: 'Finished', test: function (t) { return !!t.done_at; } },
+    { id: 'done',  title: 'Finished', test: function (t) { return !!(t.status === 'done'); } },
   ];
 
   var myJobs = [];
@@ -56,11 +56,15 @@ window.MM = window.MM || {};
     if (!me) return Promise.resolve();
 
     return Promise.all([
-      TASKS.loadMyTasks(me.id),
+      window.MM.ghltasks.loadAllJobTasks(),
       window.MM.jobaccess.loadMine().then(loadJobsForWorker),
     ])
       .then(function (res) {
-        rows = res[0] || [];
+        // A task now records its worker as a name, so that is what is matched.
+        var mine = (res[0] || []).filter(function (t) {
+          return t.who && t.who === me.name;
+        });
+        rows = mine;
         myJobs = res[1] || [];
         render();
         renderJobs();
@@ -122,7 +126,7 @@ window.MM = window.MM || {};
     var greet = document.getElementById('mm-my-greet');
     if (greet && me) greet.textContent = 'Hello ' + (me.name || '').split(' ')[0];
 
-    var openRows = rows.filter(function (t) { return !t.done_at; });
+    var openRows = rows.filter(function (t) { return !(t.status === 'done'); });
     if (!openRows.length && !rows.length) {
       el.innerHTML = '<div class="mm-my-clear">' +
         '<div class="mm-my-clear-tick" aria-hidden="true">&#10003;</div>' +
@@ -169,32 +173,32 @@ window.MM = window.MM || {};
   }
 
   function taskCard(t) {
-    var d = daysTo(t.end_date);
+    var d = daysTo(t.end);
     var flag = d === null ? 'No date'
       : d < 0 ? Math.abs(d) + ' day' + (Math.abs(d) === 1 ? '' : 's') + ' late'
       : d === 0 ? 'Due today'
       : d === 1 ? 'Due tomorrow'
-      : 'Due ' + fmt(t.end_date);
+      : 'Due ' + fmt(t.end);
     var cls = d !== null && d < 0 ? 'urgent' : d === 0 ? 'soon' : '';
 
     // The dates are spelled out as a range: a worker needs to know when they
     // can start as well as when it is due, and "Sep 12 - Sep 14" answers both
     // at a glance.
-    var range = t.start_date && t.end_date
-      ? fmt(t.start_date) + ' &rarr; ' + fmt(t.end_date)
-      : t.end_date ? 'Due ' + fmt(t.end_date)
+    var range = t.start_date && t.end
+      ? fmt(t.start_date) + ' &rarr; ' + fmt(t.end)
+      : t.end ? 'Due ' + fmt(t.end)
       : t.start_date ? 'From ' + fmt(t.start_date)
       : 'No dates set';
 
-    return '<div class="mm-mytask' + (t.done_at ? ' is-done' : '') + '">' +
+    return '<div class="mm-mytask' + ((t.status === 'done') ? ' is-done' : '') + '">' +
       '<button type="button" class="mm-task-tick" data-tick="' + U.esc(t.id) + '" ' +
-        'aria-label="' + (t.done_at ? 'Reopen ' : 'Mark ') + U.esc(t.title) +
-        (t.done_at ? '' : ' done') + '">' + (t.done_at ? '&#10003;' : '') + '</button>' +
+        'aria-label="' + ((t.status === 'done') ? 'Reopen ' : 'Mark ') + U.esc(t.title) +
+        ((t.status === 'done') ? '' : ' done') + '">' + ((t.status === 'done') ? '&#10003;' : '') + '</button>' +
       '<div class="mm-mytask-main">' +
         '<div class="mm-mytask-title">' + U.esc(t.title) + '</div>' +
         '<div class="mm-mytask-jobrow">' +
           '<span class="mm-mytask-joblabel">Job</span>' +
-          '<span class="mm-mytask-jobname">' + U.esc(t.job_name || 'Not recorded') + '</span>' +
+          '<span class="mm-mytask-jobname">' + U.esc(t.jobName || 'Not recorded') + '</span>' +
         '</div>' +
         (t.job_address
           ? '<div class="mm-mytask-addr">' + U.esc(t.job_address) + '</div>' : '') +
@@ -210,15 +214,17 @@ window.MM = window.MM || {};
       b.addEventListener('click', function () {
         var id = b.getAttribute('data-tick');
         var t = rows.find(function (x) { return x.id === id; });
-        var undo = !!(t && t.done_at);
+        if (!t) return;
+        var undo = t.status === 'done';
         b.disabled = true;
-        db('PATCH', '/tasks?id=eq.' + id, undo
-          ? { done_at: null, done_by: null }
-          : { done_at: new Date().toISOString(), done_by: (auth.user() || {}).id })
+        // The id carries the job and the task's position in that job's list,
+        // which is what the writer needs to change the right line.
+        var parts = String(id).split(':');
+        window.MM.ghltasks.setStatusOnJob(parts[0], +parts[1], undo ? 'todo' : 'done')
           .then(function () {
             window.MM.activity.log(undo ? 'task_undone' : 'task_done',
-              (undo ? 'Reopened "' : 'Finished "') + (t ? t.title : 'a task') + '"', {
-                jobId: t && t.job_id, jobName: t && t.job_name,
+              (undo ? 'Reopened "' : 'Finished "') + t.title + '"', {
+                jobId: t.jobId, jobName: t.jobName,
               });
             return load();
           })
