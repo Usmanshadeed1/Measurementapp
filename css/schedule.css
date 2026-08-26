@@ -59,38 +59,13 @@
 .mm-sched-filters .mm-btn-sm{min-height:48px;flex:0 0 auto}
 
 /* ---- Date window -------------------------------------------------------- */
-/* Presets as chips because they are the common cases and want one tap; the
-   two date boxes appear only when none of the presets fit. */
+/* Two date boxes sitting in the same row as the other filters. Empty means
+   no date filter, which is the default. */
 
-.mm-sc-dates{margin-bottom:14px}
-.mm-sc-quick{display:flex;gap:8px;flex-wrap:wrap}
-.mm-sc-chip{min-height:40px;padding:0 14px;border-radius:999px;cursor:pointer;
-  border:1px solid var(--control-border);background:var(--card);
-  color:var(--text2);font-weight:700;font-size:0.88em;white-space:nowrap}
-.mm-sc-chip:hover{color:var(--text);border-color:var(--accent)}
-.mm-sc-chip.is-on{background:var(--accent);color:var(--bg);
-  border-color:var(--accent)}
-.mm-sc-chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-
-.mm-sc-custom{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  margin-top:10px;padding:12px;border-radius:10px;background:var(--card);
-  border:1px solid var(--border)}
-.mm-sc-custom[hidden]{display:none}
-.mm-sc-custom .mm-label{margin:0;white-space:nowrap}
-.mm-sc-custom .mm-input{width:auto;flex:1 1 150px;min-width:140px;
+.mm-sc-datelabel{margin:0;white-space:nowrap;color:var(--text2);
+  font-size:0.85em;font-weight:700}
+.mm-sched-filters .mm-sc-date{width:auto;flex:0 1 160px;min-width:140px;
   margin-bottom:0;padding-top:10px;padding-bottom:10px;min-height:48px}
-
-.mm-sc-rangenote{margin-top:8px;font-size:0.85em;color:var(--text2)}
-.mm-sc-rangenote:empty{display:none}
-
-@media (max-width: 620px){
-  /* Chips scroll sideways rather than wrapping into four ragged rows. */
-  .mm-sc-quick{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;
-    scroll-snap-type:x proximity;max-width:100%}
-  .mm-sc-chip{flex:0 0 auto;scroll-snap-align:start}
-  .mm-sc-custom{flex-direction:column;align-items:stretch;gap:4px}
-  .mm-sc-custom .mm-input{width:100%;flex:1 1 auto}
-}
 
 /* ---- Chips -------------------------------------------------------------- */
 
@@ -266,6 +241,8 @@
   .mm-sched-views{width:100%;height:46px}
   .mm-sched-view{flex:1 1 0;padding:0 6px;font-size:0.92em}
   .mm-sched-filters .mm-select{min-width:0;flex:1 1 46%}
+  .mm-sched-filters .mm-sc-date{min-width:0;flex:1 1 38%}
+  .mm-sc-datelabel{flex:0 0 auto}
   .mm-sched-filters .mm-btn-sm{flex:1 1 100%}
 
   /* Chips cannot be read in a phone-width month cell, so the grid becomes a

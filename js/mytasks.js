@@ -230,8 +230,9 @@ window.MM = window.MM || {};
         var j = +parts[1];
         var id = String(t.id).split(':');
         b.disabled = true;
-        window.MM.ghltasks.setItemOnJob(id[0], +id[1], j, !t.items[j].done)
-          .then(load)
+        var want = !t.items[j].done;
+        window.MM.ghltasks.setItemOnJob(id[0], +id[1], j, want)
+          .then(function () { t.items[j].done = want; render(); })
           .catch(function (e) {
             b.disabled = false;
             var err = document.getElementById('mm-my-error');
@@ -256,7 +257,10 @@ window.MM = window.MM || {};
               (undo ? 'Reopened "' : 'Finished "') + t.title + '"', {
                 jobId: t.jobId, jobName: t.jobName,
               });
-            return load();
+            // Redraw from what is already in memory. Reloading would re-read
+            // every job in the account for a change we already know about.
+            t.status = undo ? 'todo' : 'done';
+            render();
           })
           .catch(function (e) {
             b.disabled = false;

@@ -221,25 +221,11 @@
         <option value="done">Done</option>
         <option value="late">Overdue</option>
       </select>
+      <label class="mm-label mm-sc-datelabel" for="mm-sc-from">From</label>
+      <input class="mm-input mm-sc-date" type="date" id="mm-sc-from">
+      <label class="mm-label mm-sc-datelabel" for="mm-sc-to">To</label>
+      <input class="mm-input mm-sc-date" type="date" id="mm-sc-to">
       <button class="mm-btn-sm mm-btn-secondary" id="mm-sc-clear">Clear</button>
-    </div>
-
-    <div class="mm-sc-dates">
-      <div class="mm-sc-quick" role="group" aria-label="Filter by date">
-        <button type="button" class="mm-sc-chip is-on" data-range="any">Any date</button>
-        <button type="button" class="mm-sc-chip" data-range="today">Today</button>
-        <button type="button" class="mm-sc-chip" data-range="7">Next 7 days</button>
-        <button type="button" class="mm-sc-chip" data-range="30">Next 30 days</button>
-        <button type="button" class="mm-sc-chip" data-range="month">This month</button>
-        <button type="button" class="mm-sc-chip" data-range="custom">Pick dates</button>
-      </div>
-      <div class="mm-sc-custom" id="mm-sc-custom" hidden>
-        <label class="mm-label" for="mm-sc-from">From</label>
-        <input class="mm-input" type="date" id="mm-sc-from">
-        <label class="mm-label" for="mm-sc-to">To</label>
-        <input class="mm-input" type="date" id="mm-sc-to">
-      </div>
-      <p class="mm-sc-rangenote" id="mm-sc-rangenote"></p>
     </div>
 
     <div id="mm-sc-body"><div class="mm-empty">Loading...</div></div>
