@@ -669,6 +669,7 @@
   WORKERS.init();
   C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
   C.initEdit(function () { loadContacts(); });
+  C.initSort();
   document.getElementById('mm-measure-refresh').addEventListener('click', function () { MEASURE.load(); });
   // A shortcut to the Schedule from the jobs list, for the common jump
   // between "what is in the pipeline" and "what is happening this week".

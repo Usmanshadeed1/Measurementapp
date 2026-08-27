@@ -29,6 +29,34 @@ window.MM = window.MM || {};
 
   var lastPick = null;
 
+  // GoHighLevel returns contacts newest first, which is the default here too.
+  // Sorting is applied to what came back rather than asked of the API, which
+  // has no sort parameter for this endpoint.
+  var sortMode = 'new';
+
+  function contactSortName(c) {
+    return String(c.contactName ||
+      [c.firstName, c.lastName].filter(Boolean).join(' ') ||
+      c.name || '').trim().toLowerCase();
+  }
+
+  function sortContacts(rows) {
+    var out = rows.slice();
+    if (sortMode === 'az' || sortMode === 'za') {
+      out.sort(function (a, b) {
+        return contactSortName(a).localeCompare(contactSortName(b));
+      });
+      if (sortMode === 'za') out.reverse();
+      return out;
+    }
+    var field = sortMode === 'updated' ? 'dateUpdated' : 'dateAdded';
+    out.sort(function (a, b) {
+      return new Date(b[field] || 0) - new Date(a[field] || 0);
+    });
+    if (sortMode === 'old') out.reverse();
+    return out;
+  }
+
   function loadContacts(query, onPickContact) {
     var el = document.getElementById('mm-contacts-list');
     if (onPickContact) lastPick = onPickContact;
@@ -36,7 +64,7 @@ window.MM = window.MM || {};
     api.searchContacts(query).then(function (contacts) {
       if (!contacts.length) { el.innerHTML = '<div class="mm-empty">No contacts found.</div>'; return; }
       el.innerHTML = '';
-      contacts.forEach(function (c) {
+      sortContacts(contacts).forEach(function (c) {
         var name = U.titleCase(c.contactName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name) || 'Unnamed Contact';
         var subParts = [U.phone(c.phone), c.email].filter(Boolean);
         var business = fmtBusiness(c);
@@ -298,8 +326,21 @@ window.MM = window.MM || {};
       [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name) || 'contact';
   }
 
+  // The dropdown lives on the contacts screen, and the mode it sets belongs
+  // here rather than in the page wiring.
+  function initSort() {
+    var el = document.getElementById('mm-contact-sort');
+    if (!el) return;
+    el.addEventListener('change', function () {
+      sortMode = el.value || 'new';
+      var q = (document.getElementById('mm-contact-search') || {}).value || '';
+      loadContacts(q.trim() || undefined);
+    });
+  }
+
   window.MM.contacts = {
     onOpenJob: function (fn) { onOpenJob = fn; },
+    initSort: initSort,
     initEdit: initEdit,
     contactAdded: contactAdded,
     loadContacts: loadContacts,

@@ -431,3 +431,14 @@
   .mm-doc-actions{flex-direction:column;align-items:stretch}
   .mm-doc-actions .mm-btn-sm{width:100%}
 }
+
+/* Sort control on the contacts list. Sits under the search box, and the
+   select keeps its own padding — overriding the height clips the label. */
+.mm-contact-sortbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.mm-contact-sortlabel{margin:0;white-space:nowrap;color:var(--text2);
+  font-size:0.85em;font-weight:700}
+.mm-contact-sortbar .mm-select{width:auto;min-width:180px;flex:0 1 auto;
+  margin-bottom:0;padding-top:10px;padding-bottom:10px;min-height:48px}
+@media(max-width:620px){
+  .mm-contact-sortbar .mm-select{flex:1 1 auto;min-width:0}
+}

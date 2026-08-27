@@ -277,6 +277,16 @@
       <label for="mm-contact-search" class="sr-only">Search contacts by name, phone, or email</label>
       <input class="mm-input" id="mm-contact-search" placeholder="Search by name, phone, or email...">
     </div>
+    <div class="mm-contact-sortbar">
+      <label class="mm-label mm-contact-sortlabel" for="mm-contact-sort">Sort</label>
+      <select class="mm-select" id="mm-contact-sort">
+        <option value="new">Newest first</option>
+        <option value="old">Oldest first</option>
+        <option value="az">Name A&ndash;Z</option>
+        <option value="za">Name Z&ndash;A</option>
+        <option value="updated">Recently updated</option>
+      </select>
+    </div>
     <div id="mm-contacts-list"><div class="mm-empty">Loading contacts...</div></div>
   </div>
 </div>
