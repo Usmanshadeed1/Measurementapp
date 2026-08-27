@@ -186,6 +186,9 @@ window.MM = window.MM || {};
           jobId: currentJob.id,
           jobName: jobLabel(currentJob),
           detail: n.id,
+          // The note's own time, so History reads correctly whether the note
+          // was written here or found later from GoHighLevel.
+          at: n.dateAdded || null,
         });
       });
     });

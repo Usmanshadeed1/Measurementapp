@@ -30,7 +30,7 @@ window.MM = window.MM || {};
     opts = opts || {};
     var me = auth.user();
     if (!me) return Promise.resolve();
-    return db('POST', '/activity', {
+    var row = {
       job_id: opts.jobId || null,
       job_name: opts.jobName || null,
       actor_id: me.id,
@@ -38,7 +38,14 @@ window.MM = window.MM || {};
       action: action,
       label: label,
       detail: opts.detail || null,
-    }, true).catch(function (e) {
+    };
+    // Something that happened earlier and is only being recorded now — a note
+    // written in GoHighLevel and found when the job was next opened — carries
+    // its own time, so History shows when it happened rather than when the
+    // app noticed. Everything else is happening now and needs no `at`.
+    if (opts.at) row.created_at = opts.at;
+
+    return db('POST', '/activity', row, true).catch(function (e) {
       // Never surface this: the user's actual action already succeeded, and
       // an error here would make a working change look broken.
       if (window.console) console.warn('activity log failed:', e.message);
