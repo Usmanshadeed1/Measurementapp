@@ -285,7 +285,20 @@ window.MM = window.MM || {};
     });
   }
 
+  // Which of these details are already recorded for a job. Used to avoid
+  // logging the same note twice: a note written in GoHighLevel is noticed the
+  // next time the job is opened, which could be many times.
+  function knownDetails(jobId, action) {
+    return db('GET', '/activity?select=detail&job_id=eq.' +
+                     encodeURIComponent(jobId) + '&action=eq.' + action)
+      .then(function (r) {
+        return (r || []).map(function (x) { return x.detail; }).filter(Boolean);
+      })
+      .catch(function () { return null; });   // null = could not check
+  }
+
   window.MM.activity = {
     log: log, showForJob: showForJob, loadPage: loadPage, initPage: initPage,
+    knownDetails: knownDetails,
   };
 })();

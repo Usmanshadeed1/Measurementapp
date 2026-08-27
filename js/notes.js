@@ -122,9 +122,6 @@ window.MM = window.MM || {};
 
     api.addNote(cid, body, currentJob.id)
       .then(function () {
-        // Not logged to history on purpose — see the note at the top of
-        // this file. The Notes panel is the record, and it shows every note
-        // whether it was written here or in GoHighLevel.
         box.value = '';
         return load();
       })
@@ -157,12 +154,47 @@ window.MM = window.MM || {};
           return new Date(b.dateAdded) - new Date(a.dateAdded);
         });
         render();
+        logNewNotes();
       })
       .catch(function (e) {
         notes = [];
         render();
         noteError(e.message);
       });
+  }
+
+  // Notes reach History from two directions: written here, or written in
+  // GoHighLevel and noticed when the job is next opened. Both are recorded
+  // the same way, so History shows the whole picture rather than half of it.
+  //
+  // The note's own id goes in `detail`, which is what stops the same note
+  // being logged again every time the job is opened.
+  function logNewNotes() {
+    if (!currentJob || !notes.length) return;
+    var act = window.MM.activity;
+    if (!act || !act.knownDetails) return;
+
+    act.knownDetails(currentJob.id, 'note').then(function (seen) {
+      // null means the check itself failed. Logging anyway would create
+      // duplicates on every visit, so nothing is written.
+      if (!seen) return;
+
+      notes.forEach(function (n) {
+        if (!n.id || seen.indexOf(n.id) > -1) return;
+        var text = plain(n).split(String.fromCharCode(10))[0].slice(0, 80);
+        act.log('note', 'Note: ' + (text || 'added'), {
+          jobId: currentJob.id,
+          jobName: jobLabel(currentJob),
+          detail: n.id,
+        });
+      });
+    });
+  }
+
+  function jobLabel(o) {
+    if (o.contact && o.contact.name) return U.titleCase(o.contact.name);
+    var n = o.name || '';
+    return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
 
   function showForJob(job) {
