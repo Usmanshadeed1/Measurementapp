@@ -139,12 +139,9 @@ window.MM = window.MM || {};
   }
 
   // Most pressing first: overdue visits, then soonest dates, then oldest job.
+  // Newest job first, matching the order GoHighLevel shows on its own board.
   function sortJobs(a, b) {
-    var da = daysTo(apptDate(a)), db = daysTo(apptDate(b));
-    if (da !== null && db !== null && da !== db) return da - db;
-    if (da !== null && db === null) return -1;
-    if (db !== null && da === null) return 1;
-    return new Date(a.createdAt) - new Date(b.createdAt);
+    return new Date(b.createdAt) - new Date(a.createdAt);
   }
 
   function matchesSearch(o) {
