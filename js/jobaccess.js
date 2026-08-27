@@ -83,7 +83,7 @@ window.MM = window.MM || {};
     // A worker on the job does not need to manage who else is on it.
     if (!auth.isAdmin()) { el.style.display = 'none'; return; }
     el.style.display = '';
-    el.innerHTML = '<div class="mm-steps-head"><span class="mm-steps-title">Who can work on this job</span></div>' +
+    el.innerHTML = '<div class="mm-steps-head"><span class="mm-steps-title">Worker Assigned</span></div>' +
                    '<div class="mm-empty">Loading...</div>';
 
     Promise.all([loadStaff(), loadForJob(job.id)])
@@ -98,8 +98,6 @@ window.MM = window.MM || {};
         }
 
         el.innerHTML = head(on.length) +
-          '<p class="mm-crew-note">Anyone ticked here can open this job and use the measurement tool. ' +
-          'People given a task on this job get access automatically.</p>' +
           '<div class="mm-crew-list">' +
             staff.map(function (s) {
               return '<label class="mm-te-person"><input type="checkbox" value="' + U.esc(s.id) + '"' +
@@ -119,7 +117,7 @@ window.MM = window.MM || {};
 
     function head(n) {
       return '<div class="mm-steps-head">' +
-        '<span class="mm-steps-title">Who can work on this job</span>' +
+        '<span class="mm-steps-title">Worker Assigned</span>' +
         '<span class="mm-steps-badge ' + (n ? 'mm-steps-badge-done' : 'mm-steps-badge-todo') + '">' +
           (n ? n + ' assigned' : 'Nobody assigned') + '</span></div>';
     }
