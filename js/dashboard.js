@@ -156,8 +156,6 @@ window.MM = window.MM || {};
   // because that is how many dates a job collects on its way through.
   function jobCard(o, opts) {
     opts = opts || {};
-    var flag = opts.flag || { cls: '', text: '' };
-    var step = opts.showStep ? groupFlag(o) : null;
     var done = [measuredDate(o), designDate(o), pricingDate(o),
                 sentDate(o), cabinetsDate(o), completedDate(o)].filter(Boolean).length;
 
@@ -169,12 +167,6 @@ window.MM = window.MM || {};
         '<span class="mm-jbar" role="img" aria-label="' + done + ' of 6 steps done">' +
           '<span class="mm-jbar-fill" style="width:' + Math.round((done / 6) * 100) + '%"></span>' +
         '</span>' +
-      '</span>' +
-      '<span class="mm-jcard-side">' +
-        (step ? '<span class="mm-next mm-next-' + (step.cls || 'wait') + '">' + U.esc(step.text) + '</span>' : '') +
-        '<span class="mm-jcard-staff' + (o.assignedTo ? '' : ' mm-staff-none') + '">' +
-          U.esc(staffName(o) || 'Unassigned') + '</span>' +
-        (flag.text ? '<span class="mm-jflag mm-jflag-' + flag.cls + '">' + U.esc(flag.text) + '</span>' : '') +
       '</span>' +
       '<span class="mm-jcard-arrow" aria-hidden="true">&#8250;</span>' +
     '</button>';
@@ -238,7 +230,7 @@ window.MM = window.MM || {};
           '<span class="mm-agroup-count">' + s.jobs.length + '</span>' +
         '</button>' +
         (empty ? '' : '<div class="mm-agroup-body">' +
-          s.jobs.map(function (o) { return jobCard(o, { flag: groupFlag(o) }); }).join('') +
+          s.jobs.map(function (o) { return jobCard(o, {}); }).join('') +
           '</div>') +
       '</section>';
     }).join('') + '</div>';
