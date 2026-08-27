@@ -92,11 +92,22 @@
    out near-black against near-black. Inverting the widget makes it visible
    without replacing the native picker, which phones handle better than any
    custom one. */
+/* color-scheme is what actually tells the browser to draw its own date widget
+   for a dark background, icon included. The invert filter is kept as well
+   because some browsers ignore color-scheme for the indicator itself, and a
+   white-on-white icon in light mode is avoided by scoping each to its theme. */
+input[type="date"],input[type="time"],input[type="datetime-local"]{
+  color-scheme:dark}
+:root[data-theme="light"] input[type="date"],
+:root[data-theme="light"] input[type="time"],
+:root[data-theme="light"] input[type="datetime-local"]{
+  color-scheme:light}
+
 :root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
 :root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator{
-  filter:invert(1) brightness(1.4);cursor:pointer}
-input[type="date"]{color-scheme:dark}
-:root[data-theme="light"] input[type="date"]{color-scheme:light}
+  filter:invert(1) brightness(2);opacity:1;cursor:pointer}
+:root[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator{
+  filter:none;opacity:1;cursor:pointer}
 
 @media (max-width: 620px){
   .mm-tpl-new{grid-template-columns:1fr 1fr;}
