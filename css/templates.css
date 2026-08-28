@@ -1,0 +1,72 @@
+/* ==========================================================================
+   Task templates — reusable lists of tasks.
+
+   A template is read far more often than it is edited, so the card shows the
+   whole list at a glance rather than hiding it behind a click. Numbering is
+   real information here: these are the stages of a job, in order.
+   ========================================================================== */
+
+.mm-tt-list{display:flex;flex-direction:column;gap:14px}
+
+.mm-tt{border:1px solid var(--border);border-radius:12px;
+  background:var(--card);overflow:hidden}
+.mm-tt-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;
+  background:var(--card2);border-bottom:1px solid var(--divider)}
+.mm-tt-main{flex:1 1 auto;min-width:0}
+.mm-tt-name{font-weight:700;font-size:1.02em;word-break:break-word}
+.mm-tt-count{font-size:0.8em;color:var(--text2);margin-top:2px}
+.mm-tt-desc{font-size:0.85em;color:var(--text2);margin-top:6px;
+  line-height:1.45;word-break:break-word}
+
+.mm-tt-side{display:flex;gap:4px;flex:0 0 auto}
+.mm-tt-icon{width:38px;height:38px;border:none;border-radius:8px;background:none;
+  color:var(--text2);font-size:1em;line-height:1;cursor:pointer}
+.mm-tt-icon:hover{background:var(--card);color:var(--text)}
+.mm-tt-icon:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-tt-icon:disabled{opacity:.5;cursor:wait}
+.mm-tt-del:hover{background:var(--danger-bg);color:var(--danger-text)}
+
+/* Numbered on purpose: a remodel runs in sequence, and the order is the
+   information. */
+.mm-tt-tasks{list-style:decimal;margin:0;padding:12px 16px 14px 40px;
+  display:flex;flex-direction:column;gap:6px}
+.mm-tt-tasks li{line-height:1.4;word-break:break-word}
+.mm-tt-tasks li::marker{color:var(--text2);font-size:0.85em}
+
+.mm-tt-steps{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.mm-tt-step{font-size:0.76em;color:var(--text2);background:var(--card2);
+  border:1px solid var(--border);border-radius:999px;padding:2px 9px}
+
+/* ---- The form ----------------------------------------------------------- */
+
+.mm-tt-form{margin-bottom:20px;padding:16px;border-radius:12px;
+  background:var(--card);border:1px dashed var(--control-border)}
+.mm-tt-formtitle{font-size:1em;font-weight:700;margin-bottom:14px}
+.mm-tt-area{font-family:inherit;line-height:1.6;resize:vertical;
+  min-height:220px}
+.mm-tt-hint{font-size:0.8em;color:var(--text2);line-height:1.7;
+  margin:-4px 0 12px}
+.mm-tt-hint code{background:var(--card2);border:1px solid var(--border);
+  border-radius:4px;padding:1px 5px;font-size:0.95em}
+
+/* ---- Empty -------------------------------------------------------------- */
+
+.mm-tt-empty{padding:56px 20px;text-align:center}
+.mm-tt-empty-title{font-size:1.1em;font-weight:700;margin-bottom:6px}
+.mm-tt-empty-sub{color:var(--text2);max-width:46ch;margin:0 auto;
+  line-height:1.5}
+
+/* ---- The load dialog ---------------------------------------------------- */
+
+.mm-tl-hint{font-size:0.8em;color:var(--text2);line-height:1.5;
+  margin:-6px 0 4px}
+#mm-modal-loadtpl .mm-assign-list{max-height:44vh;overflow-y:auto}
+
+/* ---- Phone -------------------------------------------------------------- */
+
+@media (max-width: 620px){
+  .mm-tt-head{padding:12px}
+  .mm-tt-tasks{padding:12px 12px 14px 34px}
+  .mm-tt-side{flex-direction:column}
+  .mm-tt-area{min-height:260px}
+}

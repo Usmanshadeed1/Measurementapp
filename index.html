@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="css/ghltasks.css">
 <link rel="stylesheet" href="css/workers.css">
 <link rel="stylesheet" href="css/checklist.css">
+<link rel="stylesheet" href="css/templates.css">
 </head>
 <body>
 
@@ -75,6 +76,7 @@
       <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
       <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
       <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
+      <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -95,6 +97,7 @@
     <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
     <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
     <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
+    <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -293,6 +296,37 @@
 
     <p class="mm-task-error" id="mm-cl-error" role="alert"></p>
     <div id="mm-cl-body"><div class="mm-empty">Loading...</div></div>
+  </div>
+</div>
+
+<!-- TASK TEMPLATES — reusable task lists -->
+<div class="screen" id="screen-templates">
+  <div class="mm-content">
+    <div class="section-header">
+      <span class="section-title">Task Templates</span>
+      <button class="mm-btn-sm mm-btn-primary" id="mm-tt-add">+ New Template</button>
+    </div>
+    <p class="mm-view-note">Build a list of tasks once, then load it onto any
+      job. Changes made inside a job never affect the template.</p>
+    <div id="mm-tt-body"><div class="mm-empty">Loading...</div></div>
+  </div>
+</div>
+
+<!-- Pick a template to copy onto this job -->
+<div class="mm-modal-overlay" id="mm-modal-loadtpl">
+  <div class="mm-modal mm-modal-narrow" role="dialog" aria-modal="true"
+       aria-labelledby="mm-tl-title">
+    <div class="mm-modal-title" id="mm-tl-title">Load a template</div>
+    <div class="mm-field-group">
+      <label class="mm-label" for="mm-tl-start">Start date
+        <span class="mm-opt">(optional)</span></label>
+      <input class="mm-input" type="date" id="mm-tl-start">
+      <p class="mm-tl-hint">Tasks are placed one day apart from this date.
+        Leave it blank to load them without dates.</p>
+    </div>
+    <div class="mm-assign-list" id="mm-tl-list"></div>
+    <p class="mm-assign-error" id="mm-tl-error" role="alert"></p>
+    <button class="mm-btn mm-btn-secondary" id="mm-tl-cancel">Cancel</button>
   </div>
 </div>
 
@@ -658,6 +692,7 @@
 <script src="js/mytasks.js"></script>
 <script src="js/schedule.js"></script>
 <script src="js/checklist.js"></script>
+<script src="js/templates.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/import.js"></script>
 <script src="js/app.js"></script>

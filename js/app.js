@@ -5,6 +5,7 @@
 (function () {
   var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, ACT = window.MM.activity, MY = window.MM.mytasks, ACCESS = window.MM.jobaccess, MEASURE = window.MM.measure, NOTES = window.MM.notes, NEWJOB = window.MM.newjob, DOCS = window.MM.jobdocs, GHLTASKS = window.MM.ghltasks,
       WORKERS = window.MM.workerlist, CHECK = window.MM.checklist,
+      TPL = window.MM.templates,
       SCHED = window.MM.schedule;
 
   var job = null, room = null, editRoom = null, contactSearchTimer = null;
@@ -30,6 +31,7 @@
     else if (tab === 'measure') { showScreen('measure'); MEASURE.load(); }
     else if (tab === 'schedule') { showScreen('schedule'); SCHED.load(); }
     else if (tab === 'checklist') { showScreen('checklist'); CHECK.load(); }
+    else if (tab === 'templates') { showScreen('templates'); TPL.load(); }
     else if (tab === 'workers') { showScreen('workers'); WORKERS.load(); }
     else if (tab === 'history') { showScreen('history'); ACT.loadPage(); }
     else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
@@ -669,6 +671,13 @@
   SCHED.init(function (o) { pickJob(o, 'tasks', 'schedule'); });
   WORKERS.init();
   CHECK.init(function (o) { pickJob(o, 'tasks', 'checklist'); });
+  TPL.init();
+  document.getElementById('mm-tl-cancel').addEventListener('click', function () {
+    closeModal('mm-modal-loadtpl');
+  });
+  document.getElementById('mm-modal-loadtpl').addEventListener('click', function (e) {
+    if (e.target === this) closeModal('mm-modal-loadtpl');
+  });
   C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
   C.initEdit(function () { loadContacts(); });
   C.initSort();

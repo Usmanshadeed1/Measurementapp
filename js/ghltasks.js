@@ -165,6 +165,7 @@ window.MM = window.MM || {};
       'GoHighLevel, so they are visible there as well as here.</p>' +
       (adding || editing !== null ? '' :
         '<div class="mm-gt-actions">' +
+          '<button class="mm-btn-sm mm-btn-secondary" id="mm-gt-load">Load Template</button>' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-gt-add">+ Add Task</button>' +
         '</div>') +
       (adding ? form(null) : '') +
@@ -380,7 +381,79 @@ window.MM = window.MM || {};
 
   // ---- Interaction ---------------------------------------------------------
 
+  // Copying a template onto this job. The tasks are COPIES: editing them here
+  // never reaches the template, which is the whole point of having one.
+  function openTemplates() {
+    var list = document.getElementById('mm-tl-list');
+    var modal = document.getElementById('mm-modal-loadtpl');
+    if (!list || !modal) return;
+
+    document.getElementById('mm-tl-error').textContent = '';
+    document.getElementById('mm-tl-start').value = '';
+    list.innerHTML = '<div class="mm-empty">Loading templates...</div>';
+    modal.classList.add('open');
+
+    window.MM.templates.load().then(function () {
+      var rows = window.MM.templates.all();
+      if (!rows.length) {
+        list.innerHTML = '<div class="mm-empty">No templates yet. ' +
+          'Build one on the Task Templates page.</div>';
+        return;
+      }
+      list.innerHTML = rows.map(function (t) {
+        var n = (t.tasks || []).length;
+        return '<button type="button" class="mm-assign-opt" data-tpl="' + U.esc(t.id) + '">' +
+          '<span><span class="mm-pick-name">' + U.esc(t.name) + '</span>' +
+          '<span class="mm-pick-desc">' + n + (n === 1 ? ' task' : ' tasks') +
+          (t.description ? ' · ' + U.esc(t.description) : '') + '</span></span></button>';
+      }).join('');
+
+      list.querySelectorAll('[data-tpl]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          applyTemplate(b.getAttribute('data-tpl'), b);
+        });
+      });
+    }).catch(function (e) {
+      list.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
+    });
+  }
+
+  function applyTemplate(id, btn) {
+    var tpl = window.MM.templates.all().find(function (t) { return t.id === id; });
+    if (!tpl) return;
+
+    // An optional start date spreads the tasks a day apart in order, so they
+    // appear on the calendar straight away. Left blank, they load undated.
+    var startStr = document.getElementById('mm-tl-start').value;
+    var cursor = startStr ? new Date(startStr + 'T00:00:00') : null;
+
+    (tpl.tasks || []).forEach(function (t) {
+      var day = '';
+      if (cursor && !isNaN(cursor.getTime())) {
+        day = cursor.getFullYear() + '-' +
+          String(cursor.getMonth() + 1).padStart(2, '0') + '-' +
+          String(cursor.getDate()).padStart(2, '0');
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      tasks.push({
+        title: String(t.title || '').replace(/[|\r\n]/g, ' '),
+        start: day, end: day,
+        who: '', status: 'todo', notes: '',
+        items: (t.items || []).map(function (i) {
+          return { title: String(i).replace(/[|\r\n]/g, ' '), done: false };
+        }),
+      });
+    });
+
+    btn.disabled = true;
+    document.getElementById('mm-modal-loadtpl').classList.remove('open');
+    save('task_added', 'Loaded template "' + tpl.name + '"');
+  }
+
   function bind(el) {
+    var loadBtn = el.querySelector('#mm-gt-load');
+    if (loadBtn) loadBtn.addEventListener('click', openTemplates);
+
     var add = el.querySelector('#mm-gt-add');
     if (add) add.addEventListener('click', function () {
       adding = true; editing = null; render();
