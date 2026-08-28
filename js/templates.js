@@ -20,6 +20,7 @@ window.MM = window.MM || {};
   var rows = [];
   var editing = null;    // template being edited, or null
   var adding = false;
+  var open = {};         // template id -> is its task list expanded
 
   function db(method, path, body) { return auth.dbFetch(method, path, body); }
 
@@ -108,14 +109,19 @@ window.MM = window.MM || {};
 
   function card(t) {
     var tasks = t.tasks || [];
-    return '<div class="mm-tt">' +
+    var isOpen = !!open[t.id];
+    return '<div class="mm-tt' + (isOpen ? ' is-open' : '') + '">' +
       '<div class="mm-tt-head">' +
-        '<div class="mm-tt-main">' +
-          '<div class="mm-tt-name">' + U.esc(t.name) + '</div>' +
-          '<div class="mm-tt-count">' + U.esc(countTasks(t)) + '</div>' +
-          (t.description
-            ? '<div class="mm-tt-desc">' + U.esc(t.description) + '</div>' : '') +
-        '</div>' +
+        '<button type="button" class="mm-tt-toggle" data-toggle="' + U.esc(t.id) + '" ' +
+            'aria-expanded="' + (isOpen ? 'true' : 'false') + '">' +
+          '<span class="mm-tt-arrow" aria-hidden="true">&#9662;</span>' +
+          '<span class="mm-tt-main">' +
+            '<span class="mm-tt-name">' + U.esc(t.name) + '</span>' +
+            '<span class="mm-tt-count">' + U.esc(countTasks(t)) + '</span>' +
+            (t.description
+              ? '<span class="mm-tt-desc">' + U.esc(t.description) + '</span>' : '') +
+          '</span>' +
+        '</button>' +
         '<div class="mm-tt-side">' +
           '<button type="button" class="mm-tt-icon" data-edit="' + U.esc(t.id) + '" ' +
             'aria-label="Edit ' + U.esc(t.name) + '">&#9998;</button>' +
@@ -123,7 +129,7 @@ window.MM = window.MM || {};
             'aria-label="Delete ' + U.esc(t.name) + '">&times;</button>' +
         '</div>' +
       '</div>' +
-      (tasks.length
+      (tasks.length && isOpen
         ? '<ol class="mm-tt-tasks">' +
             tasks.map(function (x) {
               return '<li>' + U.esc(x.title) +
@@ -195,6 +201,14 @@ window.MM = window.MM || {};
 
     var save = el.querySelector('#mm-tt-save');
     if (save) save.addEventListener('click', saveTemplate);
+
+    el.querySelectorAll('[data-toggle]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-toggle');
+        open[id] = !open[id];
+        render();
+      });
+    });
 
     el.querySelectorAll('[data-edit]').forEach(function (b) {
       b.addEventListener('click', function () {

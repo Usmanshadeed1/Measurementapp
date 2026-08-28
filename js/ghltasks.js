@@ -165,7 +165,7 @@ window.MM = window.MM || {};
       'GoHighLevel, so they are visible there as well as here.</p>' +
       (adding || editing !== null ? '' :
         '<div class="mm-gt-actions">' +
-          '<button class="mm-btn-sm mm-btn-secondary" id="mm-gt-load">Load Template</button>' +
+          '<button class="mm-btn-sm mm-btn-primary" id="mm-gt-load">Load Template</button>' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-gt-add">+ Add Task</button>' +
         '</div>') +
       (adding ? form(null) : '') +

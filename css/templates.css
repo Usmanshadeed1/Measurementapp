@@ -1,24 +1,38 @@
 /* ==========================================================================
    Task templates — reusable lists of tasks.
 
-   A template is read far more often than it is edited, so the card shows the
-   whole list at a glance rather than hiding it behind a click. Numbering is
-   real information here: these are the stages of a job, in order.
+   Cards collapse to their name and count: a template of twenty stages would
+   otherwise fill the screen, and the name is enough to pick one. Numbering
+   inside is real information — these are the stages of a job, in order.
    ========================================================================== */
 
 .mm-tt-list{display:flex;flex-direction:column;gap:14px}
 
 .mm-tt{border:1px solid var(--border);border-radius:12px;
   background:var(--card);overflow:hidden}
-.mm-tt-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;
+.mm-tt-head{display:flex;align-items:stretch;gap:4px;
   background:var(--card2);border-bottom:1px solid var(--divider)}
-.mm-tt-main{flex:1 1 auto;min-width:0}
+.mm-tt:not(.is-open) .mm-tt-head{border-bottom:none}
+
+/* The whole header is the control, so the card opens wherever it is tapped
+   rather than only on a small arrow. */
+.mm-tt-toggle{display:flex;align-items:flex-start;gap:10px;flex:1 1 auto;
+  min-width:0;padding:14px 16px;border:none;background:none;color:var(--text);
+  text-align:left;cursor:pointer;min-height:48px}
+.mm-tt-toggle:hover{background:var(--card)}
+.mm-tt-toggle:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.mm-tt-arrow{flex:0 0 auto;color:var(--accent);font-size:1.1em;line-height:1.3;
+  transition:transform .15s ease}
+.mm-tt.is-open .mm-tt-arrow{transform:rotate(180deg)}
+
+.mm-tt-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
 .mm-tt-name{font-weight:700;font-size:1.02em;word-break:break-word}
 .mm-tt-count{font-size:0.8em;color:var(--text2);margin-top:2px}
 .mm-tt-desc{font-size:0.85em;color:var(--text2);margin-top:6px;
   line-height:1.45;word-break:break-word}
 
-.mm-tt-side{display:flex;gap:4px;flex:0 0 auto}
+.mm-tt-side{display:flex;gap:4px;flex:0 0 auto;align-items:center;
+  padding-right:12px}
 .mm-tt-icon{width:38px;height:38px;border:none;border-radius:8px;background:none;
   color:var(--text2);font-size:1em;line-height:1;cursor:pointer}
 .mm-tt-icon:hover{background:var(--card);color:var(--text)}
