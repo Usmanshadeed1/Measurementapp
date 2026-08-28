@@ -21,7 +21,7 @@ window.MM = window.MM || {};
   var loaded = false;
   var onOpenJob = null;
 
-  var filters = { worker: '', job: '', show: 'all' };
+  var filters = { worker: '', job: '', show: 'all', kind: 'both' };
 
   // ---- Loading -------------------------------------------------------------
 
@@ -84,18 +84,30 @@ window.MM = window.MM || {};
 
   // ---- Shaping -------------------------------------------------------------
 
-  // Tasks without a checklist are left out entirely: this page is about the
-  // items, and an empty task would only be a heading with nothing under it.
   function visibleTasks() {
     return tasks.filter(function (t) {
-      if (!(t.items || []).length) return false;
       if (filters.job && t.jobId !== filters.job) return false;
       if (filters.worker && !GT.isAssignedTo(t.who, filters.worker)) return false;
-      return itemsOf(t).length > 0;
+
+      var has = (t.items || []).length > 0;
+      // Checklists only: a task with nothing inside it is just a heading.
+      if (filters.kind === 'items') return has && itemsOf(t).length > 0;
+      // Tasks only: the task itself must pass the done filter.
+      if (filters.kind === 'tasks') return taskPasses(t);
+      // Both: keep it if either the task or one of its items is showing.
+      return taskPasses(t) || itemsOf(t).length > 0;
     });
   }
 
+  // The done filter applied to a task rather than to a checklist item.
+  function taskPasses(t) {
+    if (filters.show === 'open') return t.status !== 'done';
+    if (filters.show === 'done') return t.status === 'done';
+    return true;
+  }
+
   function itemsOf(t) {
+    if (filters.kind === 'tasks') return [];
     return (t.items || []).filter(function (it) {
       if (filters.show === 'open') return !it.done;
       if (filters.show === 'done') return it.done;
@@ -117,7 +129,12 @@ window.MM = window.MM || {};
   function countAll(done) {
     var n = 0;
     tasks.forEach(function (t) {
-      (t.items || []).forEach(function (it) { if (!!it.done === done) n++; });
+      if (filters.kind !== 'items') {
+        if ((t.status === 'done') === done) n++;
+      }
+      if (filters.kind !== 'tasks') {
+        (t.items || []).forEach(function (it) { if (!!it.done === done) n++; });
+      }
     });
     return n;
   }
@@ -152,8 +169,12 @@ window.MM = window.MM || {};
   }
 
   function countIn(g) {
+    if (filters.kind === 'tasks') {
+      var t = g.tasks.length;
+      return t + (t === 1 ? ' task' : ' tasks');
+    }
     var n = 0;
-    g.tasks.forEach(function (t) { n += itemsOf(t).length; });
+    g.tasks.forEach(function (x) { n += itemsOf(x).length; });
     return n + (n === 1 ? ' item' : ' items');
   }
 
@@ -187,6 +208,10 @@ window.MM = window.MM || {};
         (when ? '<span class="mm-cl-when' + (late ? ' is-late' : '') + '">' +
           U.esc(when) + (late ? ' · overdue' : '') + '</span>' : '') +
       '</div>' +
+      (!items.length
+        ? '<p class="mm-cl-noitems">' +
+          (t.status === 'done' ? 'Done' : 'No checklist') + '</p>'
+        : '') +
       '<div class="mm-cl-items">' +
         items.map(function (it) {
           // The index is taken from the task's own list, not the filtered one,
@@ -204,11 +229,13 @@ window.MM = window.MM || {};
   }
 
   function emptyState() {
+    var what = filters.kind === 'tasks' ? 'tasks'
+      : filters.kind === 'items' ? 'checklist items' : 'tasks or checklists';
     var msg = filters.show === 'done'
       ? 'Nothing is done yet.'
       : filters.show === 'open'
         ? 'Everything is done.'
-        : 'No checklist items yet.';
+        : 'No ' + what + ' yet.';
     return '<div class="mm-cl-empty">' +
       '<p class="mm-cl-empty-title">' + U.esc(msg) + '</p>' +
       '<p class="mm-cl-empty-sub">Checklist items are added inside a task on ' +
@@ -292,11 +319,15 @@ window.MM = window.MM || {};
     document.getElementById('mm-cl-job').addEventListener('change', function () {
       filters.job = this.value; render();
     });
+    document.getElementById('mm-cl-kind').addEventListener('change', function () {
+      filters.kind = this.value; render();
+    });
     document.getElementById('mm-cl-show').addEventListener('change', function () {
       filters.show = this.value; render();
     });
     document.getElementById('mm-cl-clear').addEventListener('click', function () {
-      filters = { worker: '', job: '', show: 'all' };
+      filters = { worker: '', job: '', show: 'all', kind: 'both' };
+      document.getElementById('mm-cl-kind').value = 'both';
       document.getElementById('mm-cl-worker').value = '';
       document.getElementById('mm-cl-job').value = '';
       document.getElementById('mm-cl-show').value = 'all';

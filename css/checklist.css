@@ -43,6 +43,10 @@
 
 .mm-cl-items{display:flex;flex-direction:column;gap:4px}
 
+/* Shown when a task has nothing under it, so the heading is not left with a
+   gap where a list should be. */
+.mm-cl-noitems{font-size:0.8em;color:var(--empty);padding:2px 0 4px}
+
 /* The tap target is the whole row, not just the box: on a phone a small
    checkbox is the difference between ticking an item and missing it. */
 .mm-cl-item{display:flex;align-items:center;gap:12px;width:100%;
