@@ -318,11 +318,40 @@
        aria-labelledby="mm-tl-title">
     <div class="mm-modal-title" id="mm-tl-title">Load a template</div>
     <div class="mm-field-group">
-      <label class="mm-label" for="mm-tl-start">Start date
-        <span class="mm-opt">(optional)</span></label>
+      <span class="mm-label">How should the dates be set?</span>
+      <div class="mm-tl-opts" role="radiogroup" aria-label="How should the dates be set?">
+        <label class="mm-tl-opt">
+          <input type="radio" name="mm-tl-mode" value="chain" checked>
+          <span><span class="mm-tl-optname">One day each</span>
+          <span class="mm-tl-optdesc">First task on the start date, then one
+            per day after it</span></span>
+        </label>
+        <label class="mm-tl-opt">
+          <input type="radio" name="mm-tl-mode" value="same">
+          <span><span class="mm-tl-optname">All on the same day</span>
+          <span class="mm-tl-optdesc">Every task gets the start date</span></span>
+        </label>
+        <label class="mm-tl-opt">
+          <input type="radio" name="mm-tl-mode" value="none">
+          <span><span class="mm-tl-optname">No dates</span>
+          <span class="mm-tl-optdesc">Add them yourself later</span></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="mm-field-group" id="mm-tl-datewrap">
+      <label class="mm-label" for="mm-tl-start">Start date</label>
       <input class="mm-input" type="date" id="mm-tl-start">
-      <p class="mm-tl-hint">Tasks are placed one day apart from this date.
-        Leave it blank to load them without dates.</p>
+    </div>
+
+    <div class="mm-field-group">
+      <label class="mm-label" for="mm-tl-who">Assign to
+        <span class="mm-opt">(optional)</span></label>
+      <select class="mm-select" id="mm-tl-who">
+        <option value="">Nobody yet</option>
+      </select>
+      <p class="mm-tl-hint">Everyone loaded gets this person. Leave it blank
+        and assign each task later.</p>
     </div>
     <div class="mm-assign-list" id="mm-tl-list"></div>
     <p class="mm-assign-error" id="mm-tl-error" role="alert"></p>

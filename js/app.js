@@ -672,6 +672,13 @@
   WORKERS.init();
   CHECK.init(function (o) { pickJob(o, 'tasks', 'checklist'); });
   TPL.init();
+  // The start date box only makes sense for the two dated options.
+  document.querySelectorAll('input[name="mm-tl-mode"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      var wrap = document.getElementById('mm-tl-datewrap');
+      if (wrap) wrap.hidden = r.value === 'none' && r.checked;
+    });
+  });
   document.getElementById('mm-tl-cancel').addEventListener('click', function () {
     closeModal('mm-modal-loadtpl');
   });

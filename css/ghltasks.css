@@ -11,7 +11,8 @@
   vertical-align:middle;color:var(--accent);
   background:color-mix(in srgb,var(--accent) 16%,transparent)}
 
-.mm-gt-actions{display:flex;justify-content:flex-end;margin-bottom:10px}
+.mm-gt-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;
+  margin-bottom:10px}
 .mm-steps-card.is-open .mm-gt-actions{display:flex}
 
 .mm-gt-list{display:flex;flex-direction:column;gap:8px}

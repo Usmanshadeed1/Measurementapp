@@ -389,7 +389,17 @@ window.MM = window.MM || {};
     if (!list || !modal) return;
 
     document.getElementById('mm-tl-error').textContent = '';
-    document.getElementById('mm-tl-start').value = '';
+    document.getElementById('mm-tl-start').value = todayStr();
+
+    // Whoever can be assigned, same list as the task form itself.
+    var who = document.getElementById('mm-tl-who');
+    who.innerHTML = '<option value="">Nobody yet</option>' +
+      staff.map(function (p) {
+        return '<option value="' + U.esc(p.name) + '">' + U.esc(p.name) +
+          (p.hasLogin ? '' : ' (name only)') + '</option>';
+      }).join('');
+
+    syncDateBox();
     list.innerHTML = '<div class="mm-empty">Loading templates...</div>';
     modal.classList.add('open');
 
@@ -418,14 +428,37 @@ window.MM = window.MM || {};
     });
   }
 
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function dateMode() {
+    var on = document.querySelector('input[name="mm-tl-mode"]:checked');
+    return on ? on.value : 'chain';
+  }
+
+  // A start date is meaningless when no dates are wanted, so the box is
+  // hidden rather than left there to be filled in and quietly ignored.
+  function syncDateBox() {
+    var wrap = document.getElementById('mm-tl-datewrap');
+    if (wrap) wrap.hidden = dateMode() === 'none';
+  }
+
   function applyTemplate(id, btn) {
     var tpl = window.MM.templates.all().find(function (t) { return t.id === id; });
     if (!tpl) return;
 
-    // An optional start date spreads the tasks a day apart in order, so they
-    // appear on the calendar straight away. Left blank, they load undated.
+    var mode = dateMode();
     var startStr = document.getElementById('mm-tl-start').value;
-    var cursor = startStr ? new Date(startStr + 'T00:00:00') : null;
+    var who = document.getElementById('mm-tl-who').value || '';
+
+    // "chain" walks a day forward per task, "same" repeats the start date,
+    // and "none" leaves every date blank.
+    var cursor = (mode !== 'none' && startStr)
+      ? new Date(startStr + 'T00:00:00') : null;
 
     (tpl.tasks || []).forEach(function (t) {
       var day = '';
@@ -433,12 +466,12 @@ window.MM = window.MM || {};
         day = cursor.getFullYear() + '-' +
           String(cursor.getMonth() + 1).padStart(2, '0') + '-' +
           String(cursor.getDate()).padStart(2, '0');
-        cursor.setDate(cursor.getDate() + 1);
+        if (mode === 'chain') cursor.setDate(cursor.getDate() + 1);
       }
       tasks.push({
         title: String(t.title || '').replace(/[|\r\n]/g, ' '),
         start: day, end: day,
-        who: '', status: 'todo', notes: '',
+        who: who, status: 'todo', notes: '',
         items: (t.items || []).map(function (i) {
           return { title: String(i).replace(/[|\r\n]/g, ' '), done: false };
         }),
