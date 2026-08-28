@@ -21,7 +21,7 @@ window.MM = window.MM || {};
   var loaded = false;
   var onOpenJob = null;
 
-  var filters = { worker: '', job: '', show: 'open' };
+  var filters = { worker: '', job: '', show: 'all' };
 
   // ---- Loading -------------------------------------------------------------
 
@@ -205,9 +205,9 @@ window.MM = window.MM || {};
 
   function emptyState() {
     var msg = filters.show === 'done'
-      ? 'Nothing has been ticked off yet.'
+      ? 'Nothing is done yet.'
       : filters.show === 'open'
-        ? 'Everything is ticked off.'
+        ? 'Everything is done.'
         : 'No checklist items yet.';
     return '<div class="mm-cl-empty">' +
       '<p class="mm-cl-empty-title">' + U.esc(msg) + '</p>' +
@@ -225,9 +225,9 @@ window.MM = window.MM || {};
         '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
     }
     el.innerHTML =
-      stat('Outstanding', open, open ? 'warn' : 'good') +
-      stat('Ticked off', done, 'good') +
-      stat('All items', open + done, 'neutral');
+      stat('Not done yet', open, open ? 'warn' : 'good') +
+      stat('Done', done, 'good') +
+      stat('Total', open + done, 'neutral');
   }
 
   // ---- Interaction ---------------------------------------------------------
@@ -296,10 +296,10 @@ window.MM = window.MM || {};
       filters.show = this.value; render();
     });
     document.getElementById('mm-cl-clear').addEventListener('click', function () {
-      filters = { worker: '', job: '', show: 'open' };
+      filters = { worker: '', job: '', show: 'all' };
       document.getElementById('mm-cl-worker').value = '';
       document.getElementById('mm-cl-job').value = '';
-      document.getElementById('mm-cl-show').value = 'open';
+      document.getElementById('mm-cl-show').value = 'all';
       render();
     });
   }

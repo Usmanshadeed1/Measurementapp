@@ -74,7 +74,7 @@
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
       <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
       <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
-      <a href="#" class="mm-nav-link" data-tab="checklist">Checklist</a>
+      <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -94,7 +94,7 @@
     <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
     <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
     <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
-    <a href="#" class="mm-nav-link" data-tab="checklist">Checklist</a>
+    <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -269,12 +269,12 @@
 <div class="screen" id="screen-checklist">
   <div class="mm-content">
     <div class="section-header">
-      <span class="section-title">Checklist</span>
+      <span class="section-title">Checklist View</span>
     </div>
 
     <div class="mm-stats" id="mm-cl-stats"></div>
 
-    <p class="mm-view-note">Everything still to tick off, grouped by customer.
+    <p class="mm-view-note">All checklist items, grouped by customer.
       Tap an item to mark it done.</p>
 
     <div class="mm-cl-filters">
@@ -284,9 +284,9 @@
       <select class="mm-select" id="mm-cl-job"><option value="">All jobs</option></select>
       <label class="sr-only" for="mm-cl-show">Show</label>
       <select class="mm-select" id="mm-cl-show">
-        <option value="open">Outstanding</option>
-        <option value="done">Ticked off</option>
-        <option value="all">Everything</option>
+        <option value="all">Show all</option>
+        <option value="open">Not done yet</option>
+        <option value="done">Done</option>
       </select>
       <button class="mm-btn-sm mm-btn-secondary" id="mm-cl-clear">Clear</button>
     </div>
