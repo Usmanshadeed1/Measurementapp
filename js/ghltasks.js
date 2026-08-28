@@ -548,6 +548,7 @@ window.MM = window.MM || {};
         var t = tasks[+b.getAttribute('data-toggle')];
         var nowDone = t.status !== 'done';
         t.status = nowDone ? 'done' : 'todo';
+        stampFinish(t, t.status);
         save(nowDone ? 'task_done' : 'task_undone',
              (nowDone ? 'Finished "' : 'Reopened "') + t.title + '"');
       });
@@ -606,11 +607,24 @@ window.MM = window.MM || {};
 
   // Flipping a task done from another screen: read the job, change that one
   // line, write the whole field back.
+  // Marking a task done records when it was actually finished, but only when
+  // no finish date was set. A date already there is the plan, and overwriting
+  // it would lose what was intended.
+  function stampFinish(t, status) {
+    if (status !== 'done' || t.end) return;
+    var d = new Date();
+    t.end = d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+    if (!t.start) t.start = t.end;
+  }
+
   function setStatusOnJob(jobId, index, status) {
     return api.getOpportunity(jobId).then(function (opp) {
       var rows = parse(api.oppField(opp, FIELD_ID));
       if (!rows[index]) throw new Error('That task is no longer there.');
       rows[index].status = status;
+      stampFinish(rows[index], status);
       return api.setOpportunityField(jobId, FIELD_ID, serialise(rows));
     });
   }
