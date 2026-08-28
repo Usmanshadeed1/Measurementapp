@@ -4,7 +4,7 @@
 // This is the entry point — loaded last, after api/utils/media/entities/walls/lighting.
 (function () {
   var U = window.MM.utils, api = window.MM.api, MD = window.MM.media, W = window.MM.walls, L = window.MM.lighting, C = window.MM.contacts, IMP = window.MM.importer, DASH = window.MM.dashboard, STEPS = window.MM.jobsteps, ACT = window.MM.activity, MY = window.MM.mytasks, ACCESS = window.MM.jobaccess, MEASURE = window.MM.measure, NOTES = window.MM.notes, NEWJOB = window.MM.newjob, DOCS = window.MM.jobdocs, GHLTASKS = window.MM.ghltasks,
-      WORKERS = window.MM.workerlist,
+      WORKERS = window.MM.workerlist, CHECK = window.MM.checklist,
       SCHED = window.MM.schedule;
 
   var job = null, room = null, editRoom = null, contactSearchTimer = null;
@@ -22,13 +22,14 @@
   function goToTab(tab) {
     // A worker has one screen. Anything else is refused here as well as
     // being hidden, so a stale link or a back button cannot get them in.
-    var workerTabs = { mytasks: 1, measure: 1, schedule: 1 };
+    var workerTabs = { mytasks: 1, measure: 1, schedule: 1, checklist: 1 };
     if (!window.MM.auth.isAdmin() && !workerTabs[tab]) tab = 'mytasks';
 
     if (tab === 'dashboard') { showScreen('dashboard'); DASH.loadDashboard(); }
     else if (tab === 'mytasks') { showScreen('mytasks'); MY.load(); }
     else if (tab === 'measure') { showScreen('measure'); MEASURE.load(); }
     else if (tab === 'schedule') { showScreen('schedule'); SCHED.load(); }
+    else if (tab === 'checklist') { showScreen('checklist'); CHECK.load(); }
     else if (tab === 'workers') { showScreen('workers'); WORKERS.load(); }
     else if (tab === 'history') { showScreen('history'); ACT.loadPage(); }
     else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
@@ -667,6 +668,7 @@
   // A task on the calendar belongs to the Tasks tab, not the overview.
   SCHED.init(function (o) { pickJob(o, 'tasks', 'schedule'); });
   WORKERS.init();
+  CHECK.init(function (o) { pickJob(o, 'tasks', 'checklist'); });
   C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
   C.initEdit(function () { loadContacts(); });
   C.initSort();

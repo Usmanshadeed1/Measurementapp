@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="css/schedule.css">
 <link rel="stylesheet" href="css/ghltasks.css">
 <link rel="stylesheet" href="css/workers.css">
+<link rel="stylesheet" href="css/checklist.css">
 </head>
 <body>
 
@@ -73,6 +74,7 @@
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
       <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
       <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
+      <a href="#" class="mm-nav-link" data-tab="checklist">Checklist</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -92,6 +94,7 @@
     <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
     <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
     <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
+    <a href="#" class="mm-nav-link" data-tab="checklist">Checklist</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -259,6 +262,37 @@
     <p class="mm-view-note">Everyone here can be assigned a task. People with
       a login also see their tasks in the app.</p>
     <div id="mm-workers-body"><div class="mm-empty">Loading...</div></div>
+  </div>
+</div>
+
+<!-- CHECKLIST — every checklist item across every job -->
+<div class="screen" id="screen-checklist">
+  <div class="mm-content">
+    <div class="section-header">
+      <span class="section-title">Checklist</span>
+    </div>
+
+    <div class="mm-stats" id="mm-cl-stats"></div>
+
+    <p class="mm-view-note">Everything still to tick off, grouped by customer.
+      Tap an item to mark it done.</p>
+
+    <div class="mm-cl-filters">
+      <label class="sr-only" for="mm-cl-worker">Filter by worker</label>
+      <select class="mm-select" id="mm-cl-worker"><option value="">Everyone</option></select>
+      <label class="sr-only" for="mm-cl-job">Filter by job</label>
+      <select class="mm-select" id="mm-cl-job"><option value="">All jobs</option></select>
+      <label class="sr-only" for="mm-cl-show">Show</label>
+      <select class="mm-select" id="mm-cl-show">
+        <option value="open">Outstanding</option>
+        <option value="done">Ticked off</option>
+        <option value="all">Everything</option>
+      </select>
+      <button class="mm-btn-sm mm-btn-secondary" id="mm-cl-clear">Clear</button>
+    </div>
+
+    <p class="mm-task-error" id="mm-cl-error" role="alert"></p>
+    <div id="mm-cl-body"><div class="mm-empty">Loading...</div></div>
   </div>
 </div>
 
@@ -623,6 +657,7 @@
 <script src="js/measure.js"></script>
 <script src="js/mytasks.js"></script>
 <script src="js/schedule.js"></script>
+<script src="js/checklist.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/import.js"></script>
 <script src="js/app.js"></script>

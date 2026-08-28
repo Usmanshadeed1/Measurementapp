@@ -1,0 +1,308 @@
+// js/checklist.js
+// Every checklist item across every job, on one page.
+//
+// A checklist item lives inside a task, and a task lives inside a job. Finding
+// what is still outstanding therefore meant opening jobs one at a time. This
+// screen turns that inside out: the items come first, grouped under the
+// customer they belong to, and can be ticked off without leaving the page.
+//
+// Deliberately not part of the Schedule. That page answers "what is happening
+// this week" and arranges everything by date — but a checklist item has no
+// date of its own, so it has nowhere to sit on a calendar. This page answers a
+// different question: "what still needs doing".
+window.MM = window.MM || {};
+
+(function () {
+  var U = window.MM.utils, auth = window.MM.auth;
+  var GT = window.MM.ghltasks, ACCESS = window.MM.jobaccess;
+
+  var tasks = [];        // every task the person may see
+  var staff = [];
+  var loaded = false;
+  var onOpenJob = null;
+
+  var filters = { worker: '', job: '', show: 'open' };
+
+  // ---- Loading -------------------------------------------------------------
+
+  function load() {
+    var el = document.getElementById('mm-cl-body');
+    if (!el) return Promise.resolve();
+    el.innerHTML = '<div class="mm-empty">Loading the checklist...</div>';
+
+    return Promise.all([
+      GT.loadAllJobTasks(),
+      window.MM.workerlist.load().catch(function () { return null; }),
+      ACCESS.loadMine(),
+    ])
+      .then(function (res) {
+        var all = res[0] || [];
+        staff = window.MM.workerlist.assignableNames();
+
+        // A worker sees only their own jobs, exactly as everywhere else.
+        tasks = auth.isAdmin() ? all : all.filter(function (t) {
+          return ACCESS.canOpen(t.jobId);
+        });
+
+        loaded = true;
+        fillFilters();
+        render();
+      })
+      .catch(function (e) {
+        el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
+      });
+  }
+
+  function fillFilters() {
+    var w = document.getElementById('mm-cl-worker');
+    if (w) {
+      w.style.display = auth.isAdmin() ? '' : 'none';
+      if (w.options.length <= 1) {
+        staff.forEach(function (s) {
+          var o = document.createElement('option');
+          o.value = s.name; o.textContent = s.name;
+          w.appendChild(o);
+        });
+      }
+    }
+
+    var j = document.getElementById('mm-cl-job');
+    if (j) {
+      var chosen = j.value;
+      var seen = {};
+      j.innerHTML = '<option value="">All jobs</option>';
+      tasks.forEach(function (t) {
+        if (!t.jobId || seen[t.jobId]) return;
+        seen[t.jobId] = true;
+        var o = document.createElement('option');
+        o.value = t.jobId; o.textContent = t.jobName || 'Job';
+        j.appendChild(o);
+      });
+      j.value = chosen;
+    }
+  }
+
+  // ---- Shaping -------------------------------------------------------------
+
+  // Tasks without a checklist are left out entirely: this page is about the
+  // items, and an empty task would only be a heading with nothing under it.
+  function visibleTasks() {
+    return tasks.filter(function (t) {
+      if (!(t.items || []).length) return false;
+      if (filters.job && t.jobId !== filters.job) return false;
+      if (filters.worker && !GT.isAssignedTo(t.who, filters.worker)) return false;
+      return itemsOf(t).length > 0;
+    });
+  }
+
+  function itemsOf(t) {
+    return (t.items || []).filter(function (it) {
+      if (filters.show === 'open') return !it.done;
+      if (filters.show === 'done') return it.done;
+      return true;
+    });
+  }
+
+  // Grouped under the customer, because that is how the work is actually
+  // organised: one visit, one property, everything outstanding there.
+  function groups() {
+    var byJob = {}, order = [];
+    visibleTasks().forEach(function (t) {
+      if (!byJob[t.jobId]) { byJob[t.jobId] = { name: t.jobName || 'Job', id: t.jobId, tasks: [] }; order.push(t.jobId); }
+      byJob[t.jobId].tasks.push(t);
+    });
+    return order.map(function (id) { return byJob[id]; });
+  }
+
+  function countAll(done) {
+    var n = 0;
+    tasks.forEach(function (t) {
+      (t.items || []).forEach(function (it) { if (!!it.done === done) n++; });
+    });
+    return n;
+  }
+
+  // ---- Rendering -----------------------------------------------------------
+
+  function render() {
+    if (!loaded) return;
+    var el = document.getElementById('mm-cl-body');
+    if (!el) return;
+
+    renderStats();
+
+    var gs = groups();
+    if (!gs.length) {
+      el.innerHTML = emptyState();
+      return;
+    }
+
+    el.innerHTML = gs.map(function (g) {
+      return '<section class="mm-cl-job">' +
+        '<button type="button" class="mm-cl-jobhead" data-open="' + U.esc(g.id) + '">' +
+          '<span class="mm-cl-jobname">' + U.esc(g.name) + '</span>' +
+          '<span class="mm-cl-jobcount">' + countIn(g) + '</span>' +
+          '<span class="mm-cl-jobarrow" aria-hidden="true">&#8250;</span>' +
+        '</button>' +
+        g.tasks.map(taskBlock).join('') +
+      '</section>';
+    }).join('');
+
+    bind(el);
+  }
+
+  function countIn(g) {
+    var n = 0;
+    g.tasks.forEach(function (t) { n += itemsOf(t).length; });
+    return n + (n === 1 ? ' item' : ' items');
+  }
+
+  function fmtDate(v) {
+    if (!v) return '';
+    var p = String(v).split('-');
+    if (p.length !== 3) return v;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d.getTime()) ? v
+      : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function isLate(t) {
+    if (t.status === 'done' || !t.end) return false;
+    var p = String(t.end).split('-');
+    if (p.length !== 3) return false;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    var now = new Date();
+    return d < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  function taskBlock(t) {
+    var items = itemsOf(t);
+    var when = t.end ? fmtDate(t.end) : (t.start ? fmtDate(t.start) : '');
+    var late = isLate(t);
+
+    return '<div class="mm-cl-task' + (late ? ' is-late' : '') + '">' +
+      '<div class="mm-cl-taskhead">' +
+        '<span class="mm-cl-tasktitle">' + U.esc(t.title || 'Task') + '</span>' +
+        (t.who ? '<span class="mm-cl-who">' + U.esc(t.who) + '</span>' : '') +
+        (when ? '<span class="mm-cl-when' + (late ? ' is-late' : '') + '">' +
+          U.esc(when) + (late ? ' · overdue' : '') + '</span>' : '') +
+      '</div>' +
+      '<div class="mm-cl-items">' +
+        items.map(function (it) {
+          // The index is taken from the task's own list, not the filtered one,
+          // or ticking an item would write to the wrong line.
+          var j = t.items.indexOf(it);
+          return '<button type="button" class="mm-cl-item' + (it.done ? ' is-done' : '') +
+              '" data-tick="' + U.esc(t.id) + '.' + j + '" ' +
+              'aria-pressed="' + (it.done ? 'true' : 'false') + '">' +
+            '<span class="mm-cl-box">' + (it.done ? '&#10003;' : '') + '</span>' +
+            '<span class="mm-cl-itemtext">' + U.esc(it.title) + '</span>' +
+          '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }
+
+  function emptyState() {
+    var msg = filters.show === 'done'
+      ? 'Nothing has been ticked off yet.'
+      : filters.show === 'open'
+        ? 'Everything is ticked off.'
+        : 'No checklist items yet.';
+    return '<div class="mm-cl-empty">' +
+      '<p class="mm-cl-empty-title">' + U.esc(msg) + '</p>' +
+      '<p class="mm-cl-empty-sub">Checklist items are added inside a task on ' +
+      'the job screen.</p></div>';
+  }
+
+  function renderStats() {
+    var el = document.getElementById('mm-cl-stats');
+    if (!el) return;
+    var open = countAll(false), done = countAll(true);
+    function stat(label, n, tone) {
+      return '<div class="mm-stat mm-stat-' + tone + '">' +
+        '<div class="mm-stat-num">' + n + '</div>' +
+        '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
+    }
+    el.innerHTML =
+      stat('Outstanding', open, open ? 'warn' : 'good') +
+      stat('Ticked off', done, 'good') +
+      stat('All items', open + done, 'neutral');
+  }
+
+  // ---- Interaction ---------------------------------------------------------
+
+  function bind(el) {
+    el.querySelectorAll('[data-tick]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var parts = b.getAttribute('data-tick').split('.');
+        var t = tasks.find(function (x) { return x.id === parts[0]; });
+        if (!t) return;
+        var j = +parts[1];
+        var it = t.items[j];
+        if (!it) return;
+
+        var want = !it.done;
+        var id = String(t.id).split(':');
+        b.disabled = true;
+
+        GT.setItemOnJob(id[0], +id[1], j, want)
+          .then(function () {
+            window.MM.activity.log(want ? 'task_done' : 'task_undone',
+              (want ? 'Ticked off "' : 'Reopened "') + it.title + '" in ' + t.title,
+              { jobId: t.jobId, jobName: t.jobName });
+            // Updated in place rather than reloading: a full reload would
+            // re-read every job for a change already known.
+            it.done = want;
+            render();
+          })
+          .catch(function (e) {
+            b.disabled = false;
+            showError('Could not save: ' + e.message);
+          });
+      });
+    });
+
+    el.querySelectorAll('[data-open]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-open');
+        if (!onOpenJob) return;
+        // The job screen needs the whole opportunity — custom fields, contact,
+        // stage — so it is fetched rather than passed a stub built from a task.
+        b.disabled = true;
+        window.MM.api.getOpportunity(id)
+          .then(function (o) { if (o) onOpenJob(o); })
+          .catch(function (e) { showError('Could not open the job: ' + e.message); })
+          .then(function () { b.disabled = false; });
+      });
+    });
+  }
+
+  function showError(msg) {
+    var el = document.getElementById('mm-cl-error');
+    if (el) el.textContent = msg || '';
+  }
+
+  function init(openJobFn) {
+    onOpenJob = openJobFn;
+
+    document.getElementById('mm-cl-worker').addEventListener('change', function () {
+      filters.worker = this.value; render();
+    });
+    document.getElementById('mm-cl-job').addEventListener('change', function () {
+      filters.job = this.value; render();
+    });
+    document.getElementById('mm-cl-show').addEventListener('change', function () {
+      filters.show = this.value; render();
+    });
+    document.getElementById('mm-cl-clear').addEventListener('click', function () {
+      filters = { worker: '', job: '', show: 'open' };
+      document.getElementById('mm-cl-worker').value = '';
+      document.getElementById('mm-cl-job').value = '';
+      document.getElementById('mm-cl-show').value = 'open';
+      render();
+    });
+  }
+
+  window.MM.checklist = { init: init, load: load };
+})();
