@@ -76,9 +76,9 @@ window.MM = window.MM || {};
           return window.MM.ghltasks.isAssignedTo(t.who, me.name);
         });
 
-        myJobs = window.MM.jobaccess.count() || window.MM.auth.isAdmin()
-          ? window.MM.jobaccess.mineOnly(ops)
-          : [];
+        // Not built for an admin at all: the list is not shown to them, and
+        // filtering every job for nothing is wasted work.
+        myJobs = auth.isAdmin() ? [] : window.MM.jobaccess.mineOnly(ops);
 
         render();
         renderJobs();
@@ -91,6 +91,10 @@ window.MM = window.MM || {};
   function renderJobs() {
     var el = document.getElementById('mm-my-jobs');
     if (!el) return;
+    // Workers only. This list is a worker's only route into a job — they are
+    // sent to measure a property before any task exists. An admin reaches
+    // every job from the dashboard, so here it is just the same list twice.
+    if (auth.isAdmin()) { el.innerHTML = ''; return; }
     if (!myJobs.length) { el.innerHTML = ''; return; }
 
     el.innerHTML =
