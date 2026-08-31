@@ -21,7 +21,7 @@ window.MM = window.MM || {};
   var loaded = false;
   var onOpenJob = null;
 
-  var filters = { worker: '', job: '', show: 'all', kind: 'both' };
+  var filters = { worker: '', job: '', show: 'open', kind: 'both' };
 
   // ---- Loading -------------------------------------------------------------
 
@@ -161,7 +161,9 @@ window.MM = window.MM || {};
           '<span class="mm-cl-jobcount">' + countIn(g) + '</span>' +
           '<span class="mm-cl-jobarrow" aria-hidden="true">&#8250;</span>' +
         '</button>' +
-        g.tasks.map(taskBlock).join('') +
+        // Same order as the job's own task list: undated first, then oldest
+        // to newest, so the two screens read the same way.
+        GT.sortTasks(g.tasks).map(taskBlock).join('') +
       '</section>';
     }).join('');
 
@@ -326,11 +328,11 @@ window.MM = window.MM || {};
       filters.show = this.value; render();
     });
     document.getElementById('mm-cl-clear').addEventListener('click', function () {
-      filters = { worker: '', job: '', show: 'all', kind: 'both' };
+      filters = { worker: '', job: '', show: 'open', kind: 'both' };
       document.getElementById('mm-cl-kind').value = 'both';
       document.getElementById('mm-cl-worker').value = '';
       document.getElementById('mm-cl-job').value = '';
-      document.getElementById('mm-cl-show').value = 'all';
+      document.getElementById('mm-cl-show').value = 'open';
       render();
     });
   }

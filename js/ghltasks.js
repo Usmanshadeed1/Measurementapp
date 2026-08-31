@@ -695,6 +695,7 @@ window.MM = window.MM || {};
     setItemOnJob: setItemOnJob,
     loadAllJobTasks: loadAllJobTasks,
     setStatusOnJob: setStatusOnJob,
+    sortTasks: sortTasks,
     statusLabel: statusLabel,
   };
 })();
