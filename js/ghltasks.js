@@ -33,12 +33,36 @@ window.MM = window.MM || {};
   var editing = null;      // index being edited, or null
   var adding = false;
   var saving = false;
+  var showFilter = 'all';   // all | open | done
 
   var STATUS = [
     { v: 'todo',  label: 'To do' },
     { v: 'doing', label: 'In progress' },
     { v: 'done',  label: 'Done' },
   ];
+
+  // Undated tasks first — they are the ones not yet scheduled — then the
+  // dated ones oldest to newest. The original order is kept as a tiebreak so
+  // a loaded template still reads in its own sequence.
+  function sortTasks(list) {
+    return list.map(function (t, i) { return { t: t, i: i }; })
+      .sort(function (a, b) {
+        var da = a.t.start || a.t.end || '';
+        var db = b.t.start || b.t.end || '';
+        if (!da && !db) return a.i - b.i;
+        if (!da) return -1;
+        if (!db) return 1;
+        if (da !== db) return da < db ? -1 : 1;
+        return a.i - b.i;
+      })
+      .map(function (x) { return x.t; });
+  }
+
+  function passesFilter(t) {
+    if (showFilter === 'open') return t.status !== 'done';
+    if (showFilter === 'done') return t.status === 'done';
+    return true;
+  }
 
   function statusLabel(v) {
     var s = STATUS.find(function (x) { return x.v === v; });
@@ -165,13 +189,25 @@ window.MM = window.MM || {};
       'GoHighLevel, so they are visible there as well as here.</p>' +
       (adding || editing !== null ? '' :
         '<div class="mm-gt-actions">' +
+          '<label class="sr-only" for="mm-gt-filter">Show</label>' +
+          '<select class="mm-select mm-gt-filter" id="mm-gt-filter">' +
+            '<option value="all"' + (showFilter === 'all' ? ' selected' : '') +
+              '>All tasks</option>' +
+            '<option value="open"' + (showFilter === 'open' ? ' selected' : '') +
+              '>To do only</option>' +
+            '<option value="done"' + (showFilter === 'done' ? ' selected' : '') +
+              '>Done only</option>' +
+          '</select>' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-gt-load">Load Template</button>' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-gt-add">+ Add Task</button>' +
         '</div>') +
       (adding ? form(null) : '') +
       (tasks.length
         ? '<div class="mm-gt-list">' +
-            tasks.map(function (t, i) {
+            // Sorted for display only. Every row keeps the index it holds in
+            // `tasks`, because that is what editing and ticking write to.
+            sortTasks(tasks.filter(passesFilter)).map(function (t) {
+              var i = tasks.indexOf(t);
               return editing === i ? form(i) : taskRow(t, i);
             }).join('') +
           '</div>'
@@ -484,6 +520,11 @@ window.MM = window.MM || {};
   }
 
   function bind(el) {
+    var filt = el.querySelector('#mm-gt-filter');
+    if (filt) filt.addEventListener('change', function () {
+      showFilter = filt.value; render();
+    });
+
     var loadBtn = el.querySelector('#mm-gt-load');
     if (loadBtn) loadBtn.addEventListener('click', openTemplates);
 
