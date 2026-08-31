@@ -157,6 +157,64 @@ window.MM = window.MM || {};
     return true;
   }
 
+  // What the search can find: the jobs and the people, each labelled so it is
+  // obvious what picking one will do. Built from the tasks actually loaded, so
+  // nothing offered can come back empty.
+  function findable() {
+    var jobs = {}, people = {};
+    tasks.forEach(function (t) {
+      if (t.jobName) jobs[t.jobName] = true;
+      String(t.who || '').split(',').forEach(function (n) {
+        n = n.trim(); if (n) people[n] = true;
+      });
+    });
+    return Object.keys(jobs).sort().map(function (v) {
+      return { value: v, kind: 'Job' };
+    }).concat(Object.keys(people).sort().map(function (v) {
+      return { value: v, kind: 'Worker' };
+    }));
+  }
+
+  function renderHits(term) {
+    var box = document.getElementById('mm-sc-hits');
+    var input = document.getElementById('mm-sc-search');
+    if (!box) return;
+
+    var q = String(term || '').trim().toLowerCase();
+    if (!q) {
+      box.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      return;
+    }
+
+    var hits = findable().filter(function (h) {
+      return h.value.toLowerCase().indexOf(q) > -1;
+    }).slice(0, 8);
+
+    box.innerHTML = hits.length
+      ? hits.map(function (h) {
+          return '<button type="button" class="mm-sc-hit" role="option" ' +
+              'data-pick="' + U.esc(h.value) + '">' +
+            '<span class="mm-sc-hitname">' + U.esc(h.value) + '</span>' +
+            '<span class="mm-sc-hitkind">' + h.kind + '</span>' +
+          '</button>';
+        }).join('')
+      : '<p class="mm-sc-nohit">Nothing matches that.</p>';
+
+    box.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+
+    box.querySelectorAll('[data-pick]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        input.value = b.getAttribute('data-pick');
+        searchTerm = input.value.toLowerCase();
+        box.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+        render();
+      });
+    });
+  }
+
   function matchesSearch(item) {
     if (!searchTerm) return true;
     var hay = [item.job, item.who].join(' ').toLowerCase();
@@ -505,10 +563,29 @@ window.MM = window.MM || {};
     var timer = null;
     box.addEventListener('input', function () {
       clearTimeout(timer);
+      renderHits(box.value);
       timer = setTimeout(function () {
         searchTerm = box.value.trim().toLowerCase();
         render();
       }, 200);
+    });
+    box.addEventListener('focus', function () {
+      if (box.value) renderHits(box.value);
+    });
+    // Escape closes the list without losing what was typed.
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        document.getElementById('mm-sc-hits').hidden = true;
+        box.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('click', function (e) {
+      var wrap = document.querySelector('.mm-sc-find');
+      if (wrap && !wrap.contains(e.target)) {
+        var hits = document.getElementById('mm-sc-hits');
+        if (hits) hits.hidden = true;
+        box.setAttribute('aria-expanded', 'false');
+      }
     });
 
     document.getElementById('mm-sc-worker').addEventListener('change', function () {
@@ -534,6 +611,7 @@ window.MM = window.MM || {};
       filters = { worker: '', job: '', status: 'all' };
       searchTerm = '';
       document.getElementById('mm-sc-search').value = '';
+      document.getElementById('mm-sc-hits').hidden = true;
       rangeFrom = null; rangeTo = null;
       document.getElementById('mm-sc-from').value = '';
       document.getElementById('mm-sc-to').value = '';
