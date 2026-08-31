@@ -50,8 +50,10 @@ window.MM = window.MM || {};
   // The list the rest of the app assigns from: both kinds, names only,
   // sorted together so the dropdown reads as one list of people.
   function assignableNames() {
-    var out = loginStaff.filter(function (s) { return s.role !== 'admin'; })
-      .map(function (s) { return { name: s.name, hasLogin: true }; });
+    // Admins are included: the person running a small remodelling business
+    // does the work as well as managing it, and could not otherwise assign
+    // anything to themselves.
+    var out = loginStaff.map(function (s) { return { name: s.name, hasLogin: true }; });
     plainNames.forEach(function (w) { out.push({ name: w.name, hasLogin: false }); });
     return out.sort(function (a, b) { return a.name.localeCompare(b.name); });
   }
@@ -62,7 +64,7 @@ window.MM = window.MM || {};
     var el = document.getElementById('mm-workers-body');
     if (!el) return;
 
-    var withLogin = loginStaff.filter(function (s) { return s.role !== 'admin'; });
+    var withLogin = loginStaff;
 
     el.innerHTML =
       (adding || editing ? formBox() : '') +

@@ -453,3 +453,12 @@
 .mm-stage-badge:hover{background:color-mix(in srgb,var(--success) 28%,transparent)}
 .mm-stage-badge:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .mm-stage-name{font-size:0.82em;font-weight:700;white-space:nowrap;line-height:1.2}
+
+/* Four buttons in the dashboard header. On a phone they wrap into a ragged
+   two-and-two rather than a neat row, so each takes an equal share and the
+   row reads as a block of controls. */
+@media (max-width: 620px){
+  .section-header .mm-btn-row{width:100%;gap:6px}
+  .section-header .mm-btn-row .mm-btn-sm{flex:1 1 calc(50% - 3px);min-width:0;
+    padding-left:8px;padding-right:8px}
+}

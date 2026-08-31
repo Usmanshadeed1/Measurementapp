@@ -34,6 +34,7 @@ window.MM = window.MM || {};
   var adding = false;
   var saving = false;
   var showFilter = 'all';   // all | open | done
+  var openAddOnLoad = false;   // set when arriving from the dashboard
 
   var STATUS = [
     { v: 'todo',  label: 'To do' },
@@ -144,7 +145,10 @@ window.MM = window.MM || {};
   function showForJob(job) {
     currentJob = job;
     tasks = [];
-    editing = null; adding = false;
+    editing = null;
+    // Arriving from the + Task button, the form is already what is wanted.
+    adding = openAddOnLoad;
+    openAddOnLoad = false;
 
     var el = document.getElementById('mm-job-ghltasks');
     if (!el) return Promise.resolve();
@@ -696,6 +700,7 @@ window.MM = window.MM || {};
     loadAllJobTasks: loadAllJobTasks,
     setStatusOnJob: setStatusOnJob,
     sortTasks: sortTasks,
+    openAddForm: function () { openAddOnLoad = true; },
     statusLabel: statusLabel,
   };
 })();

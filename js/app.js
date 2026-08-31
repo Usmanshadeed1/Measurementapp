@@ -706,6 +706,77 @@
     goToTab('schedule');
   });
 
+  // + Task: a task belongs to a job, so the only question is which one. The
+  // job's own task form is then opened rather than a second one being built,
+  // which would drift from the real one as soon as either changed.
+  var qtJobs = [];
+  function openQuickTask() {
+    var list = document.getElementById('mm-qt-list');
+    document.getElementById('mm-qt-search').value = '';
+    list.innerHTML = '<div class="mm-empty">Loading jobs...</div>';
+    openModal('mm-modal-quicktask');
+
+    api.fetchAllOpportunities()
+      .then(function (ops) {
+        qtJobs = ACCESS.mineOnly((ops || []).filter(function (o) {
+          return o.pipelineId === api.SALES_PIPELINE_ID;
+        }));
+        renderQuickJobs('');
+        document.getElementById('mm-qt-search').focus();
+      })
+      .catch(function (e) {
+        list.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
+      });
+  }
+
+  function renderQuickJobs(q) {
+    var list = document.getElementById('mm-qt-list');
+    var rows = qtJobs;
+    if (q) {
+      var s2 = q.toLowerCase();
+      rows = qtJobs.filter(function (o) {
+        return (customerName(o) + ' ' + jobAddress(o)).toLowerCase().indexOf(s2) > -1;
+      });
+    }
+    if (!rows.length) {
+      list.innerHTML = '<div class="mm-empty">No jobs match that.</div>';
+      return;
+    }
+    list.innerHTML = rows.slice(0, 40).map(function (o) {
+      var addr = jobAddress(o);
+      return '<button type="button" class="mm-assign-opt" data-qt="' + U.esc(o.id) + '">' +
+        '<span><span class="mm-pick-name">' + U.esc(customerName(o)) + '</span>' +
+        (addr ? '<span class="mm-pick-desc">' + U.esc(addr) + '</span>' : '') +
+        '</span></button>';
+    }).join('');
+
+    list.querySelectorAll('[data-qt]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var o = qtJobs.find(function (j) { return j.id === b.getAttribute('data-qt'); });
+        if (!o) return;
+        closeModal('mm-modal-quicktask');
+        GHLTASKS.openAddForm();
+        pickJob(o, 'tasks', 'dashboard');
+      });
+    });
+  }
+
+  document.getElementById('mm-quicktask-btn').addEventListener('click', openQuickTask);
+  document.getElementById('mm-qt-cancel').addEventListener('click', function () {
+    closeModal('mm-modal-quicktask');
+  });
+  document.getElementById('mm-modal-quicktask').addEventListener('click', function (e) {
+    if (e.target === this) closeModal('mm-modal-quicktask');
+  });
+  (function () {
+    var box = document.getElementById('mm-qt-search');
+    var t = null;
+    box.addEventListener('input', function () {
+      clearTimeout(t);
+      t = setTimeout(function () { renderQuickJobs(box.value.trim()); }, 150);
+    });
+  })();
+
   // + New — one button, because on a phone there is only room for one. It
   // asks which of the two things is being added rather than guessing.
   NEWJOB.init(function () { DASH.loadDashboard(); });

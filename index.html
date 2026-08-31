@@ -76,7 +76,7 @@
     </a>
     <nav class="mm-nav" aria-label="Main">
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
-      <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
+      <a href="#" class="mm-nav-link" data-tab="mytasks">My Tasks</a>
       <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
       <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
@@ -97,7 +97,7 @@
   </div>
   <nav class="mm-mobile-nav" id="mm-mobile-nav" aria-label="Main (mobile)">
     <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
-    <a href="#" class="mm-nav-link mm-worker-only" data-tab="mytasks">My Tasks</a>
+    <a href="#" class="mm-nav-link" data-tab="mytasks">My Tasks</a>
     <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
     <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
@@ -119,6 +119,7 @@
     <div class="section-header">
       <span class="section-title">Jobs</span>
       <div class="mm-btn-row">
+        <button class="mm-btn-sm mm-btn-primary mm-admin-only" id="mm-quicktask-btn">+ Task</button>
         <button class="mm-btn-sm mm-btn-secondary" id="mm-dash-schedule">Schedule</button>
         <button class="mm-btn-sm mm-btn-secondary" id="mm-dash-refresh">Refresh</button>
         <button class="mm-btn-sm mm-btn-primary mm-admin-only" id="mm-new-btn">+ New</button>
@@ -372,6 +373,21 @@
     <div class="mm-assign-list" id="mm-tl-list"></div>
     <p class="mm-assign-error" id="mm-tl-error" role="alert"></p>
     <button class="mm-btn mm-btn-secondary" id="mm-tl-cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- Which job is the task for? — the quick way in from the dashboard -->
+<div class="mm-modal-overlay" id="mm-modal-quicktask">
+  <div class="mm-modal mm-modal-narrow" role="dialog" aria-modal="true"
+       aria-labelledby="mm-qt-title">
+    <div class="mm-modal-title" id="mm-qt-title">Add a task to which job?</div>
+    <div class="mm-search-bar">
+      <span class="mm-search-icon" aria-hidden="true">&#128269;</span>
+      <label for="mm-qt-search" class="sr-only">Search jobs</label>
+      <input class="mm-input" id="mm-qt-search" placeholder="Search by customer or address...">
+    </div>
+    <div class="mm-assign-list" id="mm-qt-list"></div>
+    <button class="mm-btn mm-btn-secondary" id="mm-qt-cancel">Cancel</button>
   </div>
 </div>
 
