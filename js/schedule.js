@@ -24,6 +24,7 @@ window.MM = window.MM || {};
   var onOpenJob = null;
 
   var filters = { worker: '', job: '', status: 'all' };
+  var searchTerm = '';
 
   // An optional date window. Both null means show everything, which is the
   // default: the Day/Week/Month views already narrow by date on their own.
@@ -96,6 +97,7 @@ window.MM = window.MM || {};
 
         loaded = true;
         fillFilters();
+        fillSuggestions();
         render();
       })
       .catch(function (e) {
@@ -156,6 +158,32 @@ window.MM = window.MM || {};
     return true;
   }
 
+  // Everything the search could usefully match, offered as you type.
+  function fillSuggestions() {
+    var el = document.getElementById('mm-sc-suggest');
+    if (!el) return;
+    var seen = {};
+    tasks.forEach(function (t) {
+      [t.jobName, t.title].forEach(function (v) { if (v) seen[v] = true; });
+      String(t.who || '').split(',').forEach(function (n) {
+        n = n.trim(); if (n) seen[n] = true;
+      });
+    });
+    el.innerHTML = Object.keys(seen).sort().map(function (v) {
+      return '<option value="' + U.esc(v) + '"></option>';
+    }).join('');
+  }
+
+  function matchesSearch(item) {
+    if (!searchTerm) return true;
+    var hay = [item.title, item.job, item.who].join(' ').toLowerCase();
+    // Every word must appear somewhere, so "usman counters" narrows rather
+    // than widening.
+    return searchTerm.split(/\s+/).every(function (w) {
+      return !w || hay.indexOf(w) > -1;
+    });
+  }
+
   function passes(item) {
     if (filters.job && item.jobId !== filters.job) return false;
     if (filters.worker &&
@@ -183,7 +211,8 @@ window.MM = window.MM || {};
   }
 
   function spans() {
-    return tasks.map(toSpan).filter(Boolean).filter(passes).filter(inRange);
+    return tasks.map(toSpan).filter(Boolean)
+      .filter(passes).filter(inRange).filter(matchesSearch);
   }
 
   function itemsOn(d) {
@@ -487,6 +516,18 @@ window.MM = window.MM || {};
       });
     });
 
+    // Typing filters as you go; the suggestion list is the browser's own,
+    // so picking one behaves exactly like finishing the word.
+    var box = document.getElementById('mm-sc-search');
+    var timer = null;
+    box.addEventListener('input', function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        searchTerm = box.value.trim().toLowerCase();
+        render();
+      }, 200);
+    });
+
     document.getElementById('mm-sc-worker').addEventListener('change', function () {
       filters.worker = this.value; render();
     });
@@ -508,6 +549,8 @@ window.MM = window.MM || {};
 
     document.getElementById('mm-sc-clear').addEventListener('click', function () {
       filters = { worker: '', job: '', status: 'all' };
+      searchTerm = '';
+      document.getElementById('mm-sc-search').value = '';
       rangeFrom = null; rangeTo = null;
       document.getElementById('mm-sc-from').value = '';
       document.getElementById('mm-sc-to').value = '';
