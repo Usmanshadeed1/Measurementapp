@@ -207,7 +207,12 @@
     infoEl.innerHTML =
       '<div class="mm-steps-head">' +
         '<span class="mm-steps-title">Job details</span>' +
-        '<span class="mm-steps-badge mm-steps-badge-done">' + U.esc(stage || 'No stage') + '</span>' +
+        '<button type="button" class="mm-stage-badge" id="mm-job-stage-btn" ' +
+            'aria-label="Change the stage of this job">' +
+          '<span class="mm-stage-label">Stage</span>' +
+          '<span class="mm-stage-name">' + U.esc(stage || 'No stage') +
+            ' <span aria-hidden="true">&#9662;</span></span>' +
+        '</button>' +
       '</div>' +
       '<div class="mm-field-display"><div class="flabel">Customer</div><div class="fvalue">' + U.esc(customerName(o)) + '</div></div>' +
       (c.phone
@@ -217,15 +222,15 @@
         ? '<div class="mm-field-display"><div class="flabel">Email</div><div class="fvalue">' +
           '<a href="mailto:' + U.esc(c.email) + '">' + U.esc(c.email) + '</a></div></div>' : '') +
       '<div class="mm-field-display"><div class="flabel">Address</div><div class="fvalue">' + U.esc(jobAddress(o) || '—') + '</div></div>' +
-      // The stage is actionable here too: the crew finishes measuring at the
-      // property and can move the job on without opening GHL.
-      '<div class="mm-field-display"><div class="flabel">Stage</div>' +
-        '<div class="fvalue"><button type="button" class="mm-btn-sm mm-btn-secondary" id="mm-job-stage-btn">' +
-        U.esc(stage || 'Set stage') + ' &#9662;</button></div></div>' +
       '<div class="mm-field-display"><div class="flabel">Job ID</div><div class="fvalue mono">' + U.esc(o.id) + '</div></div>';
 
     var stageBtn = document.getElementById('mm-job-stage-btn');
-    if (stageBtn) stageBtn.addEventListener('click', function () { DASH.openStage(o); });
+    if (stageBtn) stageBtn.addEventListener('click', function (e) {
+      // The whole panel header collapses on click, so the badge has to keep
+      // its own tap to itself.
+      e.stopPropagation();
+      DASH.openStage(o);
+    });
 
     STEPS.render(o);
     MEET.showForJob(o);
@@ -650,9 +655,13 @@
 
   // Redraw the stage button whenever the stage changes, from either route:
   // saving a progress step, or picking a stage directly.
+  // Only the name changes; the label above it stays put.
   function refreshStageButton(o) {
-    var btn = document.getElementById('mm-job-stage-btn');
-    if (btn) btn.innerHTML = U.esc(DASH.stageNameFor(o) || 'Set stage') + ' &#9662;';
+    var el = document.querySelector('#mm-job-stage-btn .mm-stage-name');
+    if (el) {
+      el.innerHTML = U.esc(DASH.stageNameFor(o) || 'No stage') +
+        ' <span aria-hidden="true">&#9662;</span>';
+    }
   }
   STEPS.onChange(refreshStageButton);
   DASH.onStageChange(function (o) {
