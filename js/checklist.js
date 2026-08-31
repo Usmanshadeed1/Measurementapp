@@ -22,6 +22,7 @@ window.MM = window.MM || {};
   var onOpenJob = null;
 
   var filters = { worker: '', job: '', show: 'open', kind: 'both' };
+  var openJobs = {};     // job id -> is its list expanded
 
   // ---- Loading -------------------------------------------------------------
 
@@ -155,29 +156,41 @@ window.MM = window.MM || {};
     }
 
     el.innerHTML = gs.map(function (g) {
-      return '<section class="mm-cl-job">' +
-        '<button type="button" class="mm-cl-jobhead" data-open="' + U.esc(g.id) + '">' +
-          '<span class="mm-cl-jobname">' + U.esc(g.name) + '</span>' +
-          '<span class="mm-cl-jobcount">' + countIn(g) + '</span>' +
-          '<span class="mm-cl-jobarrow" aria-hidden="true">&#8250;</span>' +
-        '</button>' +
+      var isOpen = !!openJobs[g.id];
+      return '<section class="mm-cl-job' + (isOpen ? ' is-open' : '') + '">' +
+        '<div class="mm-cl-jobhead' + (isOpen ? ' is-open' : '') + '">' +
+          '<button type="button" class="mm-cl-jobtoggle" data-toggle="' +
+              U.esc(g.id) + '" aria-expanded="' + (isOpen ? 'true' : 'false') + '">' +
+            '<span class="mm-cl-caret" aria-hidden="true">&#9662;</span>' +
+            '<span class="mm-cl-jobname">' + U.esc(g.name) + '</span>' +
+            '<span class="mm-cl-jobcount">' + countIn(g) + '</span>' +
+          '</button>' +
+          '<button type="button" class="mm-cl-jobopen" data-open="' + U.esc(g.id) + '" ' +
+            'aria-label="Open ' + U.esc(g.name) + '">&#8250;</button>' +
+        '</div>' +
         // Same order as the job's own task list: undated first, then oldest
         // to newest, so the two screens read the same way.
-        GT.sortTasks(g.tasks).map(taskBlock).join('') +
+        (isOpen ? GT.sortTasks(g.tasks).map(taskBlock).join('') : '') +
       '</section>';
     }).join('');
 
     bind(el);
   }
 
+  // The count has to describe whatever the page is showing. On "both" that
+  // means tasks AND items, or a job of twenty dateless tasks reports "0 items"
+  // while listing all twenty.
   function countIn(g) {
-    if (filters.kind === 'tasks') {
-      var t = g.tasks.length;
-      return t + (t === 1 ? ' task' : ' tasks');
-    }
-    var n = 0;
-    g.tasks.forEach(function (x) { n += itemsOf(x).length; });
-    return n + (n === 1 ? ' item' : ' items');
+    var tasksN = g.tasks.length;
+    var itemsN = 0;
+    g.tasks.forEach(function (x) { itemsN += itemsOf(x).length; });
+
+    function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+    if (filters.kind === 'tasks') return plural(tasksN, 'task');
+    if (filters.kind === 'items') return plural(itemsN, 'item');
+    return plural(tasksN, 'task') +
+      (itemsN ? ', ' + plural(itemsN, 'item') : '');
   }
 
   function fmtDate(v) {
@@ -289,6 +302,14 @@ window.MM = window.MM || {};
             b.disabled = false;
             showError('Could not save: ' + e.message);
           });
+      });
+    });
+
+    el.querySelectorAll('[data-toggle]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-toggle');
+        openJobs[id] = !openJobs[id];
+        render();
       });
     });
 
