@@ -27,7 +27,11 @@
 .mm-gt{display:flex;align-items:flex-start;gap:10px;padding:12px;
   border:1px solid var(--border);border-radius:10px;background:var(--card2);
   border-left:3px solid var(--accent);min-width:0}
-.mm-gt.is-done{opacity:.6;border-left-color:var(--success)}
+/* A finished task gets its own tinted ground, not just a faded one: at a
+   glance the eye should separate done from outstanding without reading. */
+.mm-gt.is-done{opacity:.75;border-left-color:var(--success);
+  background:color-mix(in srgb,var(--success) 12%,var(--card2));
+  border-color:color-mix(in srgb,var(--success) 30%,var(--border))}
 .mm-gt.is-late{border-left-color:var(--danger-text)}
 
 .mm-gt-check{flex:0 0 auto;width:28px;height:28px;margin-top:2px;border-radius:8px;

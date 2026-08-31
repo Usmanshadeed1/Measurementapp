@@ -29,6 +29,10 @@
    than as something still waiting to be done. */
 .mm-mygroup-done{opacity:.72}
 .mm-mygroup-done .mm-mytask{border-left-color:var(--success)}
+/* Same tinted ground as the job task list, so a finished task looks the same
+   wherever it is seen. */
+.mm-mytask.is-done{background:color-mix(in srgb,var(--success) 12%,var(--card));
+  border-color:color-mix(in srgb,var(--success) 30%,var(--border))}
 .mm-mytask.is-done .mm-mytask-title{text-decoration:line-through;color:var(--text2)}
 .mm-mytask.is-done .mm-task-tick{background:var(--success);
                                  border-color:var(--success);color:#04220f}
