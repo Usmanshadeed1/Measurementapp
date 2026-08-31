@@ -209,7 +209,6 @@
         '<span class="mm-steps-title">Job details</span>' +
         '<button type="button" class="mm-stage-badge" id="mm-job-stage-btn" ' +
             'aria-label="Change the stage of this job">' +
-          '<span class="mm-stage-label">Stage</span>' +
           '<span class="mm-stage-name">' + U.esc(stage || 'No stage') +
             ' <span aria-hidden="true">&#9662;</span></span>' +
         '</button>' +

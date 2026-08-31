@@ -444,15 +444,12 @@
 }
 
 /* The stage badge in the Job details header is the control for changing it.
-   It keeps the badge look — a stage is a status first — with a small label
-   above so it reads as something you can act on rather than just a tag. */
-.mm-stage-badge{display:flex;flex-direction:column;align-items:flex-end;gap:1px;
-  flex:0 0 auto;padding:6px 14px;border-radius:999px;cursor:pointer;
+   It keeps the badge look — a stage is a status first — with a caret to
+   show it can be acted on. */
+.mm-stage-badge{display:inline-flex;align-items:center;flex:0 0 auto;
+  padding:8px 16px;border-radius:999px;cursor:pointer;
   background:color-mix(in srgb,var(--success) 18%,transparent);
-  border:1px solid var(--success);color:var(--success);min-height:44px;
-  justify-content:center}
+  border:1px solid var(--success);color:var(--success);min-height:44px}
 .mm-stage-badge:hover{background:color-mix(in srgb,var(--success) 28%,transparent)}
 .mm-stage-badge:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.mm-stage-label{font-size:0.6em;font-weight:700;text-transform:uppercase;
-  letter-spacing:.08em;opacity:.85;line-height:1}
 .mm-stage-name{font-size:0.82em;font-weight:700;white-space:nowrap;line-height:1.2}
