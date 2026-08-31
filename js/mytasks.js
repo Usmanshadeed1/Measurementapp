@@ -51,21 +51,35 @@ window.MM = window.MM || {};
 
   function load() {
     var el = document.getElementById('mm-my-body');
-    el.innerHTML = '<div class="mm-empty">Loading...</div>';
+    el.innerHTML = '<div class="mm-empty">Loading your tasks...</div>';
+    // The counters keep their last values while loading, which reads as a
+    // real answer of zero rather than as work still in progress.
+    var stats = document.getElementById('mm-my-stats');
+    if (stats) stats.innerHTML = '';
     var me = auth.user();
     if (!me) return Promise.resolve();
 
+    // Every job is fetched once and used for both halves of this screen. It
+    // used to be fetched twice in parallel — once for the tasks, once for the
+    // job list — which doubled the wait for no benefit.
     return Promise.all([
-      window.MM.ghltasks.loadAllJobTasks(),
-      window.MM.jobaccess.loadMine().then(loadJobsForWorker),
+      window.MM.api.fetchAllOpportunities(),
+      window.MM.jobaccess.loadMine(),
     ])
       .then(function (res) {
+        var ops = (res[0] || []).filter(function (o) {
+          return o.pipelineId === window.MM.api.SALES_PIPELINE_ID;
+        });
+
         // A task now records its worker as a name, so that is what is matched.
-        var mine = (res[0] || []).filter(function (t) {
+        rows = window.MM.ghltasks.tasksFromJobs(ops).filter(function (t) {
           return window.MM.ghltasks.isAssignedTo(t.who, me.name);
         });
-        rows = mine;
-        myJobs = res[1] || [];
+
+        myJobs = window.MM.jobaccess.count() || window.MM.auth.isAdmin()
+          ? window.MM.jobaccess.mineOnly(ops)
+          : [];
+
         render();
         renderJobs();
       })
@@ -74,16 +88,6 @@ window.MM = window.MM || {};
 
   // The jobs themselves come from GHL, filtered to the ones this worker is
   // allowed to open.
-  function loadJobsForWorker() {
-    if (!window.MM.jobaccess.count()) return Promise.resolve([]);
-    return window.MM.api.fetchAllOpportunities()
-      .then(function (ops) {
-        return window.MM.jobaccess.mineOnly(
-          ops.filter(function (o) { return o.pipelineId === window.MM.api.SALES_PIPELINE_ID; }));
-      })
-      .catch(function () { return []; });
-  }
-
   function renderJobs() {
     var el = document.getElementById('mm-my-jobs');
     if (!el) return;

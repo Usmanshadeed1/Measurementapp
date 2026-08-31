@@ -618,8 +618,19 @@ window.MM = window.MM || {};
   //
   // fetchAllOpportunities already returns customFields, so this needs no extra
   // request per job.
+  // Pulling the tasks out of jobs already fetched. Kept separate so a screen
+  // that needs the jobs anyway does not fetch them a second time.
+  function tasksFromJobs(ops) {
+    return collect(ops);
+  }
+
   function loadAllJobTasks() {
     return api.fetchAllOpportunities().then(function (ops) {
+      return collect(ops);
+    });
+  }
+
+  function collect(ops) {
       var out = [];
       (ops || []).forEach(function (o) {
         if (o.pipelineId !== api.SALES_PIPELINE_ID) return;
@@ -639,9 +650,8 @@ window.MM = window.MM || {};
             items: t.items,
           });
         });
-      });
-      return out;
     });
+    return out;
   }
 
   function jobLabelOf(o) {
@@ -698,6 +708,7 @@ window.MM = window.MM || {};
     isAssignedTo: isAssignedTo,
     setItemOnJob: setItemOnJob,
     loadAllJobTasks: loadAllJobTasks,
+    tasksFromJobs: tasksFromJobs,
     setStatusOnJob: setStatusOnJob,
     sortTasks: sortTasks,
     openAddForm: function () { openAddOnLoad = true; },
