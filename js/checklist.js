@@ -216,9 +216,19 @@ window.MM = window.MM || {};
     var when = t.end ? fmtDate(t.end) : (t.start ? fmtDate(t.start) : '');
     var late = isLate(t);
 
-    return '<div class="mm-cl-task' + (late ? ' is-late' : '') + '">' +
+    return '<div class="mm-cl-task' + (late ? ' is-late' : '') +
+        (t.status === 'done' ? ' is-taskdone' : '') + '">' +
       '<div class="mm-cl-taskhead">' +
-        '<span class="mm-cl-tasktitle">' + U.esc(t.title || 'Task') + '</span>' +
+        // The task itself is tickable here, not only its checklist items: most
+        // tasks have no checklist, which left this page read-only for them.
+        '<button type="button" class="mm-cl-taskbox' + (t.status === 'done' ? ' is-done' : '') +
+            '" data-done="' + U.esc(t.id) + '" ' +
+            'aria-pressed="' + (t.status === 'done' ? 'true' : 'false') + '" ' +
+            'aria-label="' + (t.status === 'done' ? 'Reopen ' : 'Mark done: ') +
+            U.esc(t.title || 'task') + '">' +
+          '<span class="mm-cl-box">' + (t.status === 'done' ? '&#10003;' : '') + '</span>' +
+          '<span class="mm-cl-tasktitle">' + U.esc(t.title || 'Task') + '</span>' +
+        '</button>' +
         (t.who ? '<span class="mm-cl-who">' + U.esc(t.who) + '</span>' : '') +
         (when ? '<span class="mm-cl-when' + (late ? ' is-late' : '') + '">' +
           U.esc(when) + (late ? ' · overdue' : '') + '</span>' : '') +
@@ -296,6 +306,41 @@ window.MM = window.MM || {};
             // Updated in place rather than reloading: a full reload would
             // re-read every job for a change already known.
             it.done = want;
+            render();
+          })
+          .catch(function (e) {
+            b.disabled = false;
+            showError('Could not save: ' + e.message);
+          });
+      });
+    });
+
+    el.querySelectorAll('[data-done]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var t = tasks.find(function (x) { return x.id === b.getAttribute('data-done'); });
+        if (!t) return;
+
+        var want = t.status === 'done' ? 'todo' : 'done';
+        var id = String(t.id).split(':');
+        b.disabled = true;
+
+        // The checklist items are deliberately left alone. Whether the task is
+        // finished is a judgement call; which steps were actually done is real
+        // information, and ticking them all would destroy it.
+        GT.setStatusOnJob(id[0], +id[1], want)
+          .then(function () {
+            window.MM.activity.log(want === 'done' ? 'task_done' : 'task_undone',
+              (want === 'done' ? 'Marked "' : 'Reopened "') + t.title + '"',
+              { jobId: t.jobId, jobName: t.jobName });
+            t.status = want;
+            // Finishing a task stamps its end date when it had none. Mirrored
+            // here so the row does not show a stale blank until the next load.
+            if (want === 'done' && !t.end) {
+              var d = new Date();
+              t.end = d.getFullYear() + '-' +
+                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                String(d.getDate()).padStart(2, '0');
+            }
             render();
           })
           .catch(function (e) {
