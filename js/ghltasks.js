@@ -357,8 +357,16 @@ window.MM = window.MM || {};
     return '<div class="mm-gt-form">' +
       '<div class="mm-field-group">' +
         '<label class="mm-label" for="mm-gt-title">Task</label>' +
-        '<input class="mm-input" id="mm-gt-title" placeholder="e.g. Install cabinets" ' +
-          'value="' + U.esc(t.title) + '">' +
+        // The name is the only required field: everything under it is
+        // optional, so saving is offered here rather than only at the bottom
+        // of a form that runs past the fold.
+        '<div class="mm-gt-titlerow">' +
+          '<input class="mm-input" id="mm-gt-title" placeholder="e.g. Install cabinets" ' +
+            'value="' + U.esc(t.title) + '">' +
+          '<button class="mm-btn-sm mm-btn-primary mm-gt-quicksave" id="mm-gt-save-top"' +
+            (saving ? ' disabled' : '') + '>' +
+            (saving ? '...' : (i === null ? 'Add' : 'Save')) + '</button>' +
+        '</div>' +
       '</div>' +
 
       '<div class="mm-gt-row">' +
@@ -566,6 +574,22 @@ window.MM = window.MM || {};
       b.addEventListener('change', function () {
         b.closest('.mm-gt-whoitem').classList.toggle('is-on', b.checked);
       });
+    });
+
+    // Two save buttons, one at the top of the form and one at the bottom, and
+    // Enter in the name box. All three run the same save.
+    var topSave = el.querySelector('#mm-gt-save-top');
+    if (topSave) topSave.addEventListener('click', function () {
+      var b = el.querySelector('#mm-gt-save');
+      if (b) b.click();
+    });
+
+    var titleBox = el.querySelector('#mm-gt-title');
+    if (titleBox) titleBox.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      var b = el.querySelector('#mm-gt-save');
+      if (b) b.click();
     });
 
     var saveBtn = el.querySelector('#mm-gt-save');
