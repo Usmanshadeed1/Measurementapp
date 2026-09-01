@@ -324,6 +324,7 @@
       api.deleteRec('custom_objects.room', r.id).then(function () { showScreen('job'); loadRooms(); }).catch(function (e) { alert(e.message); db.disabled = false; });
     });
 
+    window.MM.roomsize.showForRoom(r);
     loadWalls(); loadIslands(); loadLights(); loadRoomMedia();
   }
 

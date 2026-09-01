@@ -1,0 +1,98 @@
+/* ==========================================================================
+   Room size and cabinet doors, inside a room.
+
+   Both are filled in on site, on a phone, one hand holding a tape measure.
+   Every control is at least 48px, the number boxes are as wide as the row
+   allows, and the running square footage sits next to what produced it.
+   ========================================================================== */
+
+.mm-rs{border:1px solid var(--border);border-radius:12px;background:var(--card);
+  padding:14px;margin-bottom:14px}
+
+.mm-rs-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.mm-rs-title{font-weight:700;font-size:1.02em;flex:1 1 auto;min-width:0}
+/* Empty until there is something to count, so the room does not open showing
+   a meaningless zero. */
+.mm-rs-badge:empty{display:none}
+.mm-rs-badge{flex:0 0 auto;font-size:0.78em;font-weight:700;
+  color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);
+  border-radius:999px;padding:3px 11px;white-space:nowrap}
+
+.mm-rs-empty{color:var(--empty);font-size:0.88em;line-height:1.5;
+  margin:0 0 12px;padding:10px 0}
+
+.mm-rs-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+
+.mm-rs-row{display:flex;align-items:flex-start;gap:10px;padding:10px;
+  border:1px solid var(--border);border-radius:10px;background:var(--card2);
+  border-left:3px solid var(--accent);min-width:0}
+
+/* The section number, not a name: sections are deliberately unnamed. */
+.mm-rs-n{flex:0 0 auto;width:24px;height:24px;margin-top:11px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.78em;font-weight:700;color:var(--text2);
+  background:var(--card);border:1px solid var(--border);border-radius:999px}
+
+.mm-rs-mid{flex:1 1 auto;min-width:0}
+
+.mm-rs-pair{display:flex;align-items:center;gap:8px;min-width:0}
+.mm-rs-pair .mm-rs-box{flex:1 1 0;min-width:0}
+.mm-rs-x{flex:0 0 auto;color:var(--text2);font-size:0.9em}
+
+/* The unit rides inside the box: "in" printed once beats repeating it in
+   every placeholder, and leaves the number room to be read. */
+.mm-rs-box{position:relative;display:block}
+.mm-rs-box .mm-input{margin-bottom:0;padding-right:34px;min-height:48px;width:100%}
+.mm-rs-unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-size:0.8em;color:var(--text2);pointer-events:none}
+
+.mm-rs-pair-text{gap:8px}
+.mm-rs-pair-text .mm-input{flex:1 1 0;min-width:0;margin-bottom:0;min-height:48px}
+
+/* What the numbers mean, under the numbers: feet and inches because 114 is
+   hard to picture, and the area because that is the answer being sought. */
+.mm-rs-sub{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;
+  min-height:18px}
+.mm-rs-ft{font-size:0.78em;color:var(--text2)}
+.mm-rs-area{font-size:0.78em;font-weight:700;color:var(--accent)}
+.mm-rs-ft:empty,.mm-rs-area:empty{display:none}
+
+.mm-rs-del{flex:0 0 auto;width:44px;height:44px;border:none;border-radius:8px;
+  background:none;color:var(--text2);font-size:1.2em;line-height:1;
+  cursor:pointer}
+.mm-rs-del:hover{background:var(--danger-bg);color:var(--danger-text)}
+.mm-rs-del:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.mm-rs-total{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:12px;border-radius:10px;margin-bottom:10px;
+  background:color-mix(in srgb,var(--accent) 10%,var(--card2));
+  border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border))}
+.mm-rs-total span{font-weight:700;font-size:0.9em}
+.mm-rs-totalval{font-size:1.15em;color:var(--accent)}
+
+.mm-rs-hint{font-size:0.78em;color:var(--text2);line-height:1.5;
+  margin:0 0 12px}
+
+.mm-rs-actions{display:flex;gap:8px}
+.mm-rs-actions .mm-btn-sm{flex:1 1 0;min-height:48px}
+
+.mm-rs-error{color:var(--danger-text);font-size:0.85em;margin:10px 0 0;
+  line-height:1.5}
+.mm-rs-error:empty{display:none}
+
+/* ---- Phone --------------------------------------------------------------- */
+
+@media (max-width: 620px){
+  /* Width and length stay side by side — they are read as one measurement,
+     and stacking them doubles the height of every section. */
+  .mm-rs-row{padding:10px 8px;gap:6px}
+  .mm-rs-n{display:none}
+  .mm-rs-box .mm-input{padding-left:10px;padding-right:30px}
+  .mm-rs-unit{right:9px}
+
+  /* Door style and finish do stack: two words in half a phone width leaves
+     neither readable. */
+  .mm-rs-pair-text{flex-direction:column;gap:8px}
+  .mm-rs-pair-text .mm-input{width:100%}
+}
