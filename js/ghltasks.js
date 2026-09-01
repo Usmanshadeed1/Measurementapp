@@ -148,6 +148,7 @@ window.MM = window.MM || {};
     editing = null;
     // Arriving from the + Task button, the form is already what is wanted.
     adding = openAddOnLoad;
+    var cameToAdd = openAddOnLoad;
     openAddOnLoad = false;
 
     var el = document.getElementById('mm-job-ghltasks');
@@ -164,9 +165,27 @@ window.MM = window.MM || {};
       staff = window.MM.workerlist.assignableNames();
       tasks = parse(opp ? api.oppField(opp, FIELD_ID) : '');
       render();
+      if (cameToAdd) focusTitle();
     }).catch(function (e) {
       el.innerHTML = head(0) + '<div class="mm-empty">' + U.esc(e.message) + '</div>';
     });
+  }
+
+  // Straight into the task name. Someone who came here to add a task should
+  // be able to type it, not hunt for the box first.
+  function focusTitle() {
+    var card = document.getElementById('mm-job-ghltasks');
+    // The panel remembers being collapsed, and a field inside a closed panel
+    // cannot take focus — so open it before reaching for the input.
+    if (card && !card.classList.contains('is-open')) {
+      var bar = card.querySelector('.mm-steps-head');
+      if (bar) bar.click();
+    }
+    var f = document.getElementById('mm-gt-title');
+    if (!f) return;
+    f.focus();
+    // Scrolled into view as well: on a phone the panel can sit below the fold.
+    if (f.scrollIntoView) f.scrollIntoView({ block: 'center' });
   }
 
   function head(n) {
@@ -535,8 +554,7 @@ window.MM = window.MM || {};
     var add = el.querySelector('#mm-gt-add');
     if (add) add.addEventListener('click', function () {
       adding = true; editing = null; render();
-      var f = document.getElementById('mm-gt-title');
-      if (f) f.focus();
+      focusTitle();
     });
 
     var cancel = el.querySelector('#mm-gt-cancel');
