@@ -6,11 +6,17 @@
    allows, and the running square footage sits next to what produced it.
    ========================================================================== */
 
-.mm-rs{border:1px solid var(--border);border-radius:12px;background:var(--card);
-  padding:14px;margin-bottom:14px}
+.mm-rs{margin-bottom:14px}
 
-.mm-rs-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.mm-rs-title{font-weight:700;font-size:1.02em;flex:1 1 auto;min-width:0}
+/* Collapsed by default. A measurer opening a room is usually after the walls,
+   and two open panels push those off the screen on a phone. */
+.mm-rs-body{display:none;padding:0 14px 14px}
+.mm-rs.is-open .mm-rs-body{display:block}
+
+/* The count stays visible on the closed header, so the room can be read at a
+   glance without opening anything. */
+.mm-rs .mm-steps-head{cursor:pointer}
+.mm-rs .mm-steps-title{font-weight:700;font-size:1.02em;flex:1 1 auto;min-width:0}
 /* Empty until there is something to count, so the room does not open showing
    a meaningless zero. */
 .mm-rs-badge:empty{display:none}

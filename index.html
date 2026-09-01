@@ -16,7 +16,6 @@
 <link rel="stylesheet" href="css/templates.css">
 <link rel="stylesheet" href="css/meetings.css">
 <link rel="stylesheet" href="css/drivefolder.css">
-<link rel="stylesheet" href="css/cabinetdoors.css">
 <link rel="stylesheet" href="css/roomsize.css">
 </head>
 <body>
@@ -664,7 +663,6 @@
       <div class="card mm-steps-card" id="mm-job-notes"></div>
       <div class="card mm-steps-card" id="mm-job-docs"></div>
       <div class="card mm-steps-card" id="mm-job-drive" data-open="0"></div>
-      <div class="card mm-steps-card" id="mm-job-cabinetdoors" data-open="0"></div>
       <div class="card mm-steps-card" id="mm-job-history"></div>
     </div>
 
@@ -701,8 +699,8 @@
   </div>
   <div class="mm-content">
     <div class="card" id="mm-room-info"></div>
-    <div class="mm-rs" id="mm-room-size"></div>
-    <div class="mm-rs" id="mm-room-doors"></div>
+    <div class="card mm-steps-card mm-rs" id="mm-room-size" data-open="0"></div>
+    <div class="card mm-steps-card mm-rs" id="mm-room-doors" data-open="0"></div>
     <div class="mm-divider"></div>
     <div class="section-header"><span class="section-title">Walls</span><button class="mm-btn-sm mm-btn-primary" id="mm-add-wall-btn">+ Add Wall</button></div>
     <div id="mm-walls-list"></div>
@@ -752,7 +750,6 @@
 <script src="js/notes.js"></script>
 <script src="js/meetings.js"></script>
 <script src="js/drivefolder.js"></script>
-<script src="js/cabinetdoors.js"></script>
 <script src="js/roomsize.js"></script>
 <script src="js/jobdocs.js"></script>
 <script src="js/ghltasks.js"></script>

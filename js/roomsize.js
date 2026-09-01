@@ -94,10 +94,10 @@ window.MM = window.MM || {};
     if (!el) return;
     var rows = state[cfg.elId].rows;
 
-    var html = '<div class="mm-rs-head">' +
-        '<span class="mm-rs-title">' + cfg.title + '</span>' +
+    var html = '<div class="mm-steps-head">' +
+        '<span class="mm-steps-title">' + cfg.title + '</span>' +
         '<span class="mm-rs-badge">' + U.esc(cfg.badge(rows)) + '</span>' +
-      '</div>';
+      '</div><div class="mm-rs-body">';
 
     html += rows.length
       ? '<div class="mm-rs-list">' + rows.map(cfg.row).join('') + '</div>'
@@ -111,10 +111,12 @@ window.MM = window.MM || {};
         '<button type="button" class="mm-btn-sm mm-btn-primary mm-rs-save">' +
           cfg.saveLabel + '</button>' +
       '</div>' +
-      '<p class="mm-rs-error" role="alert"></p>';
+      '<p class="mm-rs-error" role="alert"></p></div>';
 
     el.innerHTML = html;
     bindPanel(el, cfg);
+    // The markup was just replaced, which drops the accordion wiring with it.
+    if (window.MM.wireJobPanels) window.MM.wireJobPanels('#screen-room');
   }
 
   function bindPanel(el, cfg) {
