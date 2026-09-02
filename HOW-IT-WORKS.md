@@ -130,10 +130,15 @@ needed.
 
 Nothing in the code names the host: every call is a relative `/api/...`
 path, so the app works under whatever domain Vercel serves it from. The
-Vercel project was renamed to `maximusmeasure` on 2 September 2026; the
-live URL is whatever the project's Domains page lists, since a clean
-`.vercel.app` subdomain is only granted when it is free across all of
-Vercel.
+Vercel project was renamed to `maximusmeasure` on 2 September 2026 and the
+live URL is now `maximusmeasure.vercel.app`. The old
+`measurementapp.vercel.app` redirects to it, so a link already saved to a
+phone keeps working.
+
+Renaming the project stopped GitHub pushes from triggering a build: the
+webhook still fired, but Vercel no longer matched it to the renamed
+project. Deploying once from the dashboard (Deployments -> ... -> Create
+Deployment -> main) re-established it.
 
 ## Contacts tab
 
