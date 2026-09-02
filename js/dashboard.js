@@ -240,25 +240,28 @@ window.MM = window.MM || {};
   //
   // Four numbers, always the same four, so the header never reshuffles as the
   // data changes. Only counts that need action are coloured.
+  // Counted straight off the pipeline stage, the same comparison the groups
+  // below use, so a card can never disagree with the section it names. The
+  // earlier cards inferred urgency from dates and read 37 of 38 urgent, which
+  // told nobody anything.
+  function countAtStage(id) {
+    return allJobs.filter(function (o) { return o.pipelineStageId === id; }).length;
+  }
+
   function renderStats() {
     var el = document.getElementById('mm-dash-stats');
-    var open = openJobs();
-    var urgent = open.filter(function (o) { return groupFlag(o).cls === 'urgent'; }).length;
-    var needAction = open.filter(function (o) {
-      var c = groupFlag(o).cls;
-      return c === 'urgent' || c === 'soon';
-    }).length;
 
     function stat(label, value, tone) {
       return '<div class="mm-stat mm-stat-' + tone + '">' +
         '<div class="mm-stat-num">' + value + '</div>' +
         '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
     }
+
     el.innerHTML =
-      stat('Active jobs', open.length, 'neutral') +
-      stat('Need action', needAction, needAction ? 'warn' : 'good') +
-      stat('Urgent', urgent, urgent ? 'bad' : 'good') +
-      stat('Finished', allJobs.filter(isCompleted).length, 'good');
+      stat('All jobs', allJobs.length, 'neutral') +
+      stat('New Leads', countAtStage(api.STAGE.newLead), 'warn') +
+      stat('Hired Maximus', countAtStage(api.STAGE_WON), 'good') +
+      stat('Job Completed', countAtStage(api.STAGE_COMPLETED), 'good');
   }
 
   // ---- Assign staff -------------------------------------------------------
