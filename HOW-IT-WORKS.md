@@ -124,9 +124,16 @@ same domain, which the host silently forwards to the proxy function,
 which attaches the real token server-side. The token lives only in the
 host's environment variables (`GHL_API_KEY`), never in any file.
 
-The app now runs on **Vercel** (`measurementapp.vercel.app`) after
-Netlify's free tier ran out of deploy credits. Both proxies are kept in
-the repo so it can move back if needed.
+The app now runs on **Vercel** after Netlify's free tier ran out of
+deploy credits. Both proxies are kept in the repo so it can move back if
+needed.
+
+Nothing in the code names the host: every call is a relative `/api/...`
+path, so the app works under whatever domain Vercel serves it from. The
+Vercel project was renamed to `maximusmeasure` on 2 September 2026; the
+live URL is whatever the project's Domains page lists, since a clean
+`.vercel.app` subdomain is only granted when it is free across all of
+Vercel.
 
 ## Contacts tab
 
