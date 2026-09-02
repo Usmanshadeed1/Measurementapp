@@ -411,10 +411,6 @@ window.MM = window.MM || {};
 
   // ---- Rendering ----------------------------------------------------------
 
-  var VIEW_NOTES = {
-    work: 'Every job, grouped by the stage it is in. Tap a section to open it.',
-  };
-
   function renderBody() {
     var el = document.getElementById('mm-dash-table');
     el.innerHTML = renderWorkList();
@@ -444,7 +440,6 @@ window.MM = window.MM || {};
   }
 
   function render() {
-    document.getElementById('mm-dash-view-note').textContent = VIEW_NOTES[activeView] || '';
     renderStats();
     renderBody();
   }
