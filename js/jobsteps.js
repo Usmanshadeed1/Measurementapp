@@ -75,9 +75,9 @@ window.MM = window.MM || {};
     var mark = opts.state === 'done' ? '&#10003;' : opts.num;
     var body;
 
-    if (opts.state === 'done') {
+    if (opts.state === 'done' && !opts.alwaysEditable) {
       body = '<div class="mm-step-value">' + U.esc(opts.valueText) + '</div>';
-    } else if (opts.state === 'active') {
+    } else if (opts.state === 'done' || opts.state === 'active') {
       body = '<div class="mm-step-action">' +
         '<input type="date" class="mm-input mm-step-date" id="' + opts.inputId + '"' +
         (opts.value ? ' value="' + U.esc(opts.value) + '"' : '') + ' aria-label="' + U.esc(opts.label) + '">' +
@@ -89,7 +89,8 @@ window.MM = window.MM || {};
             (opts.timeValue ? ' value="' + U.esc(opts.timeValue) + '"' : '') +
             ' aria-label="Time of the ' + U.esc(opts.label) + '">'
           : '') +
-        '<button type="button" class="mm-btn-sm mm-btn-primary" id="' + opts.btnId + '">Save</button>' +
+        '<button type="button" class="mm-btn-sm mm-btn-primary" id="' + opts.btnId + '">' +
+          U.esc(opts.saveLabel || 'Save') + '</button>' +
       '</div>';
     } else {
       body = '<div class="mm-step-waiting">' + U.esc(opts.waitingText || 'Waiting for the previous step') + '</div>';
@@ -137,13 +138,21 @@ window.MM = window.MM || {};
 
     var apptWhen = api.apptDateTime(o);
 
+    // The visit is the one step that gets rearranged after it is set -- a
+    // customer reschedules, or a time is added to a date booked before times
+    // existed. So its boxes stay on screen instead of collapsing to text.
+    var apptSet = !!appt;
+
     var html =
       stepHtml({
         num: 1, label: 'Measurement appointment', state: appt ? 'done' : 'active',
+        alwaysEditable: true,
         valueText: fmtLong(appt) + (apptWhen.time ? ' at ' + fmtTime(apptWhen.time) : ''),
         value: toInputDate(appt),
         timeId: 'mm-step-appt-time', timeValue: apptWhen.time,
-        inputId: 'mm-step-appt', btnId: 'mm-step-appt-save', note: apptNote,
+        inputId: 'mm-step-appt', btnId: 'mm-step-appt-save',
+        saveLabel: apptSet ? 'Update' : 'Save',
+        note: apptNote,
       }) +
       stepHtml({
         num: 2, label: 'Measurement complete',
@@ -218,7 +227,7 @@ window.MM = window.MM || {};
 
   // The appointment writes one text field holding both halves, then moves the
   // job on exactly as the other steps do.
-  function saveApptThenStage(o, date, time) {
+  function saveApptThenStage(o, date, time, moveStage) {
     return api.setApptDateTime(o.id, date, time)
       .then(function (r) {
         window.MM.activity.log('date', STEP_LABELS.appointment, {
@@ -229,11 +238,14 @@ window.MM = window.MM || {};
         return r;
       })
       .then(function () {
+        if (!moveStage) return null;
         var stageId = api.STAGE.apptBooked;
         if (!stageId || o.pipelineStageId === stageId) return null;
         return api.setOpportunityStage(o.id, stageId);
       })
-      .then(function () { o.pipelineStageId = api.STAGE.apptBooked; });
+      .then(function () {
+        if (moveStage) o.pipelineStageId = api.STAGE.apptBooked;
+      });
   }
 
   function saveDateThenStage(o, fieldKey, val, stageId) {
@@ -254,9 +266,14 @@ window.MM = window.MM || {};
   }
 
   function bind(o, st) {
-    if (!st.appt) wire('mm-step-appt-save', 'mm-step-appt', function (val) {
+    // Wired whether or not a date is already set, so the visit can be moved.
+    wire('mm-step-appt-save', 'mm-step-appt', function (val) {
       var t = document.getElementById('mm-step-appt-time');
-      return saveApptThenStage(o, val, t ? t.value : '');
+      // The stage moves only on the FIRST booking. Correcting the time on a
+      // job that has since been measured, quoted or won must leave it exactly
+      // where it is -- dragging Kevin Cook back from Hired Maximus to
+      // Measurement Appointment would be worse than no edit at all.
+      return saveApptThenStage(o, val, t ? t.value : '', !st.appt);
     });
 
     if (st.appt && !st.measured) wire('mm-step-meas-save', 'mm-step-meas', function (val) {
