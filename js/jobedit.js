@@ -30,15 +30,11 @@ window.MM = window.MM || {};
 
   // ---- Reading -------------------------------------------------------------
 
-  // The contact's own address, assembled the way the Contacts page shows it.
-  // Used as a fallback: a job with no property address of its own is almost
-  // always at the customer's address, and showing a blank hides something the
-  // app already knows.
+  // The customer's street line, used when a job has no property address of
+  // its own. Only the street: a job is titled and identified by it, and the
+  // town, postcode and country are noise everywhere this appears.
   function contactAddress(c) {
-    if (!c) return '';
-    var cityLine = [c.city, c.state].filter(Boolean).join(', ');
-    if (c.postalCode) cityLine = (cityLine + ' ' + c.postalCode).trim();
-    return [c.address1, cityLine, c.country].filter(Boolean).join(', ');
+    return c && c.address1 ? String(c.address1).trim() : '';
   }
 
 
@@ -46,25 +42,10 @@ window.MM = window.MM || {};
   // I 10-4 Islamabad, Islamabad, Pakistan 44000, US" is the property, but
   // "Street 105, I 10-4 Islamabad" is what identifies it to a person.
   //
-  // A job is named after the street. Splitting on the first comma does not
-  // work, because a street can contain one of its own -- "Street 105, I 10-4
-  // Islamabad". So the parts contactAddress() appended (town, state,
-  // postcode, country) are peeled off the end instead, leaving the street.
-  function rxEsc(v) { return String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-
-  function streetOf(addr) {
-    var out = String(addr || '').trim();
-    if (!contact) return out;
-    // Longest-first, and in the order they were appended, so "Islamabad" as a
-    // city does not strip "Islamabad" out of the street line before the
-    // country and postcode have gone.
-    [contact.country, contact.postalCode, contact.state, contact.city]
-      .forEach(function (part) {
-        if (!part) return;
-        out = out.replace(new RegExp('[,\\s]+' + rxEsc(part) + '\\s*$', 'i'), '');
-      });
-    return out.replace(/[,\s]+$/, '').trim();
-  }
+  // A job is a property, and the street line is how the property is named --
+  // matching the GoHighLevel workflow, which titles jobs "Customer - Street".
+  // The town, postcode and country are not stored here at all.
+  function streetOf(addr) { return String(addr || '').trim(); }
 
   // ---- The form ------------------------------------------------------------
 
@@ -76,7 +57,8 @@ window.MM = window.MM || {};
     // The job's own address if it has one, otherwise the customer's, already
     // filled in. Asking someone to retype an address the app can see, or to
     // press a button to accept it, is work for no reason.
-    var addr = api.oppField(job, api.ADDR_FIELD_ID) || contactAddress(contact);
+    var addr = api.oppField(job, api.ADDR_FIELD_ID) ||
+      (contact.address1 ? String(contact.address1).trim() : '');
 
     var f = document.getElementById('mm-je-form');
     f.innerHTML =
