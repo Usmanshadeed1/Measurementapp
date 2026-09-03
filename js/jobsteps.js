@@ -24,6 +24,38 @@ window.MM = window.MM || {};
     return h12 + ':' + p[1] + ' ' + ampm;
   }
 
+  // Half-hour slots through the working day. A native <input type="time">
+  // keeps its minute segment when only the hour is changed, which silently
+  // stored "2 PM" as 14:12 -- a list cannot go wrong that way, and on a phone
+  // it is one tap instead of three.
+  function timeOptions(selected) {
+    var out = '<option value="">No time</option>';
+    var found = false;
+    for (var h = 6; h <= 20; h++) {
+      for (var m = 0; m < 60; m += 30) {
+        var v = (h < 10 ? '0' + h : h) + ':' + (m === 0 ? '00' : m);
+        var on = v === selected;
+        if (on) found = true;
+        out += '<option value="' + v + '"' + (on ? ' selected' : '') + '>' +
+          U.esc(fmtTime(v)) + '</option>';
+      }
+    }
+    // A time already stored that is not on the half hour still has to show,
+    // or opening the form would silently change it.
+    if (selected && !found) {
+      out += '<option value="' + U.esc(selected) + '" selected>' +
+        U.esc(fmtTime(selected)) + '</option>';
+    }
+    return out;
+  }
+
+  function timePicker(id, value, label) {
+    return '<select class="mm-input mm-step-time" id="' + id + '" ' +
+      'aria-label="Time of the ' + U.esc(label) + '">' +
+      timeOptions(value || '') +
+    '</select>';
+  }
+
   function dateVal(o, key) {
     return api.oppField(o, api.DATE_FIELD_IDS[key]);
   }
@@ -84,11 +116,7 @@ window.MM = window.MM || {};
         // Only the measurement visit carries a time: someone has to be at a
         // property at an hour. The rest record when work was finished, where
         // an hour would be noise.
-        (opts.timeId
-          ? '<input type="time" class="mm-input mm-step-time" id="' + opts.timeId + '"' +
-            (opts.timeValue ? ' value="' + U.esc(opts.timeValue) + '"' : '') +
-            ' aria-label="Time of the ' + U.esc(opts.label) + '">'
-          : '') +
+        (opts.timeId ? timePicker(opts.timeId, opts.timeValue, opts.label) : '') +
         '<button type="button" class="mm-btn-sm mm-btn-primary" id="' + opts.btnId + '">' +
           U.esc(opts.saveLabel || 'Save') + '</button>' +
       '</div>';
