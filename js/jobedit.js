@@ -42,6 +42,30 @@ window.MM = window.MM || {};
   }
 
 
+  // The first line of an address: what a job is named after. "Street 105,
+  // I 10-4 Islamabad, Islamabad, Pakistan 44000, US" is the property, but
+  // "Street 105, I 10-4 Islamabad" is what identifies it to a person.
+  //
+  // A job is named after the street. Splitting on the first comma does not
+  // work, because a street can contain one of its own -- "Street 105, I 10-4
+  // Islamabad". So the parts contactAddress() appended (town, state,
+  // postcode, country) are peeled off the end instead, leaving the street.
+  function rxEsc(v) { return String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function streetOf(addr) {
+    var out = String(addr || '').trim();
+    if (!contact) return out;
+    // Longest-first, and in the order they were appended, so "Islamabad" as a
+    // city does not strip "Islamabad" out of the street line before the
+    // country and postcode have gone.
+    [contact.country, contact.postalCode, contact.state, contact.city]
+      .forEach(function (part) {
+        if (!part) return;
+        out = out.replace(new RegExp('[,\\s]+' + rxEsc(part) + '\\s*$', 'i'), '');
+      });
+    return out.replace(/[,\s]+$/, '').trim();
+  }
+
   // ---- The form ------------------------------------------------------------
 
   function open(o, c, after) {
@@ -146,9 +170,13 @@ window.MM = window.MM || {};
     // either half is corrected. Renamed only when BOTH halves are present:
     // with an empty address the title would collapse to the bare name and the
     // address in it would be lost for good.
+    // The street line alone, matching how the GoHighLevel workflow names a
+    // job. The full postal address is kept in the field; repeating the town,
+    // postcode and country in the title makes every list unreadable.
+    var street = streetOf(addr);
     var newName = '';
-    if (addr) {
-      newName = U.titleCase(name) + ' - ' + addr;
+    if (street) {
+      newName = U.titleCase(name) + ' - ' + street;
       if (newName !== job.name) work.push(api.renameOpportunity(jobId, newName));
     }
 
