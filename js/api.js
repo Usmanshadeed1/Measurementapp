@@ -26,14 +26,11 @@ window.MM = window.MM || {};
   // The measurement visit is the one step with a time as well as a date:
   // someone has to drive to a property at an hour. A GoHighLevel DATE field
   // cannot hold a time, so it lives in a text field as "2026-09-10|14:00" --
-  // the same reason design meetings are stored as text.
-  //
-  // The old date-only field is still read as a fallback, so the jobs booked
-  // before this existed keep showing their appointment.
+  // the same reason design meetings are stored as text. The date-only field
+  // this replaced was deleted once every job had been moved across.
   var APPT_DT_FIELD_ID = 'aWhcYS6Y54Xm9mfKDmkq';
 
   var DATE_FIELD_IDS = {
-    appointment: 'MIs9bBh66P2gsXjDNfOQ',   // legacy date-only, still read
     measured: 'iM2aDumKi2NctsUP80bd',      // when measuring was finished
     design: 'nZtlNKXw54QNcDFZLUhc',        // when the design was finished
     pricing: 'ZwMwQt4rCYOvxzYfTdPu',       // when pricing was finished
@@ -308,21 +305,13 @@ window.MM = window.MM || {};
     }).then(function (d) { return d.opportunity; });
   }
 
-  // The measurement appointment as { date, time }. Reads the new text field
-  // first and falls back to the old date-only one, so nothing booked before
-  // the change disappears.
+  // The measurement appointment as { date, time }, from "2026-09-10|14:00".
+  // A date with no time is normal and comes back with time as ''.
   function apptDateTime(o) {
-    var raw = oppField(o, APPT_DT_FIELD_ID);
-    if (raw) {
-      var p = String(raw).split('|');
-      return { date: (p[0] || '').trim(), time: (p[1] || '').trim() };
-    }
-    return { date: oppField(o, DATE_FIELD_IDS.appointment), time: '' };
+    var p = String(oppField(o, APPT_DT_FIELD_ID) || '').split('|');
+    return { date: (p[0] || '').trim(), time: (p[1] || '').trim() };
   }
 
-  // Written to the text field only. The old field is left exactly as it is:
-  // it still holds real dates on jobs booked earlier, and clearing it would
-  // destroy them.
   function setApptDateTime(oppId, date, time) {
     var v = date ? (time ? date + '|' + time : date) : '';
     return setOpportunityField(oppId, APPT_DT_FIELD_ID, v);

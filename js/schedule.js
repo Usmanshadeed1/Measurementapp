@@ -23,7 +23,7 @@ window.MM = window.MM || {};
   var loaded = false;
   var onOpenJob = null;
 
-  var filters = { worker: '', job: '', status: 'all' };
+  var filters = { worker: '', job: '', status: 'all', kind: 'all' };
   var searchTerm = '';
 
   // An optional date window. Both null means show everything, which is the
@@ -229,10 +229,47 @@ window.MM = window.MM || {};
     if (filters.job && item.jobId !== filters.job) return false;
     if (filters.worker &&
         !window.MM.ghltasks.isAssignedTo(item.who, filters.worker)) return false;
+    // To do / Done / Overdue describe a task. A visit has no such state, so
+    // it steps aside rather than claiming one it does not have.
+    if (item.isVisit) return filters.status === 'all';
     if (filters.status === 'done') return !!item.done;
     if (filters.status === 'open') return !item.done;
     if (filters.status === 'late') return !item.done && item.end < today();
     return true;
+  }
+
+  // The booked measurement visits, in the same shape as a task span so every
+  // view, filter and search downstream treats them alike. Built from the jobs
+  // already loaded for the job filter, so this costs no extra request.
+  //
+  // A visit is not work to tick off -- it is an appointment at an hour --
+  // so it carries its time and is marked as its own kind.
+  function visitSpans() {
+    var out = [];
+    (jobs || []).forEach(function (o) {
+      var when = api.apptDateTime(o);
+      var d = parseDay(when.date);
+      if (!d) return;
+      out.push({
+        id: 'visit:' + o.id, raw: null, isVisit: true,
+        jobId: o.id,
+        title: 'Measurement visit',
+        job: jobLabel(o),
+        who: '',
+        time: when.time,
+        start: d, end: d,
+        // A visit is never "done": it happens or it does not, and the
+        // measurement date is what records that it happened.
+        done: false,
+      });
+    });
+    return out;
+  }
+
+  function jobLabel(o) {
+    if (o.contact && o.contact.name) return U.titleCase(o.contact.name);
+    var n = o.name || '';
+    return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
 
   // A task with only one of the two dates is treated as a single day.
@@ -252,8 +289,14 @@ window.MM = window.MM || {};
   }
 
   function spans() {
-    return tasks.map(toSpan).filter(Boolean)
-      .filter(passes).filter(inRange).filter(matchesSearch);
+    var list = [];
+    if (filters.kind !== 'visits') {
+      list = tasks.map(toSpan).filter(Boolean);
+    }
+    if (filters.kind !== 'tasks') {
+      list = list.concat(visitSpans());
+    }
+    return list.filter(passes).filter(inRange).filter(matchesSearch);
   }
 
   function itemsOn(d) {
@@ -308,13 +351,31 @@ window.MM = window.MM || {};
 
   function chip(item, opts) {
     opts = opts || {};
-    var cls = 'mm-ev' + (item.done ? ' is-done' : (isLate(item) ? ' is-late' : ''));
+    // A visit is an appointment somebody has to attend, not work to tick off,
+    // so it is coloured apart from the tasks and leads with its time.
+    var cls = item.isVisit
+      ? 'mm-ev is-visit'
+      : 'mm-ev' + (item.done ? ' is-done' : (isLate(item) ? ' is-late' : ''));
     var sub = opts.showWho && item.who ? item.who : item.job;
+    var title = item.isVisit && item.time
+      ? fmtTime(item.time) + ' \u00b7 ' + item.title
+      : item.title;
     return '<button type="button" class="' + cls + '" data-open="' + U.esc(item.jobId || '') + '">' +
-      '<span class="mm-ev-title">' + U.esc(item.title) + '</span>' +
+      '<span class="mm-ev-title">' + U.esc(title) + '</span>' +
       (sub ? '<span class="mm-ev-job">' + U.esc(sub) + '</span>' : '') +
       (opts.note ? '<span class="mm-ev-when">' + U.esc(opts.note) + '</span>' : '') +
     '</button>';
+  }
+
+  // 14:00 is what is stored; 2:00 PM is what people say.
+  function fmtTime(hhmm) {
+    var p = String(hhmm || '').split(':');
+    if (p.length < 2) return hhmm || '';
+    var h = parseInt(p[0], 10);
+    if (isNaN(h)) return hhmm;
+    var ampm = h < 12 ? 'AM' : 'PM';
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + ':' + p[1] + ' ' + ampm;
   }
 
   // A day's chips, capped, with a "+n more" that opens the day.
@@ -597,6 +658,9 @@ window.MM = window.MM || {};
     document.getElementById('mm-sc-status').addEventListener('change', function () {
       filters.status = this.value; render();
     });
+    document.getElementById('mm-sc-kind').addEventListener('change', function () {
+      filters.kind = this.value; render();
+    });
     ['mm-sc-from', 'mm-sc-to'].forEach(function (id) {
       document.getElementById(id).addEventListener('change', function () {
         readDates();
@@ -608,7 +672,7 @@ window.MM = window.MM || {};
     });
 
     document.getElementById('mm-sc-clear').addEventListener('click', function () {
-      filters = { worker: '', job: '', status: 'all' };
+      filters = { worker: '', job: '', status: 'all', kind: 'all' };
       searchTerm = '';
       document.getElementById('mm-sc-search').value = '';
       document.getElementById('mm-sc-hits').hidden = true;
@@ -618,6 +682,7 @@ window.MM = window.MM || {};
       document.getElementById('mm-sc-worker').value = '';
       document.getElementById('mm-sc-job').value = '';
       document.getElementById('mm-sc-status').value = 'all';
+      document.getElementById('mm-sc-kind').value = 'all';
       cursor = today();
       render();
     });

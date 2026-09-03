@@ -287,3 +287,10 @@
   .mm-sc-week{grid-auto-columns:86%}
   .mm-sc-pop{max-width:none;max-height:88vh}
 }
+
+/* A measurement visit, not a task. An appointment somebody attends at an
+   hour, so it is coloured apart from the work and never shows as overdue. */
+.mm-ev.is-visit{background:color-mix(in srgb,var(--accent) 18%,var(--card));
+  border-left-color:var(--accent);color:var(--text)}
+.mm-ev.is-visit .mm-ev-title{font-weight:700}
+.mm-ev.is-visit:hover{background:color-mix(in srgb,var(--accent) 26%,var(--card))}
