@@ -245,15 +245,19 @@
 .mm-mytask-pencil:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 @media (max-width: 620px){
-  /* The badge and pencil stack so neither squeezes the task title. */
-  .mm-mytask-side{flex-direction:column;align-items:flex-end;gap:6px}
+  /* On a phone the badge and pencil move BELOW the task, across the full
+     width. Stacked in a right-hand column they reserved space the title
+     needed, leaving it three or four words wide. */
+  .mm-mytask{flex-wrap:wrap}
+  .mm-mytask-main{flex:1 1 100%}
+  .mm-mytask-side{width:100%;justify-content:space-between;
+    align-items:center;margin-top:10px;padding-left:38px}
 }
 
-/* The badge now carries both dates, so it must be allowed to wrap here — as
-   one nowrap line it would squeeze the task title on a phone. Capped so it
-   stays a badge rather than becoming a paragraph. */
-.mm-mytask-side .mm-jflag{white-space:normal;text-align:right;
-  max-width:14ch;line-height:1.35}
+/* One line, always. A date broken across two lines is harder to read than a
+   slightly smaller one, so the badge shrinks on a phone rather than wrapping.
+   The text itself is kept short enough to fit -- see fmtShort in mytasks.js. */
+.mm-mytask-side .mm-jflag{white-space:nowrap}
 @media (max-width: 620px){
-  .mm-mytask-side .mm-jflag{max-width:11ch}
+  .mm-mytask-side .mm-jflag{font-size:0.78em;padding:3px 8px}
 }

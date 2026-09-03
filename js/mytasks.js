@@ -197,22 +197,35 @@ window.MM = window.MM || {};
     '</div>';
   }
 
+  // Without the weekday: used where two dates share one badge and the day
+  // name would push it onto a second line.
+  function fmtShort(v) {
+    if (!v) return '';
+    var p = String(v).split('-');
+    if (p.length !== 3) return v;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d.getTime()) ? v
+      : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
   function taskCard(t) {
     // Both dates live in the badge, which is where someone looks for "when".
     // A start date on its own line below the job read as a second, competing
     // answer -- "From Aug 26" beside a badge saying "No date".
     var d = daysTo(t.end);
     var flag = d === null ? ''
-      : d < 0 ? Math.abs(d) + ' day' + (Math.abs(d) === 1 ? '' : 's') + ' late'
+      : d < 0 ? Math.abs(d) + 'd late'
       : d === 0 ? 'Due today'
       : d === 1 ? 'Due tomorrow'
-      : 'Due ' + fmt(t.end);
+      : 'Due ' + fmtShort(t.end);
     var cls = d !== null && d < 0 ? 'urgent' : d === 0 ? 'soon' : '';
 
-    // The start is shown only when it adds something the due date does not.
-    var from = t.start ? 'From ' + fmt(t.start) : '';
-    if (!flag) flag = from || 'No dates set';
-    else if (from) flag = from + ' \u00b7 ' + flag;
+    // Short enough to stay on one line. The weekday is dropped once both
+    // dates are shown -- "Aug 26 - Sep 12" is the span, and the day name is
+    // decoration that costs the badge a second line.
+    var from = t.start ? fmt(t.start) : '';
+    if (!flag) flag = from ? 'From ' + from : 'No dates';
+    else if (from) flag = fmtShort(t.start) + ' \u2192 ' + flag.replace(/^Due /, '');
 
 
     return '<div class="mm-mytask' + ((t.status === 'done') ? ' is-done' : '') + '">' +
