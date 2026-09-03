@@ -11,6 +11,7 @@ window.MM = window.MM || {};
   var U = window.MM.utils, auth = window.MM.auth;
 
   var rows = [];
+  var jobsById = {};   // every job the tasks came from, for opening one
 
   function db(method, path, body) { return auth.dbFetch(method, path, body); }
 
@@ -70,6 +71,9 @@ window.MM = window.MM || {};
         var ops = (res[0] || []).filter(function (o) {
           return o.pipelineId === window.MM.api.SALES_PIPELINE_ID;
         });
+
+        jobsById = {};
+        ops.forEach(function (o) { jobsById[o.id] = o; });
 
         // A task now records its worker as a name, so that is what is matched.
         rows = window.MM.ghltasks.tasksFromJobs(ops).filter(function (t) {
@@ -219,10 +223,19 @@ window.MM = window.MM || {};
         '<div class="mm-mytask-title">' + U.esc(t.title) + '</div>' +
         '<div class="mm-mytask-jobrow">' +
           '<span class="mm-mytask-joblabel">Job</span>' +
-          '<span class="mm-mytask-jobname">' + U.esc(t.jobName || 'Not recorded') + '</span>' +
+          // A link only where it will actually open. Task assignment and job
+          // access are separate checks, so a worker can hold a task on a job
+          // they are not crewed to -- there the name stays plain text rather
+          // than becoming a link that silently does nothing.
+          (t.jobId && jobsById[t.jobId] && window.MM.jobaccess.canOpen(t.jobId)
+            ? '<button type="button" class="mm-mytask-jobname mm-mytask-joblink" ' +
+                'data-openjob="' + U.esc(t.jobId) + '" ' +
+                'aria-label="Open the job ' + U.esc(t.jobName || '') + '">' +
+                U.esc(t.jobName || 'Not recorded') + '</button>'
+            : '<span class="mm-mytask-jobname">' +
+                U.esc(t.jobName || 'Not recorded') + '</span>') +
         '</div>' +
         '<div class="mm-mytask-dates">' + range + '</div>' +
-        (t.notes ? '<div class="mm-mytask-notes">' + U.esc(t.notes) + '</div>' : '') +
         ((t.items || []).length ? checklist(t) : '') +
       '</div>' +
       '<span class="mm-jflag mm-jflag-' + cls + '">' + U.esc(flag) + '</span>' +
@@ -230,6 +243,15 @@ window.MM = window.MM || {};
   }
 
   function bind(el) {
+    el.querySelectorAll('[data-openjob]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        // The card carries its own controls, so this keeps its tap to itself.
+        e.stopPropagation();
+        var o = jobsById[b.getAttribute('data-openjob')];
+        if (o && onOpenJob) onOpenJob(o);
+      });
+    });
+
     el.querySelectorAll('[data-sub]').forEach(function (b) {
       b.addEventListener('click', function () {
         var parts = b.getAttribute('data-sub').split('.');
