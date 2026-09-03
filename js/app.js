@@ -85,6 +85,27 @@
     var n = o.name || '';
     return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
+  // A job with no property address of its own is almost always at the
+  // customer's address — showing a dash hides something the app already knows.
+  // Labelled, so a borrowed address is never mistaken for a confirmed one.
+  function addressLine(o, c) {
+    var own = jobAddress(o);
+    if (own) {
+      return '<div class="mm-field-display"><div class="flabel">Address</div>' +
+        '<div class="fvalue">' + U.esc(own) + '</div></div>';
+    }
+    // Only what the slim contact actually carries. When it has no address
+    // parts the dash stands, and the edit form offers the full one.
+    var borrowed = window.MM.jobedit.contactAddress(c);
+    if (!borrowed) {
+      return '<div class="mm-field-display"><div class="flabel">Address</div>' +
+        '<div class="fvalue">—</div></div>';
+    }
+    return '<div class="mm-field-display"><div class="flabel">Address</div>' +
+      '<div class="fvalue">' + U.esc(borrowed) +
+        '<span class="mm-addr-from">from the customer record</span></div></div>';
+  }
+
   function jobAddress(o) {
     return api.oppField(o, api.ADDR_FIELD_ID);
   }
@@ -212,6 +233,10 @@
           '<span class="mm-stage-name">' + U.esc(stage || 'No stage') +
             ' <span aria-hidden="true">&#9662;</span></span>' +
         '</button>' +
+        (window.MM.jobedit.canEdit()
+          ? '<button type="button" class="mm-job-editbtn" id="mm-job-edit-btn" ' +
+              'aria-label="Edit the customer details for this job">&#9998;</button>'
+          : '') +
       '</div>' +
       '<div class="mm-field-display"><div class="flabel">Customer</div><div class="fvalue">' + U.esc(customerName(o)) + '</div></div>' +
       (c.phone
@@ -220,8 +245,27 @@
       (c.email
         ? '<div class="mm-field-display"><div class="flabel">Email</div><div class="fvalue">' +
           '<a href="mailto:' + U.esc(c.email) + '">' + U.esc(c.email) + '</a></div></div>' : '') +
-      '<div class="mm-field-display"><div class="flabel">Address</div><div class="fvalue">' + U.esc(jobAddress(o) || '—') + '</div></div>' +
+      addressLine(o, c) +
       '<div class="mm-field-display"><div class="flabel">Job ID</div><div class="fvalue mono">' + U.esc(o.id) + '</div></div>';
+
+    var editBtn = document.getElementById('mm-job-edit-btn');
+    if (editBtn) editBtn.addEventListener('click', function (e) {
+      // The panel header collapses on click, so this keeps its own tap.
+      e.stopPropagation();
+      // Reopening the job re-reads it, so the panel shows what was saved
+      // rather than what was typed.
+      // The contact riding on an opportunity is a slim one — name, phone,
+      // email — with no address parts, so it is read in full first.
+      editBtn.disabled = true;
+      api.getContact(c.id)
+        .catch(function () { return c; })
+        .then(function (full) {
+          editBtn.disabled = false;
+          window.MM.jobedit.open(o, full || c, function () {
+            pickJob(o, 'overview', 'edit');
+          });
+        });
+    });
 
     var stageBtn = document.getElementById('mm-job-stage-btn');
     if (stageBtn) stageBtn.addEventListener('click', function (e) {
@@ -683,6 +727,7 @@
   WORKERS.init();
   CHECK.init(function (o) { pickJob(o, 'tasks', 'checklist'); });
   TPL.init();
+  window.MM.jobedit.init();
   // The start date box only makes sense for the two dated options.
   document.querySelectorAll('input[name="mm-tl-mode"]').forEach(function (r) {
     r.addEventListener('change', function () {

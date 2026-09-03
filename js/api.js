@@ -281,6 +281,13 @@ window.MM = window.MM || {};
       .then(function (d) { return d.opportunity; });
   }
 
+  // Renames an opportunity. A job is titled "Customer - Address", so this is
+  // needed whenever either half is corrected.
+  function renameOpportunity(oppId, name) {
+    return apiFetch('PUT', '/opportunities/' + oppId, { name: name })
+      .then(function (d) { return d.opportunity; });
+  }
+
   // Writes one custom field on an opportunity. GHL expects customFields as an
   // array of { id, value }; other fields on the record are left untouched.
   // Note the asymmetry: writes take `value`, but reads come back as
@@ -376,7 +383,7 @@ window.MM = window.MM || {};
     STAGE_AFTER_PRICING: STAGE_AFTER_PRICING, STAGE_PROPOSAL_SENT: STAGE_PROPOSAL_SENT,
     STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
     STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
-    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, createOpportunity: createOpportunity, setOpportunityField: setOpportunityField, getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
+    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, createOpportunity: createOpportunity, setOpportunityField: setOpportunityField, renameOpportunity: renameOpportunity, getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact, updateContact: updateContact,

@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="css/meetings.css">
 <link rel="stylesheet" href="css/drivefolder.css">
 <link rel="stylesheet" href="css/roomsize.css">
+<link rel="stylesheet" href="css/jobedit.css">
 </head>
 <body>
 
@@ -577,6 +578,17 @@
   </div>
 </div>
 
+<!-- Edit customer details from a job -->
+<div class="mm-modal-overlay" id="mm-modal-jobedit">
+  <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-je-heading">
+    <div class="mm-modal-title" id="mm-je-heading">Edit customer details</div>
+    <div id="mm-je-form"></div>
+    <p class="mm-assign-error" id="mm-je-error" role="alert"></p>
+    <button class="mm-btn mm-btn-primary" id="mm-je-save">Save changes</button>
+    <button class="mm-btn mm-btn-secondary" id="mm-je-cancel">Cancel</button>
+  </div>
+</div>
+
 <!-- Add Contact modal -->
 <div class="mm-modal-overlay" id="mm-modal-contact">
   <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-contact-modal-title">
@@ -742,6 +754,7 @@
 <script src="js/walls.js"></script>
 <script src="js/lighting.js"></script>
 <script src="js/contacts.js"></script>
+<script src="js/jobedit.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/newjob.js"></script>
 <script src="js/jobsteps.js"></script>
