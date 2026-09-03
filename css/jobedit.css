@@ -27,15 +27,6 @@
 .mm-je-groupnote{font-size:0.78em;color:var(--text2);line-height:1.45;
   margin:0 0 12px}
 
-/* Offered only when the job has no address of its own — one tap rather than
-   retyping what the app can already see. */
-.mm-je-use{display:block;width:100%;text-align:left;margin-top:-4px;
-  padding:10px 12px;min-height:44px;border-radius:8px;cursor:pointer;
-  border:1px dashed var(--accent);background:transparent;
-  color:var(--accent);font-size:0.82em;line-height:1.4}
-.mm-je-use:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}
-.mm-je-use:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-
 @media (max-width: 620px){
   .mm-je-group{padding:12px}
 }

@@ -48,6 +48,11 @@ window.MM = window.MM || {};
     contact = c || {};
     onSaved = after || null;
 
+    // The job's own address if it has one, otherwise the customer's, already
+    // filled in. Asking someone to retype an address the app can see, or to
+    // press a button to accept it, is work for no reason.
+    var addr = api.oppField(job, api.ADDR_FIELD_ID) || contactAddress(contact);
+
     var f = document.getElementById('mm-je-form');
     f.innerHTML =
       group('The customer',
@@ -59,9 +64,7 @@ window.MM = window.MM || {};
         field('mm-je-email', 'Email', contact.email || '', 'email')) +
       group('This job',
         'The property being worked on. Only this job uses it.',
-        field('mm-je-addr', 'Property address',
-          api.oppField(job, api.ADDR_FIELD_ID) || '') +
-        hint());
+        field('mm-je-addr', 'Property address', addr));
 
     document.getElementById('mm-je-error').textContent = '';
     var btn = document.getElementById('mm-je-save');
@@ -70,16 +73,6 @@ window.MM = window.MM || {};
 
     document.getElementById('mm-modal-jobedit').classList.add('open');
     document.getElementById('mm-je-first').focus();
-  }
-
-  // Offered when the job has no address but the customer does: the usual case
-  // is a job created before the address was filled in.
-  function hint() {
-    var have = api.oppField(job, api.ADDR_FIELD_ID);
-    var fromContact = contactAddress(contact);
-    if (have || !fromContact) return '';
-    return '<button type="button" class="mm-je-use" id="mm-je-use">' +
-      'Use the customer address: ' + U.esc(fromContact) + '</button>';
   }
 
   function group(title, note, body) {
@@ -149,10 +142,12 @@ window.MM = window.MM || {};
     }
 
     // The job is titled "Customer - Address", so it goes stale the moment
-    // either half is corrected.
-    var title = [U.titleCase(name), addr].filter(Boolean).join(' - ');
-    if (title && title !== job.name) {
-      work.push(api.renameOpportunity(jobId, title));
+    // either half is corrected. Renamed only when BOTH halves are present:
+    // with an empty address the title would collapse to the bare name and the
+    // address in it would be lost for good.
+    if (addr) {
+      var title = U.titleCase(name) + ' - ' + addr;
+      if (title !== job.name) work.push(api.renameOpportunity(jobId, title));
     }
 
     Promise.all(work)
@@ -182,17 +177,6 @@ window.MM = window.MM || {};
     var overlay = document.getElementById('mm-modal-jobedit');
     if (overlay) overlay.addEventListener('click', function (e) {
       if (e.target === overlay) close();
-    });
-
-    // The "use the customer address" button lives inside the form, which is
-    // rebuilt each time it opens, so it is caught here rather than bound.
-    var form = document.getElementById('mm-je-form');
-    if (form) form.addEventListener('click', function (e) {
-      if (!e.target || e.target.id !== 'mm-je-use') return;
-      var box = document.getElementById('mm-je-addr');
-      box.value = contactAddress(contact);
-      e.target.remove();
-      box.focus();
     });
   }
 
