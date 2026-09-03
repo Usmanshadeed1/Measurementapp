@@ -200,6 +200,9 @@
 .mm-step-late{color:var(--danger-text);font-weight:700}
 .mm-step-action{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .mm-step-date{width:auto;min-width:170px;flex:0 1 auto}
+/* Only the measurement visit has one. Narrower than the date box because a
+   time is shorter, and it sits beside it as one reading: the 10th at 2pm. */
+.mm-step-time{width:auto;min-width:120px;flex:0 1 auto}
 .mm-step-error{color:var(--danger-text);font-size:.86em;margin-top:12px}
 .mm-step-error:empty{display:none}
 .mm-step-final{margin-top:16px;padding:12px 14px;border-radius:10px;
@@ -238,6 +241,8 @@
   .mm-jbar{max-width:none}
   .mm-step-action{flex-direction:column;align-items:stretch}
   .mm-step-date{width:100%;min-width:0}
+  /* On a phone they stack, so both keep a full tappable width. */
+  .mm-step-time{width:100%;min-width:0}
   .mm-step-action .mm-btn-sm{width:100%}
 }
 

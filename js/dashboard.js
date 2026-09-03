@@ -28,7 +28,9 @@ window.MM = window.MM || {};
   // ---- Reading a job ------------------------------------------------------
 
   function dv(o, key) { return api.oppField(o, api.DATE_FIELD_IDS[key]); }
-  function apptDate(o) { return dv(o, 'appointment'); }
+  // The new date+time field, falling back to the old date-only one for jobs
+  // booked before the change.
+  function apptDate(o) { return api.apptDateTime(o).date; }
   function measuredDate(o) { return dv(o, 'measured'); }
   function designDate(o) { return dv(o, 'design'); }
   function pricingDate(o) { return dv(o, 'pricing'); }

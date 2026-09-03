@@ -28,7 +28,7 @@ window.MM = window.MM || {};
     return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ') : '';
   }
   function measuredDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.measured); }
-  function apptDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.appointment); }
+  function apptDate(o) { return api.apptDateTime(o).date; }
 
   function fmt(v) {
     if (!v) return '';

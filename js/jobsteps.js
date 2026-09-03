@@ -13,6 +13,17 @@ window.MM = window.MM || {};
   var currentJob = null;
   var onJobChanged = null;   // lets app.js refresh its own view after a save
 
+  // Stored as 24-hour so it sorts and compares; shown the way it is spoken.
+  function fmtTime(hhmm) {
+    var p = String(hhmm || '').split(':');
+    if (p.length < 2) return hhmm || '';
+    var h = parseInt(p[0], 10);
+    if (isNaN(h)) return hhmm;
+    var ampm = h < 12 ? 'AM' : 'PM';
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + ':' + p[1] + ' ' + ampm;
+  }
+
   function dateVal(o, key) {
     return api.oppField(o, api.DATE_FIELD_IDS[key]);
   }
@@ -70,6 +81,14 @@ window.MM = window.MM || {};
       body = '<div class="mm-step-action">' +
         '<input type="date" class="mm-input mm-step-date" id="' + opts.inputId + '"' +
         (opts.value ? ' value="' + U.esc(opts.value) + '"' : '') + ' aria-label="' + U.esc(opts.label) + '">' +
+        // Only the measurement visit carries a time: someone has to be at a
+        // property at an hour. The rest record when work was finished, where
+        // an hour would be noise.
+        (opts.timeId
+          ? '<input type="time" class="mm-input mm-step-time" id="' + opts.timeId + '"' +
+            (opts.timeValue ? ' value="' + U.esc(opts.timeValue) + '"' : '') +
+            ' aria-label="Time of the ' + U.esc(opts.label) + '">'
+          : '') +
         '<button type="button" class="mm-btn-sm mm-btn-primary" id="' + opts.btnId + '">Save</button>' +
       '</div>';
     } else {
@@ -91,7 +110,7 @@ window.MM = window.MM || {};
     var el = document.getElementById('mm-job-steps');
     if (!el) return;
 
-    var appt = dateVal(o, 'appointment');
+    var appt = api.apptDateTime(o).date;
     var measured = dateVal(o, 'measured');
     var design = dateVal(o, 'design');
     var pricing = dateVal(o, 'pricing');
@@ -116,10 +135,14 @@ window.MM = window.MM || {};
         (Math.abs(d) === 1 ? '' : 's') + ' ago &mdash; not measured yet</span>';
     }
 
+    var apptWhen = api.apptDateTime(o);
+
     var html =
       stepHtml({
         num: 1, label: 'Measurement appointment', state: appt ? 'done' : 'active',
-        valueText: fmtLong(appt), value: toInputDate(appt),
+        valueText: fmtLong(appt) + (apptWhen.time ? ' at ' + fmtTime(apptWhen.time) : ''),
+        value: toInputDate(appt),
+        timeId: 'mm-step-appt-time', timeValue: apptWhen.time,
         inputId: 'mm-step-appt', btnId: 'mm-step-appt-save', note: apptNote,
       }) +
       stepHtml({
@@ -193,6 +216,26 @@ window.MM = window.MM || {};
     completed: 'Marked the job completed',
   };
 
+  // The appointment writes one text field holding both halves, then moves the
+  // job on exactly as the other steps do.
+  function saveApptThenStage(o, date, time) {
+    return api.setApptDateTime(o.id, date, time)
+      .then(function (r) {
+        window.MM.activity.log('date', STEP_LABELS.appointment, {
+          jobId: o.id,
+          jobName: (o.contact && o.contact.name) || o.name,
+          detail: date + (time ? ' at ' + fmtTime(time) : ''),
+        });
+        return r;
+      })
+      .then(function () {
+        var stageId = api.STAGE.apptBooked;
+        if (!stageId || o.pipelineStageId === stageId) return null;
+        return api.setOpportunityStage(o.id, stageId);
+      })
+      .then(function () { o.pipelineStageId = api.STAGE.apptBooked; });
+  }
+
   function saveDateThenStage(o, fieldKey, val, stageId) {
     return api.setOpportunityField(o.id, api.DATE_FIELD_IDS[fieldKey], val)
       .then(function (r) {
@@ -212,7 +255,8 @@ window.MM = window.MM || {};
 
   function bind(o, st) {
     if (!st.appt) wire('mm-step-appt-save', 'mm-step-appt', function (val) {
-      return saveDateThenStage(o, 'appointment', val, api.STAGE.apptBooked);
+      var t = document.getElementById('mm-step-appt-time');
+      return saveApptThenStage(o, val, t ? t.value : '');
     });
 
     if (st.appt && !st.measured) wire('mm-step-meas-save', 'mm-step-meas', function (val) {
