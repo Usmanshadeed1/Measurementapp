@@ -41,6 +41,7 @@ window.MM = window.MM || {};
     return [c.address1, cityLine, c.country].filter(Boolean).join(', ');
   }
 
+
   // ---- The form ------------------------------------------------------------
 
   function open(o, c, after) {
@@ -145,18 +146,27 @@ window.MM = window.MM || {};
     // either half is corrected. Renamed only when BOTH halves are present:
     // with an empty address the title would collapse to the bare name and the
     // address in it would be lost for good.
+    var newName = '';
     if (addr) {
-      var title = U.titleCase(name) + ' - ' + addr;
-      if (title !== job.name) work.push(api.renameOpportunity(jobId, title));
+      newName = U.titleCase(name) + ' - ' + addr;
+      if (newName !== job.name) work.push(api.renameOpportunity(jobId, newName));
     }
 
     Promise.all(work)
       .then(function () {
         window.MM.activity.log('note', 'Updated customer details for ' + name, {
-          jobId: jobId, jobName: title || job.name,
+          jobId: jobId, jobName: newName || job.name,
         });
+        // Read back rather than trusting the form: GoHighLevel reformats
+        // phone numbers, and the panel should show what was actually stored.
+        return Promise.all([
+          api.getOpportunity(jobId).catch(function () { return null; }),
+          api.getContact(contactId).catch(function () { return null; }),
+        ]);
+      })
+      .then(function (fresh) {
         close();
-        if (onSaved) onSaved();
+        if (onSaved) onSaved(fresh[0], fresh[1]);
       })
       .catch(function (e) {
         btn.disabled = false;

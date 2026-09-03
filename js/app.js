@@ -261,7 +261,15 @@
         .catch(function () { return c; })
         .then(function (full) {
           editBtn.disabled = false;
-          window.MM.jobedit.open(o, full || c, function () {
+          window.MM.jobedit.open(o, full || c, function (freshJob, freshContact) {
+            // The same object is updated in place rather than swapped, so the
+            // dashboard list, the schedule and anything else already holding
+            // this job sees the new details too.
+            if (freshJob) {
+              o.name = freshJob.name;
+              o.customFields = freshJob.customFields;
+            }
+            if (freshContact) o.contact = freshContact;
             pickJob(o, 'overview', 'edit');
           });
         });
