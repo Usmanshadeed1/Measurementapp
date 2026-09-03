@@ -736,6 +736,7 @@
   CHECK.init(function (o) { pickJob(o, 'tasks', 'checklist'); });
   TPL.init();
   window.MM.jobedit.init();
+  MY.init();
   // The start date box only makes sense for the two dated options.
   document.querySelectorAll('input[name="mm-tl-mode"]').forEach(function (r) {
     r.addEventListener('change', function () {

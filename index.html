@@ -584,6 +584,31 @@
   </div>
 </div>
 
+<!-- Quick edit of a task from My Tasks -->
+<div class="mm-modal-overlay" id="mm-modal-mytaskedit">
+  <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-mte-heading">
+    <div class="mm-modal-title" id="mm-mte-heading">Edit task</div>
+    <p class="mm-assign-job" id="mm-mte-job"></p>
+    <div class="mm-field-group">
+      <label class="mm-label" for="mm-mte-title">Task</label>
+      <input class="mm-input" id="mm-mte-title">
+    </div>
+    <div class="mm-mte-row">
+      <div class="mm-field-group">
+        <label class="mm-label" for="mm-mte-start">Starts</label>
+        <input class="mm-input" type="date" id="mm-mte-start">
+      </div>
+      <div class="mm-field-group">
+        <label class="mm-label" for="mm-mte-end">Due</label>
+        <input class="mm-input" type="date" id="mm-mte-end">
+      </div>
+    </div>
+    <p class="mm-assign-error" id="mm-mte-error" role="alert"></p>
+    <button class="mm-btn mm-btn-primary" id="mm-mte-save">Save changes</button>
+    <button class="mm-btn mm-btn-secondary" id="mm-mte-cancel">Cancel</button>
+  </div>
+</div>
+
 <!-- Edit customer details from a job -->
 <div class="mm-modal-overlay" id="mm-modal-jobedit">
   <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-je-heading">

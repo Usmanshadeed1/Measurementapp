@@ -198,29 +198,33 @@ window.MM = window.MM || {};
   }
 
   function taskCard(t) {
+    // The badge is always about the DUE date, and says so. It read "No date"
+    // beside a line reading "From Aug 26", which looked like the card was
+    // contradicting itself when it was only ever describing the end date.
     var d = daysTo(t.end);
-    var flag = d === null ? 'No date'
+    var flag = d === null ? 'No due date'
       : d < 0 ? Math.abs(d) + ' day' + (Math.abs(d) === 1 ? '' : 's') + ' late'
       : d === 0 ? 'Due today'
       : d === 1 ? 'Due tomorrow'
       : 'Due ' + fmt(t.end);
     var cls = d !== null && d < 0 ? 'urgent' : d === 0 ? 'soon' : '';
 
-    // The dates are spelled out as a range: a worker needs to know when they
-    // can start as well as when it is due, and "Sep 12 - Sep 14" answers both
-    // at a glance.
-    var range = t.start && t.end
-      ? fmt(t.start) + ' &rarr; ' + fmt(t.end)
-      : t.end ? 'Due ' + fmt(t.end)
-      : t.start ? 'From ' + fmt(t.start)
-      : 'No dates set';
+    // The line under the job says when the work starts. The due date lives in
+    // the badge, so repeating it here would only invite the same confusion.
+    var range = t.start
+      ? 'Starts ' + fmt(t.start)
+      : (t.end ? '' : 'No dates set');
 
     return '<div class="mm-mytask' + ((t.status === 'done') ? ' is-done' : '') + '">' +
       '<button type="button" class="mm-task-tick" data-tick="' + U.esc(t.id) + '" ' +
         'aria-label="' + ((t.status === 'done') ? 'Reopen ' : 'Mark ') + U.esc(t.title) +
         ((t.status === 'done') ? '' : ' done') + '">' + ((t.status === 'done') ? '&#10003;' : '') + '</button>' +
       '<div class="mm-mytask-main">' +
-        '<div class="mm-mytask-title">' + U.esc(t.title) + '</div>' +
+        (auth.isAdmin()
+          ? '<button type="button" class="mm-mytask-title mm-mytask-edit" ' +
+              'data-edit="' + U.esc(t.id) + '" ' +
+              'aria-label="Edit ' + U.esc(t.title) + '">' + U.esc(t.title) + '</button>'
+          : '<div class="mm-mytask-title">' + U.esc(t.title) + '</div>') +
         '<div class="mm-mytask-jobrow">' +
           '<span class="mm-mytask-joblabel">Job</span>' +
           // A link only where it will actually open. Task assignment and job
@@ -235,14 +239,86 @@ window.MM = window.MM || {};
             : '<span class="mm-mytask-jobname">' +
                 U.esc(t.jobName || 'Not recorded') + '</span>') +
         '</div>' +
-        '<div class="mm-mytask-dates">' + range + '</div>' +
+        (range ? '<div class="mm-mytask-dates">' + range + '</div>' : '') +
         ((t.items || []).length ? checklist(t) : '') +
       '</div>' +
       '<span class="mm-jflag mm-jflag-' + cls + '">' + U.esc(flag) + '</span>' +
     '</div>';
   }
 
+  var editing = null;
+
+  function openEdit(t) {
+    editing = t;
+    document.getElementById('mm-mte-job').textContent = t.jobName || '';
+    document.getElementById('mm-mte-title').value = t.title || '';
+    document.getElementById('mm-mte-start').value = t.start || '';
+    document.getElementById('mm-mte-end').value = t.end || '';
+    document.getElementById('mm-mte-error').textContent = '';
+    var btn = document.getElementById('mm-mte-save');
+    btn.disabled = false;
+    btn.textContent = 'Save changes';
+    document.getElementById('mm-modal-mytaskedit').classList.add('open');
+    document.getElementById('mm-mte-title').focus();
+  }
+
+  function closeEdit() {
+    document.getElementById('mm-modal-mytaskedit').classList.remove('open');
+    editing = null;
+  }
+
+  function saveEdit() {
+    if (!editing) return;
+    var t = editing;
+    var btn = document.getElementById('mm-mte-save');
+    var err = document.getElementById('mm-mte-error');
+    var title = (document.getElementById('mm-mte-title').value || '').trim();
+    if (!title) {
+      err.textContent = 'Give the task a name.';
+      document.getElementById('mm-mte-title').focus();
+      return;
+    }
+
+    var start = document.getElementById('mm-mte-start').value;
+    var end = document.getElementById('mm-mte-end').value;
+    if (start && end && end < start) {
+      err.textContent = 'The due date cannot be before the start date.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    err.textContent = '';
+
+    var id = String(t.id).split(':');
+    // Only these three are sent, so the assignees, notes and checklist this
+    // form never showed cannot be wiped by saving it.
+    window.MM.ghltasks.setFieldsOnJob(id[0], +id[1], {
+      title: title, start: start, end: end,
+    })
+      .then(function () {
+        window.MM.activity.log('note', 'Edited task "' + title + '"',
+          { jobId: t.jobId, jobName: t.jobName });
+        t.title = title; t.start = start; t.end = end;
+        closeEdit();
+        render();
+      })
+      .catch(function (e) {
+        btn.disabled = false;
+        btn.textContent = 'Save changes';
+        err.textContent = 'Could not save: ' + e.message;
+      });
+  }
+
   function bind(el) {
+    el.querySelectorAll('[data-edit]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var t = rows.find(function (x) { return x.id === b.getAttribute('data-edit'); });
+        if (t) openEdit(t);
+      });
+    });
+
     el.querySelectorAll('[data-openjob]').forEach(function (b) {
       b.addEventListener('click', function (e) {
         // The card carries its own controls, so this keeps its tap to itself.
@@ -307,7 +383,21 @@ window.MM = window.MM || {};
     });
   }
 
+  // The editor lives outside the list, so its buttons are wired once rather
+  // than on every render.
+  function init() {
+    var cancel = document.getElementById('mm-mte-cancel');
+    if (cancel) cancel.addEventListener('click', closeEdit);
+    var save = document.getElementById('mm-mte-save');
+    if (save) save.addEventListener('click', saveEdit);
+    var overlay = document.getElementById('mm-modal-mytaskedit');
+    if (overlay) overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) closeEdit();
+    });
+  }
+
   window.MM.mytasks = {
+    init: init,
     load: load,
     onOpenJob: function (fn) { onOpenJob = fn; },
   };

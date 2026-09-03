@@ -726,6 +726,24 @@ window.MM = window.MM || {};
     });
   }
 
+  // Editing a task's own fields from another screen. Only the fields passed
+  // are touched, so a screen that edits three of them cannot wipe the notes
+  // or the checklist it never showed.
+  function setFieldsOnJob(jobId, index, fields) {
+    return api.getOpportunity(jobId).then(function (opp) {
+      var rows = parse(api.oppField(opp, FIELD_ID));
+      var t = rows[index];
+      if (!t) throw new Error('That task is no longer there.');
+      ['title', 'start', 'end', 'who', 'notes'].forEach(function (k) {
+        // A pipe or newline would break the one-task-per-line format.
+        if (fields[k] !== undefined) {
+          t[k] = String(fields[k] || '').replace(/[|\r\n]/g, ' ').trim();
+        }
+      });
+      return api.setOpportunityField(jobId, FIELD_ID, serialise(rows));
+    });
+  }
+
   // Ticking one checklist item from another screen.
   function setItemOnJob(jobId, taskIndex, itemIndex, done) {
     return api.getOpportunity(jobId).then(function (opp) {
@@ -752,6 +770,7 @@ window.MM = window.MM || {};
     loadAllJobTasks: loadAllJobTasks,
     tasksFromJobs: tasksFromJobs,
     setStatusOnJob: setStatusOnJob,
+    setFieldsOnJob: setFieldsOnJob,
     sortTasks: sortTasks,
     openAddForm: function () { openAddOnLoad = true; },
     statusLabel: statusLabel,
