@@ -198,22 +198,22 @@ window.MM = window.MM || {};
   }
 
   function taskCard(t) {
-    // The badge is always about the DUE date, and says so. It read "No date"
-    // beside a line reading "From Aug 26", which looked like the card was
-    // contradicting itself when it was only ever describing the end date.
+    // Both dates live in the badge, which is where someone looks for "when".
+    // A start date on its own line below the job read as a second, competing
+    // answer -- "From Aug 26" beside a badge saying "No date".
     var d = daysTo(t.end);
-    var flag = d === null ? 'No due date'
+    var flag = d === null ? ''
       : d < 0 ? Math.abs(d) + ' day' + (Math.abs(d) === 1 ? '' : 's') + ' late'
       : d === 0 ? 'Due today'
       : d === 1 ? 'Due tomorrow'
       : 'Due ' + fmt(t.end);
     var cls = d !== null && d < 0 ? 'urgent' : d === 0 ? 'soon' : '';
 
-    // The line under the job says when the work starts. The due date lives in
-    // the badge, so repeating it here would only invite the same confusion.
-    var range = t.start
-      ? 'Starts ' + fmt(t.start)
-      : (t.end ? '' : 'No dates set');
+    // The start is shown only when it adds something the due date does not.
+    var from = t.start ? 'From ' + fmt(t.start) : '';
+    if (!flag) flag = from || 'No dates set';
+    else if (from) flag = from + ' \u00b7 ' + flag;
+
 
     return '<div class="mm-mytask' + ((t.status === 'done') ? ' is-done' : '') + '">' +
       '<button type="button" class="mm-task-tick" data-tick="' + U.esc(t.id) + '" ' +
@@ -239,10 +239,17 @@ window.MM = window.MM || {};
             : '<span class="mm-mytask-jobname">' +
                 U.esc(t.jobName || 'Not recorded') + '</span>') +
         '</div>' +
-        (range ? '<div class="mm-mytask-dates">' + range + '</div>' : '') +
         ((t.items || []).length ? checklist(t) : '') +
       '</div>' +
-      '<span class="mm-jflag mm-jflag-' + cls + '">' + U.esc(flag) + '</span>' +
+      '<div class="mm-mytask-side">' +
+        '<span class="mm-jflag mm-jflag-' + cls + '">' + U.esc(flag) + '</span>' +
+        // A visible pencil rather than relying on someone discovering that
+        // the title is tappable.
+        (auth.isAdmin()
+          ? '<button type="button" class="mm-mytask-pencil" data-edit="' +
+              U.esc(t.id) + '" aria-label="Edit ' + U.esc(t.title) + '">&#9998;</button>'
+          : '') +
+      '</div>' +
     '</div>';
   }
 
