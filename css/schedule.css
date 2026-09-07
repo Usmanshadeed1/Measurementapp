@@ -294,3 +294,10 @@
   border-left-color:var(--accent);color:var(--text)}
 .mm-ev.is-visit .mm-ev-title{font-weight:700}
 .mm-ev.is-visit:hover{background:color-mix(in srgb,var(--accent) 26%,var(--card))}
+
+/* Design work waiting to start. Distinct from a measurement visit: one is an
+   appointment somebody attends, the other is work sitting in a queue. */
+.mm-ev.is-design{background:color-mix(in srgb,#e8a33d 16%,var(--card));
+  border-left-color:#e8a33d;color:var(--text)}
+.mm-ev.is-design .mm-ev-title{font-weight:700}
+.mm-ev.is-design:hover{background:color-mix(in srgb,#e8a33d 24%,var(--card))}

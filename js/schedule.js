@@ -266,10 +266,30 @@ window.MM = window.MM || {};
     return out;
   }
 
-  function jobLabel(o) {
-    if (o.contact && o.contact.name) return U.titleCase(o.contact.name);
-    var n = o.name || '';
-    return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
+  // Design work waiting to be started. Dated the day measuring finished, so
+  // it appears on the calendar the moment it becomes due rather than staying
+  // invisible until somebody remembers it.
+  //
+  // Dropped once the design is finished: the job has moved on, and a calendar
+  // full of work already done is a calendar nobody reads.
+  function designSpans() {
+    var out = [];
+    (jobs || []).forEach(function (o) {
+      if (api.oppField(o, api.DATE_FIELD_IDS.design)) return;
+      var d = parseDay(api.oppField(o, api.DATE_FIELD_IDS.needDesign));
+      if (!d) return;
+      out.push({
+        id: 'design:' + o.id, raw: null, isVisit: true, isDesign: true,
+        jobId: o.id,
+        title: 'Needs design',
+        job: jobLabel(o),
+        who: '',
+        time: '',
+        start: d, end: d,
+        done: false,
+      });
+    });
+    return out;
   }
 
   // A task with only one of the two dates is treated as a single day.
@@ -294,7 +314,7 @@ window.MM = window.MM || {};
       list = tasks.map(toSpan).filter(Boolean);
     }
     if (filters.kind !== 'tasks') {
-      list = list.concat(visitSpans());
+      list = list.concat(visitSpans()).concat(designSpans());
     }
     return list.filter(passes).filter(inRange).filter(matchesSearch);
   }
@@ -353,8 +373,8 @@ window.MM = window.MM || {};
     opts = opts || {};
     // A visit is an appointment somebody has to attend, not work to tick off,
     // so it is coloured apart from the tasks and leads with its time.
-    var cls = item.isVisit
-      ? 'mm-ev is-visit'
+    var cls = item.isDesign ? 'mm-ev is-design'
+      : item.isVisit ? 'mm-ev is-visit'
       : 'mm-ev' + (item.done ? ' is-done' : (isLate(item) ? ' is-late' : ''));
     var sub = opts.showWho && item.who ? item.who : item.job;
     var title = item.isVisit && item.time
