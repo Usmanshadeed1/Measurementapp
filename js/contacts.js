@@ -136,6 +136,41 @@ window.MM = window.MM || {};
     editingContact = null;
   }
 
+  // A job is titled "Customer - Address". When a customer's name is corrected
+  // the titles keep the old spelling, so the customer half is swapped and
+  // everything after the first " - " is left exactly as it was.
+  //
+  // Only the NAME is touched. The address in a job title is that job's
+  // property, which is often not the address held on the contact -- a second
+  // job is usually at a different house -- so rewriting it from the contact
+  // record would put the wrong address on the job.
+  function renamedTitle(oldTitle, newName) {
+    var title = String(oldTitle || '');
+    var at = title.indexOf(' - ');
+    // A title that does not follow the pattern is left alone rather than
+    // guessed at: better a stale title than a mangled one.
+    if (at === -1) return null;
+    var rebuilt = newName + title.slice(at);
+    return rebuilt === title ? null : rebuilt;
+  }
+
+  // Renames every job for this customer. Failures are swallowed on purpose:
+  // the contact itself is already saved, and a job that could not be renamed
+  // is a cosmetic problem, not a reason to show the edit as failed.
+  function renameTheirJobs(contactId, newName) {
+    if (!newName) return Promise.resolve(0);
+    return api.opportunitiesForContact(contactId)
+      .then(function (jobs) {
+        var work = [];
+        (jobs || []).forEach(function (o) {
+          var t = renamedTitle(o.name, newName);
+          if (t) work.push(api.renameOpportunity(o.id, t).catch(function () {}));
+        });
+        return Promise.all(work).then(function () { return work.length; });
+      })
+      .catch(function () { return 0; });
+  }
+
   function saveEdit() {
     if (!editingContact) return;
     var btn = document.getElementById('mm-ce-save');
@@ -161,12 +196,27 @@ window.MM = window.MM || {};
       postalCode: v('mm-ce-postal'),
     };
 
+    var newName = [first, v('mm-ce-last')].filter(Boolean).join(' ');
+    var nameChanged = newName !== [
+      editingContact.firstName || '', editingContact.lastName || '',
+    ].filter(Boolean).join(' ');
+    var contactId = editingContact.id;
+
     api.updateContact(editingContact.id, fields)
+      .then(function (updated) {
+        // Only when the name actually changed: every avoidable write to live
+        // data is one that cannot go wrong.
+        if (!nameChanged) return updated;
+        return renameTheirJobs(contactId, U.titleCase(newName))
+          .then(function () { return updated; });
+      })
       .then(function (updated) {
         closeEdit();
         // Re-read rather than trusting the form: GHL normalises phone numbers
         // and may reformat what was typed.
-        return api.getContact(editingContact ? editingContact.id : updated.id)
+        // editingContact is cleared by closeEdit above, so the id captured
+        // before the save is what identifies the contact here.
+        return api.getContact(contactId)
           .catch(function () { return updated; });
       })
       .then(function (fresh) {

@@ -255,6 +255,15 @@ window.MM = window.MM || {};
       .then(function (d) { return d.opportunity; });
   }
 
+  // Every job belonging to one customer. Used when a name is corrected: the
+  // job titles carry that name and would otherwise keep the old spelling.
+  function opportunitiesForContact(contactId) {
+    var qs = 'location_id=' + encodeURIComponent(LOC) +
+             '&contact_id=' + encodeURIComponent(contactId) + '&limit=100';
+    return apiFetch('GET', '/opportunities/search?' + qs)
+      .then(function (d) { return d.opportunities || []; });
+  }
+
   // Creates a job in New Lead with its Property Address already filled — the
   // field most existing jobs are missing, because they predate the workflow
   // action that sets it.
@@ -403,7 +412,8 @@ window.MM = window.MM || {};
     STAGE_AFTER_PRICING: STAGE_AFTER_PRICING, STAGE_PROPOSAL_SENT: STAGE_PROPOSAL_SENT,
     STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
     STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
-    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, createOpportunity: createOpportunity, setOpportunityField: setOpportunityField, renameOpportunity: renameOpportunity, getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
+    oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, createOpportunity: createOpportunity, opportunitiesForContact: opportunitiesForContact,
+    setOpportunityField: setOpportunityField, renameOpportunity: renameOpportunity, getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact, updateContact: updateContact,
