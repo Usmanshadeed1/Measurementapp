@@ -141,7 +141,10 @@ window.MM = window.MM || {};
 
     var appt = api.apptDateTime(o).date;
     var measured = dateVal(o, 'measured');
+    var needDesign = dateVal(o, 'needDesign');
     var design = dateVal(o, 'design');
+    var designEmailed = dateVal(o, 'designEmailed');
+    var emailQuote = dateVal(o, 'emailQuote');
     var pricing = dateVal(o, 'pricing');
     var sent = dateVal(o, 'proposalSent');
     var cabinets = dateVal(o, 'cabinets');
@@ -191,14 +194,44 @@ window.MM = window.MM || {};
         note: measured ? '' : (appt ? 'Saving this moves the job to Measurement Complete.' : ''),
       }) +
       stepHtml({
-        num: 3, label: 'Design complete',
+        num: 3, label: 'Need design',
+        state: needDesign ? 'done' : (measured ? 'active' : 'waiting'),
+        valueText: fmtLong(needDesign),
+        // Pre-filled with the measurement date: design becomes due the day
+        // measuring finished. Still editable, because design sometimes starts
+        // later than the tape came off the wall.
+        value: toInputDate(needDesign) || toInputDate(measured) || todayInput(),
+        inputId: 'mm-step-needdesign', btnId: 'mm-step-needdesign-save',
+        waitingText: 'Measure the property first',
+        note: needDesign ? '' : (measured
+          ? 'Dated the day measuring finished. Change it if design starts later.'
+          : ''),
+      }) +
+      stepHtml({
+        num: 4, label: 'Design complete',
         state: design ? 'done' : (measured ? 'active' : 'waiting'),
         valueText: fmtLong(design), value: toInputDate(design) || todayInput(),
         inputId: 'mm-step-design', btnId: 'mm-step-design-save',
         waitingText: 'Measure the property first',
       }) +
       stepHtml({
-        num: 4, label: 'Pricing complete',
+        num: 5, label: 'Design emailed',
+        state: designEmailed ? 'done' : (design ? 'active' : 'waiting'),
+        valueText: fmtLong(designEmailed),
+        value: toInputDate(designEmailed) || todayInput(),
+        inputId: 'mm-step-demailed', btnId: 'mm-step-demailed-save',
+        waitingText: 'Finish the design first',
+      }) +
+      stepHtml({
+        num: 6, label: 'Email quote',
+        state: emailQuote ? 'done' : (designEmailed ? 'active' : 'waiting'),
+        valueText: fmtLong(emailQuote),
+        value: toInputDate(emailQuote) || todayInput(),
+        inputId: 'mm-step-equote', btnId: 'mm-step-equote-save',
+        waitingText: 'Email the design first',
+      }) +
+      stepHtml({
+        num: 7, label: 'Pricing complete',
         state: pricing ? 'done' : (design ? 'active' : 'waiting'),
         valueText: fmtLong(pricing), value: toInputDate(pricing) || todayInput(),
         inputId: 'mm-step-pricing', btnId: 'mm-step-pricing-save',
@@ -206,7 +239,7 @@ window.MM = window.MM || {};
         note: pricing ? '' : (design ? 'Saving this moves the job to Pricing Complete.' : ''),
       }) +
       stepHtml({
-        num: 5, label: 'Proposal sent',
+        num: 8, label: 'Proposal sent',
         state: sent ? 'done' : (pricing ? 'active' : 'waiting'),
         valueText: fmtLong(sent), value: toInputDate(sent) || todayInput(),
         inputId: 'mm-step-sent', btnId: 'mm-step-sent-save',
@@ -214,7 +247,7 @@ window.MM = window.MM || {};
         note: sent ? waitingNote(sent, won) : (pricing ? 'Email the customer yourself, then record the date here.' : ''),
       }) +
       stepHtml({
-        num: 6, label: 'Material ordering',
+        num: 9, label: 'Material ordering',
         state: cabinets ? 'done' : (won ? 'active' : 'waiting'),
         valueText: fmtLong(cabinets), value: toInputDate(cabinets) || todayInput(),
         inputId: 'mm-step-cab', btnId: 'mm-step-cab-save',
@@ -222,7 +255,7 @@ window.MM = window.MM || {};
         note: cabinets ? '' : (won ? 'Saving this moves the job to Material Ordering.' : ''),
       }) +
       stepHtml({
-        num: 7, label: 'Job completed',
+        num: 10, label: 'Job completed',
         state: completed ? 'done' : (cabinets ? 'active' : 'waiting'),
         valueText: fmtLong(completed), value: toInputDate(completed) || todayInput(),
         inputId: 'mm-step-done', btnId: 'mm-step-done-save',
@@ -238,8 +271,10 @@ window.MM = window.MM || {};
       (completed ? '<div class="mm-step-final">This job is finished and no longer appears on the active dashboard.</div>' : '') +
       '<p class="mm-step-error" id="mm-step-error" role="alert"></p>';
 
-    bind(o, { appt: appt, measured: measured, design: design, pricing: pricing,
-             sent: sent, cabinets: cabinets, completed: completed, won: won });
+    bind(o, { appt: appt, measured: measured, needDesign: needDesign,
+             design: design, designEmailed: designEmailed, emailQuote: emailQuote,
+             pricing: pricing, sent: sent, cabinets: cabinets,
+             completed: completed, won: won });
     if (window.MM.wireJobPanels) window.MM.wireJobPanels();
   }
 
@@ -248,7 +283,11 @@ window.MM = window.MM || {};
   // safely stored.
   var STEP_LABELS = {
     appointment: 'Set the appointment date', measured: 'Recorded the measurement date',
-    design: 'Recorded the design as finished', pricing: 'Recorded the pricing as finished',
+    needDesign: 'Marked the design as needed',
+    design: 'Recorded the design as finished',
+    designEmailed: 'Recorded the design as emailed',
+    emailQuote: 'Recorded the quote as emailed',
+    pricing: 'Recorded the pricing as finished',
     proposalSent: 'Recorded the proposal as sent', cabinets: 'Recorded the cabinets as ordered',
     completed: 'Marked the job completed',
   };
@@ -305,8 +344,36 @@ window.MM = window.MM || {};
     });
 
     if (st.appt && !st.measured) wire('mm-step-meas-save', 'mm-step-meas', function (val) {
-      return saveDateThenStage(o, 'measured', val, api.STAGE.measured);
+      // Measuring finishing is what makes design due, so the next step is
+      // stamped with the same day rather than asked for again. The job still
+      // moves to Measurement Complete -- Need Design is where it goes next,
+      // once someone confirms that step.
+      return saveDateThenStage(o, 'measured', val, api.STAGE.measured)
+        .then(function (r) {
+          if (dateVal(o, 'needDesign')) return r;
+          return api.setOpportunityField(o.id, api.DATE_FIELD_IDS.needDesign, val)
+            .catch(function () { return null; })
+            .then(function () { return r; });
+        });
     });
+
+    if (st.measured && !st.needDesign) {
+      wire('mm-step-needdesign-save', 'mm-step-needdesign', function (val) {
+        return saveDateThenStage(o, 'needDesign', val, api.STAGE.needDesign);
+      });
+    }
+
+    if (st.design && !st.designEmailed) {
+      wire('mm-step-demailed-save', 'mm-step-demailed', function (val) {
+        return saveDateThenStage(o, 'designEmailed', val, api.STAGE.designEmailed);
+      });
+    }
+
+    if (st.designEmailed && !st.emailQuote) {
+      wire('mm-step-equote-save', 'mm-step-equote', function (val) {
+        return saveDateThenStage(o, 'emailQuote', val, api.STAGE.emailQuote);
+      });
+    }
 
     if (st.measured && !st.design) wire('mm-step-design-save', 'mm-step-design', function (val) {
       return saveDateThenStage(o, 'design', val, api.STAGE.design);
