@@ -48,6 +48,14 @@ window.MM = window.MM || {};
   function sortTasks(list) {
     return list.map(function (t, i) { return { t: t, i: i }; })
       .sort(function (a, b) {
+        // Finished work sinks to the bottom. A task that is done is a record,
+        // not something to act on, and by date alone it sat above outstanding
+        // work simply because it happened earlier.
+        var fa = a.t.status === 'done' ? 1 : 0;
+        var fb = b.t.status === 'done' ? 1 : 0;
+        if (fa !== fb) return fa - fb;
+
+        // Within each half: undated first, then oldest to newest.
         var da = a.t.start || a.t.end || '';
         var db = b.t.start || b.t.end || '';
         if (!da && !db) return a.i - b.i;
