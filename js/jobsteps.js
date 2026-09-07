@@ -11,7 +11,7 @@ window.MM = window.MM || {};
   var U = window.MM.utils, api = window.MM.api;
 
   var currentJob = null;
-  var onJobChanged = null;   // lets app.js refresh its own view after a save
+  var onJobChanged = null;   // letts app.js refresh its own view after a save
 
   // Stored as 24-hour so it sorts and compares; shown the way it is spoken.
   function fmtTime(hhmm) {
@@ -197,14 +197,14 @@ window.MM = window.MM || {};
         num: 3, label: 'Need design',
         state: needDesign ? 'done' : (measured ? 'active' : 'waiting'),
         valueText: fmtLong(needDesign),
-        // Pre-filled with the measurement date: design becomes due the day
-        // measuring finished. Still editable, because design sometimes starts
-        // later than the tape came off the wall.
+        // Pre-filled with the measurement date, which is when design becomes
+        // due. Saved like every other step rather than written silently, so
+        // one step never changes another behind the person using it.
         value: toInputDate(needDesign) || toInputDate(measured) || todayInput(),
         inputId: 'mm-step-needdesign', btnId: 'mm-step-needdesign-save',
         waitingText: 'Measure the property first',
         note: needDesign ? '' : (measured
-          ? 'Dated the day measuring finished. Change it if design starts later.'
+          ? 'Set to the day measuring finished. Change it if design starts later.'
           : ''),
       }) +
       stepHtml({
@@ -344,17 +344,7 @@ window.MM = window.MM || {};
     });
 
     if (st.appt && !st.measured) wire('mm-step-meas-save', 'mm-step-meas', function (val) {
-      // Measuring finishing is what makes design due, so the next step is
-      // stamped with the same day rather than asked for again. The job still
-      // moves to Measurement Complete -- Need Design is where it goes next,
-      // once someone confirms that step.
-      return saveDateThenStage(o, 'measured', val, api.STAGE.measured)
-        .then(function (r) {
-          if (dateVal(o, 'needDesign')) return r;
-          return api.setOpportunityField(o.id, api.DATE_FIELD_IDS.needDesign, val)
-            .catch(function () { return null; })
-            .then(function () { return r; });
-        });
+      return saveDateThenStage(o, 'measured', val, api.STAGE.measured);
     });
 
     if (st.measured && !st.needDesign) {
