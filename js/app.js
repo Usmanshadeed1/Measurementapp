@@ -31,7 +31,7 @@
     else if (tab === 'measure') { showScreen('measure'); MEASURE.load(); }
     else if (tab === 'schedule') { showScreen('schedule'); SCHED.load(); }
     else if (tab === 'checklist') { showScreen('checklist'); CHECK.load(); }
-    else if (tab === 'templates') { showScreen('templates'); TPL.load(); }
+    else if (tab === 'templates') { showScreen('templates'); TPL.load(); window.MM.emailtpl.show(); }
     else if (tab === 'workers') { showScreen('workers'); WORKERS.load(); }
     else if (tab === 'history') { showScreen('history'); ACT.loadPage(); }
     else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }

@@ -38,6 +38,7 @@ window.MM = window.MM || {};
     design: 'nZtlNKXw54QNcDFZLUhc',        // when the design was finished
     designEmailed: 'hvG2bjms0XA1Kys8o4OS', // when the drawings went out
     emailQuote: 'Boxem27IDmdoUIvR0iiY',    // when the quote was emailed
+    emailLog: 'trbgoJmInsECI6FdNTVi',      // every email sent, one per line
     pricing: 'ZwMwQt4rCYOvxzYfTdPu',       // when pricing was finished
     proposalSent: 'wwLRthpRhQLmMcSOLnaH',  // when the proposal went to the customer
     cabinets: 'IPuLmeNR8jrtQ41gO3RF',      // after the sale: cabinets ordered
@@ -56,8 +57,12 @@ window.MM = window.MM || {};
     measured:     '4c348bc2-30b5-4b41-a7aa-c6e299f4b062',  // Measurement Complete
     needDesign:   'b55fead3-6ba6-4f1b-bd4a-ac6db94035a9',  // Need Design
     design:       '5abda84b-8753-436f-8d4d-34d93620f5f0',  // Design Complete
-    designEmailed:'c9cb40fe-1d25-46f5-8114-c5324caa0ccd',  // Design Emailed
-    emailQuote:   '241f9cea-9d90-40ac-aa0d-8558346ad04f',  // Email Quote
+    // One stage for every email to the customer, whatever it contained. A job
+    // arrives here on the first send and stays: what happens next depends on
+    // the customer's reply, which a person reads and acts on.
+    emailCustomer:'63d88efd-983d-4f19-8bf1-77cea559bd36',  // Email Customer
+    designEmailed:'c9cb40fe-1d25-46f5-8114-c5324caa0ccd',  // Design Emailed (retired)
+    emailQuote:   '241f9cea-9d90-40ac-aa0d-8558346ad04f',  // Email Quote (retired)
     pricing:      'ba83959c-dd8e-47bc-8cb0-a1e78944ef13',  // Pricing Complete
     designMeeting:'eb7eca8c-db5c-4df7-a766-2366d240d469',
     revision:     'c1d6ee95-7275-4f50-b3a0-be4744923131',

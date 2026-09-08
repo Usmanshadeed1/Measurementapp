@@ -102,6 +102,65 @@ window.MM = window.MM || {};
 
   // Steps render as done / active / waiting. Only the active one is
   // actionable, so the order of work is never ambiguous.
+  // Emailing the customer. Not a date to type: the send records itself, and
+  // the log underneath says what went and when. One step rather than two,
+  // because the design and the quote go out in whatever order suits the job.
+  function emailStep(o, designDone) {
+    var log = parseLog(api.oppField(o, api.DATE_FIELD_IDS.emailLog));
+    var sent = log.length > 0;
+    var cls = 'mm-step mm-step-' + (sent ? 'done' : (designDone ? 'active' : 'waiting'));
+
+    var body;
+    if (!designDone && !sent) {
+      body = '<div class="mm-step-waiting">Finish the design first</div>';
+    } else {
+      body =
+        (log.length ? '<div class="mm-step-log">' +
+          log.map(function (e) {
+            return '<div class="mm-step-logrow">' +
+              '<span class="mm-step-logwhen">' + U.esc(fmtLong(e.date)) + '</span>' +
+              '<span class="mm-step-logwhat">' + U.esc(kindLabel(e.kind)) + '</span>' +
+              (e.subject ? '<span class="mm-step-logsub">' + U.esc(e.subject) + '</span>' : '') +
+            '</div>';
+          }).join('') + '</div>' : '') +
+        (window.MM.senddesign.canSend()
+          ? '<button type="button" class="mm-btn-sm mm-btn-primary mm-step-send" ' +
+              'id="mm-step-senddesign">' +
+              (sent ? 'Send another email' : 'Email the customer') + '</button>'
+          : '');
+    }
+
+    return '<div class="' + cls + '">' +
+      '<div class="mm-step-mark" aria-hidden="true">' +
+        (sent ? '&#10003;' : '5') + '</div>' +
+      '<div class="mm-step-body">' +
+        '<div class="mm-step-label">Email the customer</div>' +
+        body +
+      '</div>' +
+    '</div>';
+  }
+
+  // "2026-09-08|design|Your design - 108 teal lane", one per line.
+  function parseLog(text) {
+    var out = [];
+    String(text || '').split(/\r?\n/).forEach(function (raw) {
+      if (!raw.trim()) return;
+      var p = raw.split('|');
+      out.push({
+        date: (p[0] || '').trim(),
+        kind: (p[1] || '').trim(),
+        subject: (p[2] || '').trim(),
+      });
+    });
+    return out;
+  }
+
+  function kindLabel(k) {
+    return k === 'both' ? 'Design and quote'
+      : k === 'quote' ? 'Quote'
+      : 'Design';
+  }
+
   function stepHtml(opts) {
     var cls = 'mm-step mm-step-' + opts.state;
     var mark = opts.state === 'done' ? '&#10003;' : opts.num;
@@ -143,8 +202,6 @@ window.MM = window.MM || {};
     var measured = dateVal(o, 'measured');
     var needDesign = dateVal(o, 'needDesign');
     var design = dateVal(o, 'design');
-    var designEmailed = dateVal(o, 'designEmailed');
-    var emailQuote = dateVal(o, 'emailQuote');
     var pricing = dateVal(o, 'pricing');
     var sent = dateVal(o, 'proposalSent');
     var cabinets = dateVal(o, 'cabinets');
@@ -214,31 +271,9 @@ window.MM = window.MM || {};
         inputId: 'mm-step-design', btnId: 'mm-step-design-save',
         waitingText: 'Measure the property first',
       }) +
+      emailStep(o, design) +
       stepHtml({
-        num: 5, label: 'Design emailed',
-        state: designEmailed ? 'done' : (design ? 'active' : 'waiting'),
-        valueText: fmtLong(designEmailed),
-        value: toInputDate(designEmailed) || todayInput(),
-        inputId: 'mm-step-demailed', btnId: 'mm-step-demailed-save',
-        waitingText: 'Finish the design first',
-        // Offered even once a design has been emailed: a customer says it
-        // never arrived, or a drawing gets corrected and has to go again. The
-        // date simply updates to the new send.
-        note: (design && window.MM.senddesign.canSend())
-          ? '<button type="button" class="mm-btn-sm mm-btn-primary mm-step-send" ' +
-              'id="mm-step-senddesign">Send design to customer</button>'
-          : '',
-      }) +
-      stepHtml({
-        num: 6, label: 'Email quote',
-        state: emailQuote ? 'done' : (designEmailed ? 'active' : 'waiting'),
-        valueText: fmtLong(emailQuote),
-        value: toInputDate(emailQuote) || todayInput(),
-        inputId: 'mm-step-equote', btnId: 'mm-step-equote-save',
-        waitingText: 'Email the design first',
-      }) +
-      stepHtml({
-        num: 7, label: 'Pricing complete',
+        num: 6, label: 'Pricing complete',
         state: pricing ? 'done' : (design ? 'active' : 'waiting'),
         valueText: fmtLong(pricing), value: toInputDate(pricing) || todayInput(),
         inputId: 'mm-step-pricing', btnId: 'mm-step-pricing-save',
@@ -246,7 +281,7 @@ window.MM = window.MM || {};
         note: pricing ? '' : (design ? 'Saving this moves the job to Pricing Complete.' : ''),
       }) +
       stepHtml({
-        num: 8, label: 'Proposal sent',
+        num: 7, label: 'Proposal sent',
         state: sent ? 'done' : (pricing ? 'active' : 'waiting'),
         valueText: fmtLong(sent), value: toInputDate(sent) || todayInput(),
         inputId: 'mm-step-sent', btnId: 'mm-step-sent-save',
@@ -254,7 +289,7 @@ window.MM = window.MM || {};
         note: sent ? waitingNote(sent, won) : (pricing ? 'Email the customer yourself, then record the date here.' : ''),
       }) +
       stepHtml({
-        num: 9, label: 'Material ordering',
+        num: 8, label: 'Material ordering',
         state: cabinets ? 'done' : (won ? 'active' : 'waiting'),
         valueText: fmtLong(cabinets), value: toInputDate(cabinets) || todayInput(),
         inputId: 'mm-step-cab', btnId: 'mm-step-cab-save',
@@ -262,7 +297,7 @@ window.MM = window.MM || {};
         note: cabinets ? '' : (won ? 'Saving this moves the job to Material Ordering.' : ''),
       }) +
       stepHtml({
-        num: 10, label: 'Job completed',
+        num: 9, label: 'Job completed',
         state: completed ? 'done' : (cabinets ? 'active' : 'waiting'),
         valueText: fmtLong(completed), value: toInputDate(completed) || todayInput(),
         inputId: 'mm-step-done', btnId: 'mm-step-done-save',
@@ -279,7 +314,7 @@ window.MM = window.MM || {};
       '<p class="mm-step-error" id="mm-step-error" role="alert"></p>';
 
     bind(o, { appt: appt, measured: measured, needDesign: needDesign,
-             design: design, designEmailed: designEmailed, emailQuote: emailQuote,
+             design: design,
              pricing: pricing, sent: sent, cabinets: cabinets,
              completed: completed, won: won });
     if (window.MM.wireJobPanels) window.MM.wireJobPanels();
@@ -292,8 +327,6 @@ window.MM = window.MM || {};
     appointment: 'Set the appointment date', measured: 'Recorded the measurement date',
     needDesign: 'Marked the design as needed',
     design: 'Recorded the design as finished',
-    designEmailed: 'Recorded the design as emailed',
-    emailQuote: 'Recorded the quote as emailed',
     pricing: 'Recorded the pricing as finished',
     proposalSent: 'Recorded the proposal as sent', cabinets: 'Recorded the cabinets as ordered',
     completed: 'Marked the job completed',
@@ -360,11 +393,6 @@ window.MM = window.MM || {};
       });
     }
 
-    if (st.design && !st.designEmailed) {
-      wire('mm-step-demailed-save', 'mm-step-demailed', function (val) {
-        return saveDateThenStage(o, 'designEmailed', val, api.STAGE.designEmailed);
-      });
-    }
 
     // Wired whenever the button is on screen, which includes a design already
     // emailed once -- re-sending is a real need, and a button that does
@@ -384,11 +412,6 @@ window.MM = window.MM || {};
       });
     });
 
-    if (st.designEmailed && !st.emailQuote) {
-      wire('mm-step-equote-save', 'mm-step-equote', function (val) {
-        return saveDateThenStage(o, 'emailQuote', val, api.STAGE.emailQuote);
-      });
-    }
 
     if (st.measured && !st.design) wire('mm-step-design-save', 'mm-step-design', function (val) {
       return saveDateThenStage(o, 'design', val, api.STAGE.design);

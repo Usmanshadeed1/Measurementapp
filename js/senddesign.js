@@ -28,6 +28,17 @@ window.MM = window.MM || {};
   var sending = false;
   var onSent = null;
 
+  // What this email contains. The design and the quote go out separately as
+  // often as together -- sometimes the drawings first and the price after a
+  // conversation, sometimes both at once -- so this is a choice, not a
+  // sequence of two steps.
+  var KINDS = [
+    { v: 'design', label: 'The design' },
+    { v: 'quote', label: 'The quote' },
+    { v: 'both', label: 'Both' },
+  ];
+  var kind = 'design';
+
   // ---- Reading the job's files ---------------------------------------------
 
   function labelOf(rec) {
@@ -66,25 +77,17 @@ window.MM = window.MM || {};
     return api.oppField(job, api.ADDR_FIELD_ID) || '';
   }
 
-  function defaultSubject(withQuote) {
-    var a = addressOf();
-    var what = withQuote ? 'Your design and quote' : 'Your design';
-    return a ? what + ' — ' + a : what;
+  // The saved template for this kind, with the customer's details filled in.
+  // Editable in Settings, so the wording changes without a deploy.
+  function templateFor(k) {
+    return window.MM.emailtpl.forKind(k, {
+      name: firstName(),
+      address: addressOf(),
+    });
   }
 
-  function defaultBody(withQuote) {
-    var a = addressOf();
-    var where = a ? ' for ' + a : '';
-    return 'Hi ' + firstName() + ',\n\n' +
-      (withQuote
-        ? 'Please find the drawings and the quote' + where + ' below.\n\n' +
-          'Any questions, or anything you would like changed? Happy to talk it ' +
-          'through whenever suits you.'
-        : 'Please find the drawings' + where + ' below.\n\n' +
-          'Any questions, or anything you would like changed? Happy to walk you ' +
-          'through them whenever suits you.') +
-      '\n\nEddie\nMaximus Construction NJ';
-  }
+  function subjectFor(k) { return templateFor(k).subject; }
+  function bodyFor(k) { return templateFor(k).body; }
 
   // ---- The form ------------------------------------------------------------
 
@@ -108,17 +111,16 @@ window.MM = window.MM || {};
 
     document.getElementById('mm-modal-senddesign').classList.add('open');
 
-    loadFiles().then(render).catch(function (e) {
-      el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
-    });
+    Promise.all([loadFiles(), window.MM.emailtpl.load()])
+      .then(render)
+      .catch(function (e) {
+        el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
+      });
   }
 
   function render() {
     var el = document.getElementById('mm-sd-body');
     if (!el) return;
-
-    var withQuote = document.getElementById('mm-sd-quote');
-    withQuote = withQuote ? withQuote.checked : false;
 
     el.innerHTML =
       // Who it is going to, stated plainly. Nobody should have to guess which
@@ -130,23 +132,30 @@ window.MM = window.MM || {};
         '</span>' +
       '</div>' +
 
-      '<label class="mm-sd-check">' +
-        '<input type="checkbox" id="mm-sd-quote"' + (withQuote ? ' checked' : '') + '>' +
-        '<span><strong>The quote is included</strong>' +
-          '<span class="mm-sd-checknote">Tick this if you are sending the price ' +
-          'as well as the drawings.</span></span>' +
-      '</label>' +
+      '<div class="mm-sd-kind">' +
+        '<div class="mm-sd-kindhead">What are you sending?</div>' +
+        '<div class="mm-sd-kinds">' +
+          KINDS.map(function (k) {
+            return '<label class="mm-sd-kindopt' +
+                (kind === k.v ? ' is-on' : '') + '">' +
+              '<input type="radio" name="mm-sd-kind" value="' + k.v + '"' +
+                (kind === k.v ? ' checked' : '') + '>' +
+              '<span>' + U.esc(k.label) + '</span>' +
+            '</label>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
 
       '<div class="mm-field-group">' +
         '<label class="mm-label" for="mm-sd-subject">Subject</label>' +
         '<input class="mm-input" id="mm-sd-subject" value="' +
-          U.esc(defaultSubject(withQuote)) + '">' +
+          U.esc(subjectFor(kind)) + '">' +
       '</div>' +
 
       '<div class="mm-field-group">' +
         '<label class="mm-label" for="mm-sd-msg">Message</label>' +
         '<textarea class="mm-input mm-sd-msg" id="mm-sd-msg" rows="9">' +
-          U.esc(defaultBody(withQuote)) + '</textarea>' +
+          U.esc(bodyFor(kind)) + '</textarea>' +
       '</div>' +
 
       fileList() +
@@ -160,8 +169,9 @@ window.MM = window.MM || {};
     if (!files.length) {
       return '<div class="mm-sd-files">' +
         '<div class="mm-sd-fileshead">Files to include</div>' +
-        '<p class="mm-sd-empty">There are no files on this job yet. Upload the ' +
-        'drawings in Documents &amp; Photos first.</p></div>';
+        '<p class="mm-sd-empty">No files on this job yet.</p>' +
+        uploadRow() +
+      '</div>';
     }
     return '<div class="mm-sd-files">' +
       '<div class="mm-sd-fileshead">Files to include</div>' +
@@ -172,20 +182,95 @@ window.MM = window.MM || {};
           '<span class="mm-sd-filename">' + U.esc(labelOf(f)) + '</span>' +
         '</label>';
       }).join('') +
+      uploadRow() +
+    '</div>';
+  }
+
+  // Uploading here saves a trip to Documents and back. The file lands on the
+  // job like any other, so it is still there afterwards -- this is a shortcut
+  // to the same place, not a separate store.
+  function uploadRow() {
+    return '<div class="mm-sd-upload">' +
+      '<button type="button" class="mm-btn-sm mm-btn-secondary" id="mm-sd-pick">' +
+        'Upload from this computer</button>' +
+      '<span class="mm-sd-uploading" id="mm-sd-uploading"></span>' +
+      '<input type="file" id="mm-sd-fileinput" multiple ' +
+        'accept="application/pdf,image/*" hidden>' +
     '</div>';
   }
 
   function bind(el) {
-    var q = el.querySelector('#mm-sd-quote');
-    // Re-rendered so the subject and wording follow the choice, rather than
-    // leaving a message about drawings when a quote is included too.
-    if (q) q.addEventListener('change', render);
+    // Changing what is being sent rewrites the subject and message, rather
+    // than leaving a note about drawings on an email carrying a price.
+    el.querySelectorAll('input[name="mm-sd-kind"]').forEach(function (r) {
+      r.addEventListener('change', function () {
+        kind = r.value;
+        render();
+      });
+    });
 
     el.querySelectorAll('[data-file]').forEach(function (b) {
       b.addEventListener('change', function () {
         chosen[b.getAttribute('data-file')] = b.checked;
       });
     });
+
+    var pick = el.querySelector('#mm-sd-pick');
+    var input = el.querySelector('#mm-sd-fileinput');
+    if (pick && input) {
+      pick.addEventListener('click', function () { input.click(); });
+      input.addEventListener('change', function () {
+        var list = Array.prototype.slice.call(input.files || []);
+        if (list.length) uploadFiles(list);
+      });
+    }
+  }
+
+  // Uploaded one at a time rather than all at once: the proxy has a size
+  // limit per request, and one failure should not lose the rest.
+  function uploadFiles(list) {
+    var note = document.getElementById('mm-sd-uploading');
+    var pick = document.getElementById('mm-sd-pick');
+    var done = 0, failed = [];
+
+    if (pick) pick.disabled = true;
+    function say(t) { if (note) note.textContent = t; }
+    say('Uploading 1 of ' + list.length + '...');
+
+    return list.reduce(function (chain, file) {
+      return chain.then(function () {
+        return api.uploadMediaFile(file)
+          .then(function (url) {
+            return api.createPhotoOrVideo(
+              /^video\//.test(file.type) ? api.VIDEO : api.PHOTO,
+              'Design' + ' - ' + file.name,
+              url,
+              job.id,          // job only: no room, no wall
+              null, null
+            );
+          })
+          .then(function (rec) {
+            done++;
+            // Ticked straight away: a file uploaded here was uploaded to be
+            // sent, so making someone tick it again is a pointless step.
+            if (rec && rec.id) chosen[rec.id] = true;
+            if (done < list.length) say('Uploading ' + (done + 1) + ' of ' + list.length + '...');
+          })
+          .catch(function (e) { failed.push(file.name + ': ' + e.message); });
+      });
+    }, Promise.resolve())
+      .then(function () {
+        say('');
+        if (pick) pick.disabled = false;
+        // Re-read so the new files appear in the list with their real ids.
+        return loadFiles().then(function () {
+          render();
+          if (failed.length) {
+            var err = document.getElementById('mm-sd-error');
+            if (err) err.textContent = 'Could not upload: ' + failed.join('; ');
+          }
+        });
+      });
   }
 
   function close() {
@@ -235,38 +320,35 @@ window.MM = window.MM || {};
       return;
     }
     var msg = document.getElementById('mm-sd-msg').value || '';
-    var withQuote = document.getElementById('mm-sd-quote').checked;
     var picked = files.filter(function (f) { return chosen[f.id]; });
+    var sentKind = kind;
 
     sending = true;
     btn.disabled = true;
     btn.textContent = 'Sending...';
     err.textContent = '';
 
-    var today = todayStr();
     var jobId = job.id;
+    // Read before the send so the stage decision is made on what was true
+    // when the button was pressed.
+    var alreadyEmailing = job.pipelineStageId === api.STAGE.emailCustomer;
 
     api.sendEmailToContact(contact.id, subject, toHtml(msg, picked))
       .then(function () {
-        // Recorded only after the email actually left. A date written before
-        // a failed send would say something happened that did not.
-        var work = [
-          api.setOpportunityField(jobId, api.DATE_FIELD_IDS.designEmailed, today),
-        ];
-        if (withQuote) {
-          work.push(api.setOpportunityField(jobId, api.DATE_FIELD_IDS.emailQuote, today));
-        }
-        return Promise.all(work);
+        // Written only after the email actually left. A log line recorded
+        // before a failed send would claim something that never happened.
+        return appendLog(jobId, sentKind, subject);
       })
       .then(function () {
-        // Sending the quote too means the customer now has everything, so the
-        // job goes straight to Proposal Sent rather than through Email Quote.
-        var stage = withQuote ? api.STAGE.proposalSent : api.STAGE.designEmailed;
-        return api.setOpportunityStage(jobId, stage);
+        // The job moves here on the FIRST email and then stays, however many
+        // follow. Where it goes next depends on what the customer says, which
+        // a person reads and decides -- not something a send can know.
+        if (alreadyEmailing) return null;
+        return api.setOpportunityStage(jobId, api.STAGE.emailCustomer);
       })
       .then(function () {
         window.MM.activity.log('note',
-          (withQuote ? 'Emailed the design and quote to ' : 'Emailed the design to ') +
+          'Emailed ' + kindLabel(sentKind) + ' to ' +
           (contact.email || 'the customer'),
           { jobId: jobId, jobName: job.name });
         sending = false;
@@ -279,6 +361,32 @@ window.MM = window.MM || {};
         btn.textContent = 'Send email';
         err.textContent = 'Could not send: ' + e.message;
       });
+  }
+
+  // One line per email, newest last, on the job itself. A date field could
+  // hold only the most recent send and could not say what was in it.
+  //
+  //   2026-09-08|design|Your design - 108 teal lane
+  function appendLog(jobId, k, subject) {
+    return api.getOpportunity(jobId)
+      .then(function (fresh) {
+        var existing = fresh ? (api.oppField(fresh, api.DATE_FIELD_IDS.emailLog) || '') : '';
+        var line = [todayStr(), k, clean(subject)].join('|');
+        var next = existing ? existing + '\n' + line : line;
+        return api.setOpportunityField(jobId, api.DATE_FIELD_IDS.emailLog, next);
+      })
+      // A log that fails to save must not fail the send: the email has gone,
+      // and saying otherwise would be worse than a missing line.
+      .catch(function () { return null; });
+  }
+
+  // A pipe or newline would break the one-per-line format.
+  function clean(v) { return String(v || '').replace(/[|\r\n]/g, ' ').trim(); }
+
+  function kindLabel(k) {
+    return k === 'both' ? 'the design and quote'
+      : k === 'quote' ? 'the quote'
+      : 'the design';
   }
 
   function todayStr() {
