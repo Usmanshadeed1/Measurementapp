@@ -252,7 +252,7 @@ window.MM = window.MM || {};
     var details =
       field('Name', name) +
       fieldHtml('Phone', c.phone
-        ? U.esc(U.phone(c.phone)) + U.callButtons(c.phone, c.id)
+        ? U.esc(U.phone(c.phone)) + U.callButtons(c.phone, c.id, c.firstName || c.name)
         : '') +
       field('Email', c.email) +
       field('Business', fmtBusiness(c)) +

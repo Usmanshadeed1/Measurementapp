@@ -61,8 +61,12 @@ window.MM = window.MM || {};
   //
   // The direct dial is kept beside it for a quick call where none of that
   // matters. It uses the phone's own SIM, so nothing is recorded.
-  function callButtons(phoneNumber, contactId) {
+  // The dial button carries the customer's name, so it is obvious who is
+  // about to be rung. "Direct call" said how the call was placed, which is
+  // not the thing anyone checks before tapping.
+  function callButtons(phoneNumber, contactId, who) {
     if (!phoneNumber) return '';
+    var name = titleCase(String(who || '').trim().split(/\s+/)[0] || '');
     var out = '<span class="mm-callrow">';
     if (contactId) {
       out += '<a class="mm-callbtn mm-callbtn-ghl" href="' + esc(ghlContactUrl(contactId)) + '" ' +
@@ -70,8 +74,9 @@ window.MM = window.MM || {};
     }
     // The phone icon belongs on the button that actually dials.
     out += '<a class="mm-callbtn mm-callbtn-direct" href="tel:' + esc(phoneNumber) + '" ' +
-      'aria-label="Call directly from this phone">' +
-      '<span aria-hidden="true">&#128222;</span> Direct call</a></span>';
+      'aria-label="Call ' + esc(name || 'this customer') + ' from this phone">' +
+      '<span aria-hidden="true">&#128222;</span> ' +
+      esc(name ? 'Call ' + name : 'Call') + '</a></span>';
     return out;
   }
 
