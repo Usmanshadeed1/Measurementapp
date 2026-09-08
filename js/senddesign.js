@@ -98,6 +98,14 @@ window.MM = window.MM || {};
     var el = document.getElementById('mm-sd-body');
     el.innerHTML = '<div class="mm-empty">Loading the files on this job...</div>';
     document.getElementById('mm-sd-error').textContent = '';
+
+    // The modal is reused, so the send button carries over whatever state the
+    // last send left on it. Reset here or a second send opens already
+    // disabled and still reading "Sending...".
+    var btn = document.getElementById('mm-sd-send');
+    btn.disabled = false;
+    btn.textContent = 'Send email';
+
     document.getElementById('mm-modal-senddesign').classList.add('open');
 
     loadFiles().then(render).catch(function (e) {
@@ -182,6 +190,9 @@ window.MM = window.MM || {};
 
   function close() {
     document.getElementById('mm-modal-senddesign').classList.remove('open');
+    var btn = document.getElementById('mm-sd-send');
+    if (btn) { btn.disabled = false; btn.textContent = 'Send email'; }
+    sending = false;
     job = null;
     contact = null;
     files = [];
@@ -258,6 +269,7 @@ window.MM = window.MM || {};
           (withQuote ? 'Emailed the design and quote to ' : 'Emailed the design to ') +
           (contact.email || 'the customer'),
           { jobId: jobId, jobName: job.name });
+        sending = false;
         close();
         if (onSent) onSent();
       })
