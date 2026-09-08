@@ -251,9 +251,16 @@ window.MM = window.MM || {};
           })
           .then(function (rec) {
             done++;
-            // Ticked straight away: a file uploaded here was uploaded to be
-            // sent, so making someone tick it again is a pointless step.
-            if (rec && rec.id) chosen[rec.id] = true;
+            if (rec && rec.id) {
+              // Added straight to the list rather than re-read. GoHighLevel's
+              // record search runs a second or two behind a write, so asking
+              // for the files again returns the list without the one just
+              // uploaded -- which looked like the upload had failed.
+              files.push(rec);
+              // Ticked straight away: a file uploaded here was uploaded to be
+              // sent, so making someone tick it again is a pointless step.
+              chosen[rec.id] = true;
+            }
             if (done < list.length) say('Uploading ' + (done + 1) + ' of ' + list.length + '...');
           })
           .catch(function (e) { failed.push(file.name + ': ' + e.message); });
@@ -262,14 +269,11 @@ window.MM = window.MM || {};
       .then(function () {
         say('');
         if (pick) pick.disabled = false;
-        // Re-read so the new files appear in the list with their real ids.
-        return loadFiles().then(function () {
-          render();
-          if (failed.length) {
-            var err = document.getElementById('mm-sd-error');
-            if (err) err.textContent = 'Could not upload: ' + failed.join('; ');
-          }
-        });
+        render();
+        if (failed.length) {
+          var err = document.getElementById('mm-sd-error');
+          if (err) err.textContent = 'Could not upload: ' + failed.join('; ');
+        }
       });
   }
 

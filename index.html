@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="css/workers.css">
 <link rel="stylesheet" href="css/checklist.css">
 <link rel="stylesheet" href="css/templates.css">
+<link rel="stylesheet" href="css/emailtpl.css">
 <link rel="stylesheet" href="css/meetings.css">
 <link rel="stylesheet" href="css/drivefolder.css">
 <link rel="stylesheet" href="css/roomsize.css">
@@ -82,6 +83,7 @@
       <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
       <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
+      <a href="#" class="mm-nav-link mm-admin-only" data-tab="emailtpl">Email Templates</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -103,6 +105,7 @@
     <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
     <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
+      <a href="#" class="mm-nav-link mm-admin-only" data-tab="emailtpl">Email Templates</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
@@ -323,6 +326,18 @@
 </div>
 
 <!-- TASK TEMPLATES — reusable task lists -->
+<div class="screen" id="screen-emailtpl">
+  <div class="mm-content">
+    <div class="section-header">
+      <span class="section-title">Email Templates</span>
+    </div>
+    <p class="mm-view-note">The wording used when you email a customer their
+      design or quote. You can still change any email before sending it &mdash;
+      editing it there never changes the template.</p>
+    <div id="mm-et-body"><div class="mm-empty">Loading...</div></div>
+  </div>
+</div>
+
 <div class="screen" id="screen-templates">
   <div class="mm-content">
     <div class="section-header">
@@ -333,14 +348,6 @@
       job. Changes made inside a job never affect the template.</p>
     <div id="mm-tt-body"><div class="mm-empty">Loading...</div></div>
 
-    <div class="mm-divider"></div>
-    <div class="section-header">
-      <span class="section-title">Customer Email Templates</span>
-    </div>
-    <p class="mm-view-note">The wording used when you email a customer their
-      design or quote. You can still change any email before sending it &mdash;
-      editing it there never changes the template.</p>
-    <div id="mm-et-body"><div class="mm-empty">Loading...</div></div>
   </div>
 </div>
 

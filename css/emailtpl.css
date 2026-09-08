@@ -1,0 +1,15 @@
+/* ==========================================================================
+   Email templates.
+
+   The wording used when a customer is emailed their design or quote. Kept in
+   the database rather than in the code, so it can be changed without a
+   deploy -- and still editable per email before sending.
+   ========================================================================== */
+
+.mm-et{border:1px solid var(--border);border-radius:12px;background:var(--card);
+  padding:14px;margin-bottom:14px}
+.mm-et-head{font-weight:700;font-size:1.02em;margin-bottom:12px}
+.mm-et-msg{min-height:170px;line-height:1.55;resize:vertical;font-family:inherit}
+.mm-et-hint{font-size:0.82em;color:var(--text2);line-height:1.55;
+  margin:0 0 14px;padding:12px 14px;border-radius:10px;background:var(--card2);
+  border:1px solid var(--border)}
