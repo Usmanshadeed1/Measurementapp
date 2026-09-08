@@ -221,10 +221,10 @@ window.MM = window.MM || {};
         value: toInputDate(designEmailed) || todayInput(),
         inputId: 'mm-step-demailed', btnId: 'mm-step-demailed-save',
         waitingText: 'Finish the design first',
-        // Sending the email from here records the date and moves the stage on
-        // its own, so the date box beside it is only for a design emailed
-        // some other way.
-        note: (!designEmailed && design && window.MM.senddesign.canSend())
+        // Offered even once a design has been emailed: a customer says it
+        // never arrived, or a drawing gets corrected and has to go again. The
+        // date simply updates to the new send.
+        note: (design && window.MM.senddesign.canSend())
           ? '<button type="button" class="mm-btn-sm mm-btn-primary mm-step-send" ' +
               'id="mm-step-senddesign">Send design to customer</button>'
           : '',
@@ -364,22 +364,25 @@ window.MM = window.MM || {};
       wire('mm-step-demailed-save', 'mm-step-demailed', function (val) {
         return saveDateThenStage(o, 'designEmailed', val, api.STAGE.designEmailed);
       });
+    }
 
-      var sendBtn = document.getElementById('mm-step-senddesign');
-      if (sendBtn) sendBtn.addEventListener('click', function () {
-        window.MM.senddesign.open(o, o.contact, function () {
-          // Re-read so the panel shows the date and stage the send produced.
-          api.getOpportunity(o.id).then(function (fresh) {
-            if (fresh) {
-              o.customFields = fresh.customFields;
-              o.pipelineStageId = fresh.pipelineStageId;
-            }
-            render(o);
-            if (onJobChanged) onJobChanged(o);
-          });
+    // Wired whenever the button is on screen, which includes a design already
+    // emailed once -- re-sending is a real need, and a button that does
+    // nothing is worse than no button.
+    var sendBtn = document.getElementById('mm-step-senddesign');
+    if (sendBtn) sendBtn.addEventListener('click', function () {
+      window.MM.senddesign.open(o, o.contact, function () {
+        // Re-read so the panel shows the date and stage the send produced.
+        api.getOpportunity(o.id).then(function (fresh) {
+          if (fresh) {
+            o.customFields = fresh.customFields;
+            o.pipelineStageId = fresh.pipelineStageId;
+          }
+          render(o);
+          if (onJobChanged) onJobChanged(o);
         });
       });
-    }
+    });
 
     if (st.designEmailed && !st.emailQuote) {
       wire('mm-step-equote-save', 'mm-step-equote', function (val) {
