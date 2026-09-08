@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="css/drivefolder.css">
 <link rel="stylesheet" href="css/roomsize.css">
 <link rel="stylesheet" href="css/jobedit.css">
+<link rel="stylesheet" href="css/senddesign.css">
 </head>
 <body>
 
@@ -584,6 +585,17 @@
   </div>
 </div>
 
+<!-- Emailing the design to the customer -->
+<div class="mm-modal-overlay" id="mm-modal-senddesign">
+  <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-sd-heading">
+    <div class="mm-modal-title" id="mm-sd-heading">Send design to customer</div>
+    <div id="mm-sd-body"></div>
+    <p class="mm-assign-error" id="mm-sd-error" role="alert"></p>
+    <button class="mm-btn mm-btn-primary" id="mm-sd-send">Send email</button>
+    <button class="mm-btn mm-btn-secondary" id="mm-sd-cancel">Cancel</button>
+  </div>
+</div>
+
 <!-- Quick edit of a task from My Tasks -->
 <div class="mm-modal-overlay" id="mm-modal-mytaskedit">
   <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-mte-heading">
@@ -786,6 +798,7 @@
 <script src="js/lighting.js"></script>
 <script src="js/contacts.js"></script>
 <script src="js/jobedit.js"></script>
+<script src="js/senddesign.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/newjob.js"></script>
 <script src="js/jobsteps.js"></script>

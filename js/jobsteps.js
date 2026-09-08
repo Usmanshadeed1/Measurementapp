@@ -221,6 +221,13 @@ window.MM = window.MM || {};
         value: toInputDate(designEmailed) || todayInput(),
         inputId: 'mm-step-demailed', btnId: 'mm-step-demailed-save',
         waitingText: 'Finish the design first',
+        // Sending the email from here records the date and moves the stage on
+        // its own, so the date box beside it is only for a design emailed
+        // some other way.
+        note: (!designEmailed && design && window.MM.senddesign.canSend())
+          ? '<button type="button" class="mm-btn-sm mm-btn-primary mm-step-send" ' +
+              'id="mm-step-senddesign">Send design to customer</button>'
+          : '',
       }) +
       stepHtml({
         num: 6, label: 'Email quote',
@@ -356,6 +363,21 @@ window.MM = window.MM || {};
     if (st.design && !st.designEmailed) {
       wire('mm-step-demailed-save', 'mm-step-demailed', function (val) {
         return saveDateThenStage(o, 'designEmailed', val, api.STAGE.designEmailed);
+      });
+
+      var sendBtn = document.getElementById('mm-step-senddesign');
+      if (sendBtn) sendBtn.addEventListener('click', function () {
+        window.MM.senddesign.open(o, o.contact, function () {
+          // Re-read so the panel shows the date and stage the send produced.
+          api.getOpportunity(o.id).then(function (fresh) {
+            if (fresh) {
+              o.customFields = fresh.customFields;
+              o.pipelineStageId = fresh.pipelineStageId;
+            }
+            render(o);
+            if (onJobChanged) onJobChanged(o);
+          });
+        });
       });
     }
 

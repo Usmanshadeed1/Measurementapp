@@ -737,6 +737,7 @@
   TPL.init();
   window.MM.jobedit.init();
   MY.init();
+  window.MM.senddesign.init();
   // The start date box only makes sense for the two dated options.
   document.querySelectorAll('input[name="mm-tl-mode"]').forEach(function (r) {
     r.addEventListener('change', function () {

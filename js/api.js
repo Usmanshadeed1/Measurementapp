@@ -334,6 +334,25 @@ window.MM = window.MM || {};
     return setOpportunityField(oppId, APPT_DT_FIELD_ID, v);
   }
 
+  // Sends one email to one contact, through GoHighLevel so it lands in that
+  // customer's conversation thread. That matters for two reasons: the client
+  // can see what was sent, and GoHighLevel can detect the reply -- which is
+  // what cancels the follow-up reminder. An email sent from a personal inbox
+  // would do neither.
+  //
+  // Deliberately takes a single contactId. There is no bulk form of this in
+  // the app, and there should not be one.
+  function sendEmailToContact(contactId, subject, html) {
+    if (!contactId) return Promise.reject(new Error('No customer to email.'));
+    if (!subject) return Promise.reject(new Error('The email needs a subject.'));
+    return apiFetch('POST', '/conversations/messages', {
+      type: 'Email',
+      contactId: contactId,
+      subject: subject,
+      html: html || '',
+    });
+  }
+
   // A single opportunity, read directly. Unlike /opportunities/search this
   // is not behind an index, so it reflects a write immediately.
   function getOpportunity(oppId) {
@@ -421,7 +440,8 @@ window.MM = window.MM || {};
     STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
     STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, createOpportunity: createOpportunity, opportunitiesForContact: opportunitiesForContact,
-    setOpportunityField: setOpportunityField, renameOpportunity: renameOpportunity, getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
+    setOpportunityField: setOpportunityField, renameOpportunity: renameOpportunity, sendEmailToContact: sendEmailToContact,
+    getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact, updateContact: updateContact,
