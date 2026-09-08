@@ -100,15 +100,31 @@
 
 /* ---- The job card — one design, used by both views ---- */
 .mm-jlist{display:flex;flex-direction:column;gap:8px}
-.mm-jcard{display:flex;align-items:center;gap:14px;width:100%;
-          text-align:left;font-family:inherit;font-size:1em;
+/* The row is a container, not a control: it holds the button that opens the
+   job and the pencil that edits the customer. A button inside a button is
+   invalid and lays out unpredictably, so the outer element is a div. */
+.mm-jcard{display:flex;align-items:stretch;width:100%;
           background:var(--card2);border:1px solid var(--border);
           border-left:4px solid var(--accent);border-radius:10px;
-          padding:14px 16px;cursor:pointer;min-height:66px}
+          min-height:66px;overflow:hidden}
 .mm-jlist .mm-jcard{background:var(--card);box-shadow:var(--card-shadow)}
 .mm-jcard:hover{border-color:var(--accent)}
-.mm-jcard:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .mm-jcard.is-closed{border-left-color:var(--success);opacity:.75}
+
+/* The padding and the tap target moved here from the row itself. */
+.mm-jcard-open{display:flex;align-items:center;gap:14px;flex:1 1 auto;
+          min-width:0;text-align:left;font-family:inherit;font-size:1em;
+          background:none;border:none;color:inherit;
+          padding:14px 16px;cursor:pointer}
+.mm-jcard-open:hover{background:var(--card2)}
+.mm-jcard-open:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+
+.mm-jcard-edit{flex:0 0 auto;width:48px;border:none;background:none;
+          border-left:1px solid var(--border);
+          color:var(--text2);font-size:1em;cursor:pointer}
+.mm-jcard-edit:hover{background:var(--card2);color:var(--accent)}
+.mm-jcard-edit:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.mm-jcard-edit:disabled{opacity:.5;cursor:wait}
 
 .mm-jcard-main{display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0}
 .mm-jcard-name{font-size:1.05em;font-weight:700;color:var(--text);line-height:1.3}
@@ -234,8 +250,9 @@
   .mm-agroup-head{padding:14px;gap:10px;min-height:60px}
   .mm-agroup-count{min-width:32px;height:32px}
   /* The card stacks so the name always gets a full line, and the status
-     lands underneath rather than being squeezed against it. */
-  .mm-jcard{flex-wrap:wrap;padding:14px}
+     lands underneath rather than being squeezed against it. The wrapping
+     happens inside the open button, which is what holds that content now. */
+  .mm-jcard-open{flex-wrap:wrap;padding:14px}
   .mm-jcard-side{align-items:flex-start;text-align:left;flex-direction:row;
                  flex-wrap:wrap;gap:10px;width:100%;
                  padding-top:8px;border-top:1px solid var(--border)}

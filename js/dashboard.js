@@ -161,17 +161,26 @@ window.MM = window.MM || {};
     var done = [measuredDate(o), designDate(o), pricingDate(o),
                 sentDate(o), cabinetsDate(o), completedDate(o)].filter(Boolean).length;
 
-    return '<button type="button" class="mm-jcard' + (isClosed(o) ? ' is-closed' : '') +
-        '" data-job="' + U.esc(o.id) + '">' +
-      '<span class="mm-jcard-main">' +
-        '<span class="mm-jcard-name">' + U.esc(customerName(o)) + '</span>' +
-        '<span class="mm-jcard-addr">' + U.esc(jobAddress(o) || 'No address on file') + '</span>' +
-        '<span class="mm-jbar" role="img" aria-label="' + done + ' of 6 steps done">' +
-          '<span class="mm-jbar-fill" style="width:' + Math.round((done / 6) * 100) + '%"></span>' +
+    var name = customerName(o);
+
+    return '<div class="mm-jcard' + (isClosed(o) ? ' is-closed' : '') + '">' +
+      '<button type="button" class="mm-jcard-open" data-job="' + U.esc(o.id) + '">' +
+        '<span class="mm-jcard-main">' +
+          '<span class="mm-jcard-name">' + U.esc(name) + '</span>' +
+          '<span class="mm-jcard-addr">' + U.esc(jobAddress(o) || 'No address on file') + '</span>' +
+          '<span class="mm-jbar" role="img" aria-label="' + done + ' of 6 steps done">' +
+            '<span class="mm-jbar-fill" style="width:' + Math.round((done / 6) * 100) + '%"></span>' +
+          '</span>' +
         '</span>' +
-      '</span>' +
-      '<span class="mm-jcard-arrow" aria-hidden="true">&#8250;</span>' +
-    '</button>';
+        '<span class="mm-jcard-arrow" aria-hidden="true">&#8250;</span>' +
+      '</button>' +
+      // Correcting a name or address without opening the job first. Admin
+      // only, matching the pencil on the job screen.
+      (window.MM.jobedit.canEdit()
+        ? '<button type="button" class="mm-jcard-edit" data-editjob="' + U.esc(o.id) + '" ' +
+            'aria-label="Edit the customer details for ' + U.esc(name) + '">&#9998;</button>'
+        : '') +
+    '</div>';
   }
 
   // ---- Work list ----------------------------------------------------------
@@ -436,10 +445,39 @@ window.MM = window.MM || {};
         renderBody();
       });
     });
-    el.querySelectorAll('.mm-jcard[data-job]').forEach(function (btn) {
+    el.querySelectorAll('.mm-jcard-open[data-job]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var o = allJobs.find(function (j) { return j.id === btn.getAttribute('data-job'); });
         if (o && onOpenJob) onOpenJob(o);
+      });
+    });
+
+    el.querySelectorAll('[data-editjob]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var o = allJobs.find(function (j) { return j.id === btn.getAttribute('data-editjob'); });
+        if (!o) return;
+        var c = o.contact || {};
+        if (!c.id) return;
+
+        // The contact riding on an opportunity is a slim one -- name, phone,
+        // email -- with no address parts, so it is read in full first.
+        btn.disabled = true;
+        api.getContact(c.id)
+          .catch(function () { return c; })
+          .then(function (full) {
+            btn.disabled = false;
+            window.MM.jobedit.open(o, full || c, function (freshJob, freshContact) {
+              // Updated in place so the row, and anything else holding this
+              // job, shows the correction without a reload.
+              if (freshJob) {
+                o.name = freshJob.name;
+                o.customFields = freshJob.customFields;
+              }
+              if (freshContact) o.contact = freshContact;
+              renderBody();
+            });
+          });
       });
     });
   }
