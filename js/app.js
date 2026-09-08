@@ -106,8 +106,17 @@
         '<span class="mm-addr-from">from the customer record</span></div></div>';
   }
 
+  // The Property Address field, or the address inside the job name when that
+  // field was never filled in. Jobs created by the GoHighLevel workflow put
+  // the address in the title but not the field, so reading the field alone
+  // showed a dash on a job whose own heading names the property.
+  //
+  // Same rule the dashboard uses, so one job never reads two ways.
   function jobAddress(o) {
-    return api.oppField(o, api.ADDR_FIELD_ID);
+    var addr = api.oppField(o, api.ADDR_FIELD_ID);
+    if (addr) return addr;
+    var n = o.name || '';
+    return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ') : '';
   }
 
   // ===== JOB =====

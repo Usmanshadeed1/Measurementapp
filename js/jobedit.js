@@ -47,6 +47,13 @@ window.MM = window.MM || {};
   // The town, postcode and country are not stored here at all.
   function streetOf(addr) { return String(addr || '').trim(); }
 
+  // Jobs are titled "Customer - Address", and the workflow that creates them
+  // fills the title but not the address field.
+  function addressInName(o) {
+    var n = (o && o.name) || '';
+    return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ').trim() : '';
+  }
+
   // ---- The form ------------------------------------------------------------
 
   function open(o, c, after) {
@@ -57,7 +64,12 @@ window.MM = window.MM || {};
     // The job's own address if it has one, otherwise the customer's, already
     // filled in. Asking someone to retype an address the app can see, or to
     // press a button to accept it, is work for no reason.
+    // The job's own address if it has one; then the address inside its name,
+    // which is where the GoHighLevel workflow puts it; and only then the
+    // customer's own address. A second job is usually at a different
+    // property, so the contact's address is the last resort, not the first.
     var addr = api.oppField(job, api.ADDR_FIELD_ID) ||
+      addressInName(job) ||
       (contact.address1 ? String(contact.address1).trim() : '');
 
     var f = document.getElementById('mm-je-form');
