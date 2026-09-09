@@ -36,8 +36,6 @@ window.MM = window.MM || {};
     // the moment measuring is done, which is what the client asked for.
     needDesign: '3K1kYljXXCkPxF8W8OYP',    // when design became due
     design: 'nZtlNKXw54QNcDFZLUhc',        // when the design was finished
-    designEmailed: 'hvG2bjms0XA1Kys8o4OS', // when the drawings went out
-    emailQuote: 'Boxem27IDmdoUIvR0iiY',    // when the quote was emailed
     emailLog: 'trbgoJmInsECI6FdNTVi',      // every email sent, one per line
     pricing: 'ZwMwQt4rCYOvxzYfTdPu',       // when pricing was finished
     proposalSent: 'wwLRthpRhQLmMcSOLnaH',  // when the proposal went to the customer
@@ -61,8 +59,6 @@ window.MM = window.MM || {};
     // arrives here on the first send and stays: what happens next depends on
     // the customer's reply, which a person reads and acts on.
     emailCustomer:'63d88efd-983d-4f19-8bf1-77cea559bd36',  // Email Customer
-    designEmailed:'c9cb40fe-1d25-46f5-8114-c5324caa0ccd',  // Design Emailed (retired)
-    emailQuote:   '241f9cea-9d90-40ac-aa0d-8558346ad04f',  // Email Quote (retired)
     pricing:      'ba83959c-dd8e-47bc-8cb0-a1e78944ef13',  // Pricing Complete
     designMeeting:'eb7eca8c-db5c-4df7-a766-2366d240d469',
     revision:     'c1d6ee95-7275-4f50-b3a0-be4744923131',
