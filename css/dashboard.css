@@ -495,3 +495,22 @@
     padding-left:6px;padding-right:6px;font-size:0.82em;
     overflow:hidden;text-overflow:ellipsis}
 }
+
+/* ---- The measurement step ------------------------------------------------ */
+/* Booking the visit and recording that it happened are two halves of one
+   thing, filled in days apart. One panel, two labelled rows. */
+
+.mm-msrow{margin-bottom:12px}
+.mm-msrow:last-child{margin-bottom:0}
+.mm-msrow-label{font-size:0.78em;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text2);margin-bottom:5px}
+
+/* Quieter than Save: removing a date is the rarer action and should not
+   compete with the one people came to press. */
+.mm-step-clear{flex:0 0 auto}
+.mm-step-clear:disabled{opacity:.5;cursor:wait}
+
+@media (max-width: 620px){
+  .mm-msrow .mm-step-action{flex-wrap:wrap}
+  .mm-msrow .mm-step-action .mm-btn-sm{flex:1 1 0;min-width:0}
+}

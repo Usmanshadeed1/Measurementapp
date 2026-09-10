@@ -102,6 +102,62 @@ window.MM = window.MM || {};
 
   // Steps render as done / active / waiting. Only the active one is
   // actionable, so the order of work is never ambiguous.
+  // Booking the visit and recording that it happened, in one panel. Both
+  // dates write to the fields they always used -- only the layout changed.
+  //
+  // Each row keeps its own Save, because the two are filled in days apart.
+  // Clear is offered beside them: a visit gets cancelled, and a date typed by
+  // mistake had no way back before this.
+  function measurementStep(appt, apptTime, measured, apptNote) {
+    var done = !!measured;
+    var cls = 'mm-step mm-step-' + (done ? 'done' : 'active');
+
+    var visitRow =
+      '<div class="mm-msrow">' +
+        '<div class="mm-msrow-label">Visit</div>' +
+        '<div class="mm-step-action">' +
+          '<input type="date" class="mm-input mm-step-date" id="mm-step-appt"' +
+            (toInputDate(appt) ? ' value="' + U.esc(toInputDate(appt)) + '"' : '') +
+            ' aria-label="Measurement visit date">' +
+          timePicker('mm-step-appt-time', apptTime, 'measurement visit') +
+          '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
+            'id="mm-step-appt-save">' + (appt ? 'Update' : 'Save') + '</button>' +
+          (appt
+            ? '<button type="button" class="mm-btn-sm mm-btn-secondary mm-step-clear" ' +
+              'id="mm-step-appt-clear">Clear</button>'
+            : '') +
+        '</div>' +
+        (apptNote ? '<div class="mm-step-note">' + apptNote + '</div>' : '') +
+      '</div>';
+
+    var doneRow =
+      '<div class="mm-msrow">' +
+        '<div class="mm-msrow-label">Completed</div>' +
+        '<div class="mm-step-action">' +
+          '<input type="date" class="mm-input mm-step-date" id="mm-step-meas"' +
+            ' value="' + U.esc(toInputDate(measured) || todayInput()) + '"' +
+            ' aria-label="Measurement completed date">' +
+          '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
+            'id="mm-step-meas-save">' + (measured ? 'Update' : 'Save') + '</button>' +
+          (measured
+            ? '<button type="button" class="mm-btn-sm mm-btn-secondary mm-step-clear" ' +
+              'id="mm-step-meas-clear">Clear</button>'
+            : '') +
+        '</div>' +
+        (!measured
+          ? '<div class="mm-step-note">Saving this moves the job to Need Design.</div>'
+          : '') +
+      '</div>';
+
+    return '<div class="' + cls + '">' +
+      '<div class="mm-step-mark" aria-hidden="true">' + (done ? '&#10003;' : '1') + '</div>' +
+      '<div class="mm-step-body">' +
+        '<div class="mm-step-label">Measurement</div>' +
+        visitRow + doneRow +
+      '</div>' +
+    '</div>';
+  }
+
   // Emailing the customer. Not a date to type: the send records itself, and
   // the log underneath says what went and when. One step rather than two,
   // because the design and the quote go out in whatever order suits the job.
@@ -132,7 +188,7 @@ window.MM = window.MM || {};
 
     return '<div class="' + cls + '">' +
       '<div class="mm-step-mark" aria-hidden="true">' +
-        (sent ? '&#10003;' : '5') + '</div>' +
+        (sent ? '&#10003;' : '4') + '</div>' +
       '<div class="mm-step-body">' +
         '<div class="mm-step-label">Email the customer</div>' +
         body +
@@ -178,6 +234,12 @@ window.MM = window.MM || {};
         (opts.timeId ? timePicker(opts.timeId, opts.timeValue, opts.label) : '') +
         '<button type="button" class="mm-btn-sm mm-btn-primary" id="' + opts.btnId + '">' +
           U.esc(opts.saveLabel || 'Save') + '</button>' +
+        // Offered only where a step asks for it, and only once there is
+        // something to remove.
+        (opts.clearId && opts.value
+          ? '<button type="button" class="mm-btn-sm mm-btn-secondary mm-step-clear" ' +
+            'id="' + opts.clearId + '">Clear</button>'
+          : '') +
       '</div>';
     } else {
       body = '<div class="mm-step-waiting">' + U.esc(opts.waitingText || 'Waiting for the previous step') + '</div>';
@@ -226,32 +288,10 @@ window.MM = window.MM || {};
 
     var apptWhen = api.apptDateTime(o);
 
-    // The visit is the one step that gets rearranged after it is set -- a
-    // customer reschedules, or a time is added to a date booked before times
-    // existed. So its boxes stay on screen instead of collapsing to text.
-    var apptSet = !!appt;
-
     var html =
+      measurementStep(appt, apptWhen.time, measured, apptNote) +
       stepHtml({
-        num: 1, label: 'Measurement appointment', state: appt ? 'done' : 'active',
-        alwaysEditable: true,
-        valueText: fmtLong(appt) + (apptWhen.time ? ' at ' + fmtTime(apptWhen.time) : ''),
-        value: toInputDate(appt),
-        timeId: 'mm-step-appt-time', timeValue: apptWhen.time,
-        inputId: 'mm-step-appt', btnId: 'mm-step-appt-save',
-        saveLabel: apptSet ? 'Update' : 'Save',
-        note: apptNote,
-      }) +
-      stepHtml({
-        num: 2, label: 'Measurement complete',
-        state: measured ? 'done' : (appt ? 'active' : 'waiting'),
-        valueText: fmtLong(measured), value: toInputDate(measured) || todayInput(),
-        inputId: 'mm-step-meas', btnId: 'mm-step-meas-save',
-        waitingText: 'Set the appointment date first',
-        note: measured ? '' : (appt ? 'Saving this moves the job to Measurement Complete.' : ''),
-      }) +
-      stepHtml({
-        num: 3, label: 'Need design',
+        num: 2, label: 'Need design',
         state: needDesign ? 'done' : (measured ? 'active' : 'waiting'),
         valueText: fmtLong(needDesign),
         // Pre-filled with the measurement date, which is when design becomes
@@ -259,13 +299,16 @@ window.MM = window.MM || {};
         // one step never changes another behind the person using it.
         value: toInputDate(needDesign) || toInputDate(measured) || todayInput(),
         inputId: 'mm-step-needdesign', btnId: 'mm-step-needdesign-save',
+        // Only once a date is actually stored: the box is pre-filled from the
+        // measurement date, and offering to clear a suggestion is meaningless.
+        clearId: needDesign ? 'mm-step-needdesign-clear' : '',
         waitingText: 'Measure the property first',
         note: needDesign ? '' : (measured
           ? 'Set to the day measuring finished. Change it if design starts later.'
           : ''),
       }) +
       stepHtml({
-        num: 4, label: 'Design complete',
+        num: 3, label: 'Design complete',
         state: design ? 'done' : (measured ? 'active' : 'waiting'),
         valueText: fmtLong(design), value: toInputDate(design) || todayInput(),
         inputId: 'mm-step-design', btnId: 'mm-step-design-save',
@@ -273,7 +316,7 @@ window.MM = window.MM || {};
       }) +
       emailStep(o, design) +
       stepHtml({
-        num: 6, label: 'Pricing complete',
+        num: 5, label: 'Pricing complete',
         state: pricing ? 'done' : (design ? 'active' : 'waiting'),
         valueText: fmtLong(pricing), value: toInputDate(pricing) || todayInput(),
         inputId: 'mm-step-pricing', btnId: 'mm-step-pricing-save',
@@ -281,7 +324,7 @@ window.MM = window.MM || {};
         note: pricing ? '' : (design ? 'Saving this moves the job to Pricing Complete.' : ''),
       }) +
       stepHtml({
-        num: 7, label: 'Proposal sent',
+        num: 6, label: 'Proposal sent',
         state: sent ? 'done' : (pricing ? 'active' : 'waiting'),
         valueText: fmtLong(sent), value: toInputDate(sent) || todayInput(),
         inputId: 'mm-step-sent', btnId: 'mm-step-sent-save',
@@ -289,7 +332,7 @@ window.MM = window.MM || {};
         note: sent ? waitingNote(sent, won) : (pricing ? 'Email the customer yourself, then record the date here.' : ''),
       }) +
       stepHtml({
-        num: 8, label: 'Material ordering',
+        num: 7, label: 'Material ordering',
         state: cabinets ? 'done' : (won ? 'active' : 'waiting'),
         valueText: fmtLong(cabinets), value: toInputDate(cabinets) || todayInput(),
         inputId: 'mm-step-cab', btnId: 'mm-step-cab-save',
@@ -297,7 +340,7 @@ window.MM = window.MM || {};
         note: cabinets ? '' : (won ? 'Saving this moves the job to Material Ordering.' : ''),
       }) +
       stepHtml({
-        num: 9, label: 'Job completed',
+        num: 8, label: 'Job completed',
         state: completed ? 'done' : (cabinets ? 'active' : 'waiting'),
         valueText: fmtLong(completed), value: toInputDate(completed) || todayInput(),
         inputId: 'mm-step-done', btnId: 'mm-step-done-save',
@@ -383,15 +426,31 @@ window.MM = window.MM || {};
       return saveApptThenStage(o, val, t ? t.value : '', !st.appt);
     });
 
-    if (st.appt && !st.measured) wire('mm-step-meas-save', 'mm-step-meas', function (val) {
-      return saveDateThenStage(o, 'measured', val, api.STAGE.measured);
+    // Wired whether or not a date is set, so a completed measurement can be
+    // corrected the way the visit can.
+    wire('mm-step-meas-save', 'mm-step-meas', function (val) {
+      return saveDateThenStage(o, 'measured', val, api.STAGE.needDesign);
     });
 
-    if (st.measured && !st.needDesign) {
-      wire('mm-step-needdesign-save', 'mm-step-needdesign', function (val) {
-        return saveDateThenStage(o, 'needDesign', val, api.STAGE.needDesign);
-      });
-    }
+    // Need Design keeps its date box so it can be changed or cleared, but no
+    // Save that moves the stage: completing the measurement already put the
+    // job there, and a button offering to do it again would only confuse.
+    wire('mm-step-needdesign-save', 'mm-step-needdesign', function (val) {
+      return saveDateThenStage(o, 'needDesign', val, null);
+    });
+
+    // Clearing a date leaves the stage alone. A visit gets cancelled without
+    // the job going backwards, and a silent reverse move would be harder to
+    // understand than doing it by hand.
+    wireClear('mm-step-appt-clear', function () {
+      return api.setApptDateTime(o.id, '', '');
+    });
+    wireClear('mm-step-meas-clear', function () {
+      return api.setOpportunityField(o.id, api.DATE_FIELD_IDS.measured, '');
+    });
+    wireClear('mm-step-needdesign-clear', function () {
+      return api.setOpportunityField(o.id, api.DATE_FIELD_IDS.needDesign, '');
+    });
 
 
     // Wired whenever the button is on screen, which includes a design already
@@ -433,6 +492,33 @@ window.MM = window.MM || {};
     // stage, and the dashboard archives it on the date alone.
     if (st.cabinets && !st.completed) wire('mm-step-done-save', 'mm-step-done', function (val) {
       return saveDateThenStage(o, 'completed', val, api.STAGE.completed);
+    });
+  }
+
+  // Clearing shares wire()'s reload so the panel redraws from what was
+  // actually stored, rather than from what the screen hoped was stored.
+  function wireClear(btnId, clearFn) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      btn.textContent = 'Clearing...';
+      showError('');
+      clearFn()
+        .then(function () { return api.getOpportunity(currentJob.id); })
+        .then(function (fresh) {
+          if (fresh) {
+            currentJob.customFields = fresh.customFields;
+            currentJob.pipelineStageId = fresh.pipelineStageId;
+          }
+          render(currentJob);
+          if (onJobChanged) onJobChanged(currentJob);
+        })
+        .catch(function (e) {
+          btn.disabled = false;
+          btn.textContent = 'Clear';
+          showError('Could not clear: ' + e.message);
+        });
     });
   }
 
