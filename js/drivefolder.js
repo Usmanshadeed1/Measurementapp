@@ -114,6 +114,7 @@ window.MM = window.MM || {};
 
   function form() {
     return '<div class="mm-dr-form">' +
+      pickerHtml() +
       '<div class="mm-field-group">' +
         '<label class="mm-label" for="mm-dr-input">Folder link</label>' +
         '<input class="mm-input" id="mm-dr-input" type="url" ' +
@@ -134,9 +135,77 @@ window.MM = window.MM || {};
     '</div>';
   }
 
+  // ---- Choosing from the folders already in Drive ---------------------------
+  //
+  // A job made before this app existed already has a folder, sitting in the
+  // client's parent folder. Picking it from a list beats copying an address
+  // out of the browser -- but the list needs Drive connected, so the paste
+  // box stays underneath as the way that always works.
+
+  var picker = { state: 'idle', list: [] };   // idle | loading | ready | failed
+
+  function pickerHtml() {
+    if (picker.state === 'loading') {
+      return '<div class="mm-field-group"><div class="mm-loading">' +
+        '<span class="mm-spinner" aria-hidden="true"></span>' +
+        '<span>Reading your Drive folders&hellip;</span></div></div>';
+    }
+
+    if (picker.state === 'ready') {
+      if (!picker.list.length) {
+        return '<div class="mm-field-group">' +
+          '<p class="mm-dr-hint">No folders found in the Drive folder this app ' +
+          'was pointed at. Paste a link instead.</p></div>';
+      }
+      return '<div class="mm-field-group">' +
+        '<label class="mm-label" for="mm-dr-pick">Choose a folder</label>' +
+        '<select class="mm-select" id="mm-dr-pick">' +
+          '<option value="">Pick a folder...</option>' +
+          picker.list.map(function (f) {
+            return '<option value="' + U.esc(f.link) + '">' + U.esc(f.name) + '</option>';
+          }).join('') +
+        '</select>' +
+        '<p class="mm-dr-hint">Choosing one fills in the link below. Nothing in ' +
+          'the folder is changed.</p>' +
+      '</div>';
+    }
+
+    if (picker.state === 'failed') return '';   // the paste box covers it
+
+    return '<div class="mm-field-group">' +
+      '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+        'id="mm-dr-browse">Choose from my Drive</button></div>';
+  }
+
+  function loadFolders() {
+    if (!window.MM.drive) { picker.state = 'failed'; render(); return; }
+    picker.state = 'loading';
+    render();
+    window.MM.drive.listFolders()
+      .then(function (list) {
+        picker.list = list || [];
+        picker.state = 'ready';
+        render();
+      })
+      .catch(function (e) {
+        picker.state = 'failed';
+        render();
+        showError(e.message + ' You can still paste the link.');
+      });
+  }
+
   // ---- Actions -------------------------------------------------------------
 
   function bind(el) {
+    var browse = el.querySelector('#mm-dr-browse');
+    if (browse) browse.addEventListener('click', loadFolders);
+
+    var pick = el.querySelector('#mm-dr-pick');
+    if (pick) pick.addEventListener('change', function () {
+      var input = document.getElementById('mm-dr-input');
+      if (input && pick.value) input.value = pick.value;
+    });
+
     var add = el.querySelector('#mm-dr-add') || el.querySelector('#mm-dr-change');
     if (add) add.addEventListener('click', function () {
       editing = true; render();

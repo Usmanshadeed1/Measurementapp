@@ -160,6 +160,16 @@ window.MM = window.MM || {};
           jobName: jobName(picked, addr),
           detail: addr,
         });
+
+        // The job's Google Drive folder, made in the background. Deliberately
+        // not waited on: the job exists and the person should be looking at
+        // it, not at a spinner while Drive builds six folders. It fails
+        // silently by design -- a job with no Drive folder still works, and
+        // one can be linked by hand from the job's Drive Folder panel.
+        if (window.MM.drive && opp) {
+          window.MM.drive.createForJob(opp, picked);
+        }
+
         close();
         btn.disabled = false; btn.textContent = 'Create job';
         if (onCreated) onCreated(opp);

@@ -113,6 +113,13 @@ window.MM = window.MM || {};
       if (!wr.id) { alert('Save the wall first.'); return Promise.resolve(); }
       var isVid = file.type.indexOf('video') === 0;
       return api.uploadMediaFile(file).then(function (url) {
+        // The extra copy in Drive. Started once the file is safely uploaded,
+        // never waited on, and silent on every failure -- see js/drive.js.
+        if (window.MM.drive && ctx.job && ctx.job.id) {
+          window.MM.drive.copyMedia(ctx.job.id, url,
+            (isVid ? 'Video' : 'Photo') + ' - ' + (U.pv(wr, 'name') || 'Wall') +
+            ' - ' + new Date().toISOString().split('T')[0], isVid);
+        }
         return api.createPhotoOrVideo(isVid ? api.VIDEO : api.PHOTO, 'Photo – ' + (U.pv(wr, 'name') || 'Wall') + ' – ' + new Date().toISOString().split('T')[0], url, ctx.job.id, ctx.room.id, wr.id);
       }).then(function (rec) {
         var wallLabel = U.pv(wr, 'name') || 'Wall';

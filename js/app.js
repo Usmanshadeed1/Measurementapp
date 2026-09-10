@@ -735,6 +735,9 @@
       var roomName = U.pv(room, 'name') || 'Room';
       btn.textContent = 'Uploading...'; btn.disabled = true;
       api.uploadMediaFile(file).then(function (url) {
+        // The extra copy in Drive, started once the file is safely uploaded
+        // and never waited on. See js/drive.js: it is silent on every failure.
+        driveCopy(url, roomName, isVid);
         return api.createPhotoOrVideo(isVid ? api.VIDEO : api.PHOTO, 'Photo – ' + roomName + ' – ' + new Date().toISOString().split('T')[0], url, job.id, room.id);
       }).then(function (rec) { MD.addMediaThumb(rec, isVid); MD.addJobMediaThumb(rec, isVid, room.id, '', room); })
         .catch(function (e) { alert(e.message); })
@@ -752,11 +755,25 @@
     var roomName = U.pv(room, 'name') || 'Room';
     btn.textContent = 'Uploading...'; btn.disabled = true;
     api.uploadMediaFile(file).then(function (url) {
+      driveCopy(url, roomName, isVid);
       return api.createPhotoOrVideo(isVid ? api.VIDEO : api.PHOTO, 'Photo – ' + roomName + ' – ' + new Date().toISOString().split('T')[0], url, job.id, room.id);
     }).then(function (rec) { MD.addMediaThumb(rec, isVid); MD.addJobMediaThumb(rec, isVid, room.id, '', room); input.value = ''; })
       .catch(function (e) { alert(e.message); })
       .then(function () { btn.textContent = '📁 Upload'; btn.disabled = false; });
   });
+
+  // Copies a just-uploaded file into the job's Google Drive folder.
+  //
+  // Fire and forget, on purpose. The file is already in GoHighLevel by the
+  // time this runs, so nothing here is allowed to slow the upload down or to
+  // surface an error: a job with no Drive folder, or no Drive connection at
+  // all, simply copies nothing.
+  function driveCopy(url, label, isVid) {
+    if (!window.MM.drive || !job || !job.id) return;
+    var name = (isVid ? 'Video' : 'Photo') + ' - ' + label + ' - ' +
+      new Date().toISOString().split('T')[0];
+    window.MM.drive.copyMedia(job.id, url, name, isVid);
+  }
 
   // ---- Adding a photo or video from the job screen -------------------------
   //
@@ -778,6 +795,7 @@
       btn.textContent = 'Uploading...'; btn.disabled = true;
       api.uploadMediaFile(file)
         .then(function (url) {
+          driveCopy(url, 'Job', isVid);
           return api.createPhotoOrVideo(
             isVid ? api.VIDEO : api.PHOTO,
             'Photo – Job – ' + new Date().toISOString().split('T')[0],

@@ -1,19 +1,22 @@
 // api/drive.js
 //
-// The Google Drive connection, server side.
+// Google Drive, server side.
 //
-// Why this is not done in the browser: connecting to Drive produces a refresh
-// token, which is a permanent key to the owner's Drive. It must never reach
-// the browser, so the whole exchange happens here and the token is written
-// straight to the database using the service key -- which also never leaves
-// this file.
+// Why none of this is done in the browser: connecting to Drive produces a
+// refresh token, which is a permanent key to the owner's Drive. It must never
+// reach the browser, so the whole exchange happens here and the token is
+// written straight to the database using the service key -- which also never
+// leaves this file.
 //
 // Routes (vercel.json sends /api/drive/* here):
 //
-//   GET /api/drive/status     is Drive connected, and as whom
-//   GET /api/drive/connect    redirects to Google's consent screen
-//   GET /api/drive/callback   where Google sends the person back
+//   GET  /api/drive/status      is Drive connected, and as whom
+//   GET  /api/drive/connect     redirects to Google's consent screen
+//   GET  /api/drive/callback    where Google sends the person back
 //   POST /api/drive/disconnect  forget the stored token
+//   GET  /api/drive/folders     folders inside the parent, to pick from
+//   POST /api/drive/job-folder  make a job's folder tree, return its link
+//   POST /api/drive/upload      copy one photo or video into a job folder
 //
 // Environment variables, all set in Vercel:
 //   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET   the OAuth client
@@ -22,14 +25,30 @@
 
 const SUPABASE_URL = 'https://ozmpcygzbooddrbplxcz.supabase.co';
 
-// Only what the feature actually does: create folders and add files. Not
-// drive.readonly and not full drive access -- this scope cannot see, change
-// or delete anything the app did not create itself, so an existing folder
-// picked by hand is safe from it.
-const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+// drive.file alone would only see folders this app created, and picking a
+// folder made by hand months ago is exactly what the existing jobs need. So
+// readonly is added for *looking*, and drive.file remains what grants the
+// right to create and write. Nothing here deletes or edits anything: the app
+// can read the folder list, and add to folders, and that is all.
+const SCOPE = [
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/drive.readonly',
+].join(' ');
 
-// Where the token is kept. One row, same table as the other app settings.
 const TOKEN_KEY = 'google_drive_token';
+
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
+
+// The tree made inside every new job folder. Photos and Videos are what the
+// app files uploads into; the Kitchen 1 branch is the client's own working
+// area, created empty and never touched again.
+const SUBFOLDERS = [
+  { name: 'Photos' },
+  { name: 'Videos' },
+  { name: 'Kitchen 1', children: ['FP and EL', 'Renderings', 'Invoices'] },
+];
+
+export const config = { api: { bodyParser: false } };
 
 export default async function handler(req, res) {
   const action = readAction(req);
@@ -39,6 +58,9 @@ export default async function handler(req, res) {
     if (action === 'connect') return connect(req, res);
     if (action === 'callback') return await callback(req, res);
     if (action === 'disconnect') return await disconnect(req, res);
+    if (action === 'folders') return await folders(req, res);
+    if (action === 'job-folder') return await jobFolder(req, res);
+    if (action === 'upload') return await upload(req, res);
     res.status(404).json({ error: 'Unknown Drive route: ' + action });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -63,6 +85,19 @@ function origin(req) {
 }
 
 function redirectUri(req) { return origin(req) + '/api/drive/callback'; }
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8');
+      if (!raw) return resolve({});
+      try { resolve(JSON.parse(raw)); } catch (e) { reject(new Error('Bad request body.')); }
+    });
+    req.on('error', reject);
+  });
+}
 
 // ---- Talking to the database --------------------------------------------
 //
@@ -101,6 +136,96 @@ async function writeToken(value) {
     return db('PATCH', '/app_settings?key=eq.' + TOKEN_KEY, { value: text });
   }
   return db('POST', '/app_settings', { key: TOKEN_KEY, value: text });
+}
+
+// ---- Talking to Google ---------------------------------------------------
+
+// A fresh access token for this request. They last an hour; rather than cache
+// one and reason about expiry, each request trades the refresh token for a
+// new one. That is a single extra call and removes a whole class of bug.
+async function accessToken() {
+  const stored = await readToken();
+  if (!stored || !stored.refresh_token) {
+    throw new Error('Google Drive is not connected.');
+  }
+
+  const body = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID || '',
+    client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+    refresh_token: stored.refresh_token,
+    grant_type: 'refresh_token',
+  });
+
+  const r = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  const data = await r.json();
+
+  if (!r.ok || !data.access_token) {
+    // A revoked or expired grant lands here. Saying so plainly beats a
+    // generic failure, because the fix is specific: connect again.
+    throw new Error('The Google Drive connection has expired. Reconnect it in Settings.');
+  }
+  return data.access_token;
+}
+
+async function gapi(token, path, options) {
+  const r = await fetch('https://www.googleapis.com' + path, {
+    ...options,
+    headers: { Authorization: 'Bearer ' + token, ...((options || {}).headers || {}) },
+  });
+  const text = await r.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { raw: text }; }
+  if (!r.ok) {
+    throw new Error((data.error && data.error.message) || 'Google Drive said: ' + text);
+  }
+  return data;
+}
+
+// Drive has no "create if missing", so a folder is looked for first. Names
+// are escaped because a customer called O'Brien would otherwise break the
+// query -- and would then get a second folder made on every upload.
+async function findFolder(token, name, parentId) {
+  const q = [
+    "mimeType='" + FOLDER_MIME + "'",
+    "name='" + String(name).replace(/'/g, "\\'") + "'",
+    "'" + parentId + "' in parents",
+    'trashed=false',
+  ].join(' and ');
+  const data = await gapi(token,
+    '/drive/v3/files?q=' + encodeURIComponent(q) +
+    '&fields=files(id,name)&pageSize=1&supportsAllDrives=true');
+  return (data.files && data.files[0]) || null;
+}
+
+async function makeFolder(token, name, parentId) {
+  return gapi(token, '/drive/v3/files?fields=id,name&supportsAllDrives=true', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, mimeType: FOLDER_MIME, parents: [parentId] }),
+  });
+}
+
+async function folderNamed(token, name, parentId) {
+  return (await findFolder(token, name, parentId)) ||
+         (await makeFolder(token, name, parentId));
+}
+
+function parentId() {
+  const id = process.env.GOOGLE_DRIVE_PARENT_ID;
+  if (!id) throw new Error('Server misconfigured: GOOGLE_DRIVE_PARENT_ID is not set.');
+  return id;
+}
+
+function folderLink(id) { return 'https://drive.google.com/drive/folders/' + id; }
+
+// A Drive folder link, whatever form it was pasted or stored in.
+function idFromLink(link) {
+  const m = String(link || '').match(/[-\w]{25,}/);
+  return m ? m[0] : '';
 }
 
 // ---- The routes ----------------------------------------------------------
@@ -196,6 +321,113 @@ async function callback(req, res) {
 async function disconnect(req, res) {
   await writeToken(null);
   res.status(200).json({ ok: true });
+}
+
+// Folders inside the parent, for picking one by hand on an existing job.
+// Only that one folder is listed -- the readonly scope allows more, but there
+// is no reason to show the rest of somebody's Drive.
+async function folders(req, res) {
+  const token = await accessToken();
+  const q = [
+    "mimeType='" + FOLDER_MIME + "'",
+    "'" + parentId() + "' in parents",
+    'trashed=false',
+  ].join(' and ');
+
+  const data = await gapi(token,
+    '/drive/v3/files?q=' + encodeURIComponent(q) +
+    '&fields=files(id,name)&pageSize=1000&orderBy=name&supportsAllDrives=true');
+
+  res.status(200).json({
+    folders: (data.files || []).map((f) => ({
+      id: f.id, name: f.name, link: folderLink(f.id),
+    })),
+  });
+}
+
+// Makes (or finds) a job's folder and everything inside it. Returns the link,
+// which the app stores on the opportunity exactly as a pasted one.
+async function jobFolder(req, res) {
+  const body = await readBody(req);
+  const wanted = String(body.name || '').trim();
+  if (!wanted) throw new Error('A folder name is needed.');
+
+  const token = await accessToken();
+  const root = parentId();
+
+  // Two jobs for one customer would both want "Shadeed Usman", and the second
+  // must not pour its photos into the first one's folder. So an unused name
+  // is found: "Shadeed Usman 2", then 3, and so on.
+  let name = wanted;
+  if (body.unique) {
+    let n = 1;
+    while (await findFolder(token, name, root)) {
+      n += 1;
+      name = wanted + ' ' + n;
+      if (n > 50) throw new Error('Too many folders already named ' + wanted + '.');
+    }
+  }
+
+  const folder = await folderNamed(token, name, root);
+
+  // Each subfolder is found-or-made, so running this twice is harmless.
+  for (const sub of SUBFOLDERS) {
+    const made = await folderNamed(token, sub.name, folder.id);
+    for (const child of (sub.children || [])) {
+      await folderNamed(token, child, made.id);
+    }
+  }
+
+  res.status(200).json({ id: folder.id, name, link: folderLink(folder.id) });
+}
+
+// Copies one already-uploaded file into a job's Photos or Videos folder.
+//
+// The file is fetched from the URL GoHighLevel already gave it rather than
+// being uploaded twice from the phone: the photo is safely in GHL before this
+// runs, and this is only the extra copy.
+async function upload(req, res) {
+  const body = await readBody(req);
+  const fileUrl = String(body.fileUrl || '');
+  const folderId = idFromLink(body.folderLink || '');
+  const name = String(body.name || 'file').replace(/[\\/]/g, '-');
+  const isVideo = !!body.isVideo;
+
+  if (!fileUrl) throw new Error('No file to copy.');
+  if (!folderId) throw new Error('This job has no Drive folder linked.');
+
+  const token = await accessToken();
+
+  // Photos and Videos live beside each other in the job folder.
+  const bucket = await folderNamed(token, isVideo ? 'Videos' : 'Photos', folderId);
+
+  const fileRes = await fetch(fileUrl);
+  if (!fileRes.ok) throw new Error('Could not read the uploaded file.');
+  const bytes = Buffer.from(await fileRes.arrayBuffer());
+  const type = fileRes.headers.get('content-type') || 'application/octet-stream';
+
+  // Multipart upload, written out rather than pulled from a library: the
+  // project has no dependencies and this is the only place that needs it.
+  const boundary = 'mm' + Date.now();
+  const meta = JSON.stringify({ name, parents: [bucket.id] });
+  const payload = Buffer.concat([
+    Buffer.from('--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + meta + '\r\n'),
+    Buffer.from('--' + boundary + '\r\nContent-Type: ' + type + '\r\n\r\n'),
+    bytes,
+    Buffer.from('\r\n--' + boundary + '--'),
+  ]);
+
+  const made = await gapi(token,
+    '/upload/drive/v3/files?uploadType=multipart&fields=id,name&supportsAllDrives=true', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/related; boundary=' + boundary,
+        'Content-Length': String(payload.length),
+      },
+      body: payload,
+    });
+
+  res.status(200).json({ id: made.id, name: made.name });
 }
 
 // Google sends the person back to a browser tab, so the reply is a page
