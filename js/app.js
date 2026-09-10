@@ -474,24 +474,36 @@
   // ===== CONTACTS =====
   function loadContacts(q) { C.loadContacts(q, pickContact); }
   function pickContact(c) {
-    // Drawn twice on purpose. The row handed over by the list came from a
-    // contact *search*, and GoHighLevel's search index runs a second or two
-    // behind the record itself -- so an address edited a moment ago can come
-    // back as the previous one, or the one before that, depending on how far
-    // the index has caught up.
+    // The row handed over by the list came from a contact *search*, and
+    // GoHighLevel's search index runs a second or two behind the record
+    // itself -- so an address edited a moment ago can come back as the
+    // previous one, or the one before that, depending on how far the index
+    // has caught up. Reading by id skips the index and is always what was
+    // actually saved.
     //
-    // So the row is shown straight away, because waiting on a request to draw
-    // anything would make every contact feel slow, and then the real record
-    // is read by id and drawn over it. Reading by id skips the index and is
-    // always what was actually saved.
-    C.renderContactDetail(c);
+    // Drawn once, when that read comes back. Drawing the stale row first and
+    // correcting it a moment later did work, but it meant showing the wrong
+    // address and then visibly jumping to the right one -- and the wrong
+    // address is the whole thing being fixed here. So the name is filled in
+    // from what we already know, the details wait behind a spinner, and what
+    // finally appears is right the first time.
+    var name = U.titleCase(
+      c.contactName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name
+    ) || 'Contact';
+    document.getElementById('mm-contact-title').textContent = name;
+    document.getElementById('mm-contact-info').innerHTML =
+      '<div class="mm-loading">' +
+        '<span class="mm-spinner" aria-hidden="true"></span>' +
+        '<span>Loading details&hellip;</span>' +
+      '</div>';
+    document.getElementById('mm-contact-jobs').innerHTML = '';
     showScreen('contact');
 
     api.getContact(c.id)
-      .then(function (full) { if (full) C.renderContactDetail(full); })
-      // Offline, or the read failed: what the list gave us stays on screen,
-      // which is better than an error over a page that is already readable.
-      .catch(function () { });
+      // Offline, or the read failed: fall back to the row from the list, so
+      // the page still shows what it can rather than a dead spinner.
+      .catch(function () { return c; })
+      .then(function (full) { C.renderContactDetail(full || c); });
   }
   document.getElementById('mm-contact-search').addEventListener('input', function () {
     clearTimeout(contactSearchTimer);
