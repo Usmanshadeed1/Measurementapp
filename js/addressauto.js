@@ -75,9 +75,25 @@ window.MM = window.MM || {};
     s.src = 'https://maps.googleapis.com/maps/api/js' +
       '?key=' + encodeURIComponent(key) + '&libraries=places&loading=async';
 
+    // With loading=async the script tag returns before the libraries exist,
+    // so onload is too early to look for them -- importLibrary is what
+    // actually resolves once Places is there.
     s.onload = function () {
-      loadState = ready() ? 'ready' : 'failed';
-      flush();
+      var g = window.google && window.google.maps;
+      if (!g || !g.importLibrary) {
+        loadState = ready() ? 'ready' : 'failed';
+        flush();
+        return;
+      }
+      g.importLibrary('places')
+        .then(function () {
+          loadState = ready() ? 'ready' : 'failed';
+          flush();
+        })
+        .catch(function () {
+          loadState = 'failed';
+          waiting.length = 0;
+        });
     };
     // A bad key, no network, or a blocked request all land here. The app
     // carries on without suggestions.
