@@ -486,7 +486,12 @@
    two-and-two rather than a neat row, so each takes an equal share and the
    row reads as a block of controls. */
 @media (max-width: 620px){
-  .section-header .mm-btn-row{width:100%;gap:6px}
-  .section-header .mm-btn-row .mm-btn-sm{flex:1 1 calc(50% - 3px);min-width:0;
-    padding-left:8px;padding-right:8px}
+  .section-header .mm-btn-row{width:100%;gap:5px;flex-wrap:nowrap}
+  /* An equal share of one row rather than a fixed half, so four buttons sit
+     on a single line and a lone button still fills the width. The label is
+     what shrinks -- a wrapped row of controls costs more space than small
+     text does. */
+  .section-header .mm-btn-row .mm-btn-sm{flex:1 1 0;min-width:0;
+    padding-left:6px;padding-right:6px;font-size:0.82em;
+    overflow:hidden;text-overflow:ellipsis}
 }
