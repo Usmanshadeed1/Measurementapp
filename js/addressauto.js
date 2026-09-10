@@ -75,26 +75,12 @@ window.MM = window.MM || {};
     s.src = 'https://maps.googleapis.com/maps/api/js' +
       '?key=' + encodeURIComponent(key) + '&libraries=places&loading=async';
 
-    // With loading=async the script tag returns before the libraries exist,
-    // so onload is too early to look for them -- importLibrary is what
-    // actually resolves once Places is there.
-    s.onload = function () {
-      var g = window.google && window.google.maps;
-      if (!g || !g.importLibrary) {
-        loadState = ready() ? 'ready' : 'failed';
-        flush();
-        return;
-      }
-      g.importLibrary('places')
-        .then(function () {
-          loadState = ready() ? 'ready' : 'failed';
-          flush();
-        })
-        .catch(function () {
-          loadState = 'failed';
-          waiting.length = 0;
-        });
-    };
+    // The library arrives some time after the script tag does, and exactly
+    // when varies: onload can fire before Places exists, or -- if the script
+    // was already cached -- not fire for us at all. So rather than trust a
+    // single moment, watch for the class itself and start as soon as it is
+    // really there.
+    s.onload = poll;
     // A bad key, no network, or a blocked request all land here. The app
     // carries on without suggestions.
     s.onerror = function () {
@@ -103,10 +89,37 @@ window.MM = window.MM || {};
     };
 
     document.head.appendChild(s);
+    poll();
   }
 
+  // Checks whether Places has actually arrived, and keeps checking until it
+  // has. Waiting on a single event proved unreliable -- the script can be
+  // cached and load before the handler is attached, or fire before the
+  // library it pulls in exists -- and the symptom either way was suggestions
+  // silently never appearing.
+  var polls = 0;
+  function poll() {
+    if (loadState === 'ready' || loadState === 'failed') return;
+    if (ready()) {
+      loadState = 'ready';
+      flush();
+      return;
+    }
+    // Roughly ten seconds, then give up so this is not looping forever on a
+    // page where Google is never going to answer.
+    if (++polls > 100) {
+      loadState = 'failed';
+      waiting.length = 0;
+      return;
+    }
+    setTimeout(poll, 100);
+  }
+
+  // Only ever called once Places is ready. The queue is left alone otherwise:
+  // emptying it while still loading was throwing away the very boxes that
+  // were waiting to be wired.
   function flush() {
-    if (loadState !== 'ready') { waiting.length = 0; return; }
+    if (loadState !== 'ready') return;
     var pending = waiting.slice();
     waiting.length = 0;
     pending.forEach(function (id) { wire(id); });
@@ -146,7 +159,6 @@ window.MM = window.MM || {};
   // ---- Wiring one box ------------------------------------------------------
 
   function wire(id) {
-    if (loadState === 'failed') return;
     if (loadState !== 'ready') {
       if (waiting.indexOf(id) === -1) waiting.push(id);
       return;
