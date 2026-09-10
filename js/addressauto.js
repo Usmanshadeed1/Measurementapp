@@ -148,11 +148,20 @@ window.MM = window.MM || {};
   // Writes into one of the app's own boxes and tells the page it changed, so
   // anything listening -- the live job-name preview, say -- reacts exactly as
   // it does to typing.
+  // Writes one of the app's own boxes and tells the page it changed, so
+  // anything listening -- the live job-name preview, say -- reacts exactly as
+  // it does to typing.
+  //
+  // An empty value is written, not skipped. Picking a new address has to
+  // replace the old one outright: leaving a field alone because the new
+  // address has nothing for it is what produced addresses like
+  // "3535 Market Street, Islamabad, Pakistan 44000" -- a Philadelphia street
+  // wearing the previous address's city, state and postcode.
   function put(id, value) {
-    if (!id || !value) return;
+    if (!id) return;
     var el = document.getElementById(id);
     if (!el) return;
-    el.value = value;
+    el.value = value || '';
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
@@ -234,12 +243,19 @@ window.MM = window.MM || {};
           var comps = place.addressComponents || [];
           if (!comps.length) return;
 
+          // The street is the one field that is never blanked: an answer with
+          // no road in it is a bad answer, and wiping what someone typed on
+          // the strength of it would be worse than leaving it be.
           var st = street(comps);
-          if (!st) return;   // no road in the answer, nothing worth writing
+          if (!st) return;
 
           put(id, st);
 
           if (cfg.mode !== 'full') return;
+
+          // From here every field is written, including the ones this address
+          // has nothing for. That is the point: the whole address is replaced
+          // rather than merged with whatever was there before.
 
           put(cfg.city, part(comps, 'locality') ||
             part(comps, 'sublocality') || part(comps, 'postal_town'));
