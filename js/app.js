@@ -103,8 +103,18 @@
 
   // ===== SCREEN NAV =====
   function showScreen(n) {
+    // A name with no screen behind it used to blank the app: every screen was
+    // hidden on the line above, then this line threw on a null and nothing
+    // was ever shown again. Checking first means the worst case is landing on
+    // a sensible screen rather than a black page.
+    var next = document.getElementById('screen-' + n);
+    if (!next) {
+      next = document.getElementById(
+        window.MM.auth.isAdmin() ? 'screen-dashboard' : 'screen-mytasks');
+      if (!next) return;
+    }
     document.querySelectorAll('#mm-app .screen').forEach(function (s) { s.classList.remove('active'); });
-    document.getElementById('screen-' + n).classList.add('active');
+    next.classList.add('active');
     U.updateFloatBtn();
   }
   function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -239,10 +249,25 @@
 
   var jobCameFrom = 'dashboard';
 
+  // True when the job screen is the one already showing -- which means this
+  // is a redraw of the job in place, not an arrival from a list.
+  function openJobIsOnScreen() {
+    var el = document.getElementById('screen-job');
+    return !!el && el.classList.contains('active');
+  }
+
   function pickJob(o, tab, from) {
-    jobCameFrom = from
-                || (tab === 'measure' ? 'measure'
-                : window.MM.auth.isAdmin() ? 'dashboard' : 'mytasks');
+    // Redrawing a job already on screen passes no origin, and that has to
+    // leave the back arrow pointing where it already pointed. Defaulting here
+    // would quietly send someone who arrived from Contacts to the dashboard
+    // instead, just because they corrected an address on the way.
+    if (from) {
+      jobCameFrom = from;
+    } else if (tab === 'measure') {
+      jobCameFrom = 'measure';
+    } else if (!openJobIsOnScreen()) {
+      jobCameFrom = window.MM.auth.isAdmin() ? 'dashboard' : 'mytasks';
+    }
     // A worker may open a job they are on — that is how measuring happens —
     // but nothing else. The check is here as well as in the lists, so a stale
     // reference cannot open a job they were removed from.
@@ -310,7 +335,12 @@
               o.customFields = freshJob.customFields;
             }
             if (freshContact) o.contact = freshContact;
-            pickJob(o, 'overview', 'edit');
+            // Redrawn in place. No third argument: editing a job is not a
+            // place you can navigate back to, and naming one here used to
+            // send the back arrow to a screen that does not exist -- which
+            // hid every screen and left a black page. Where "back" goes is
+            // wherever the job was opened from, and that has not changed.
+            pickJob(o, 'overview');
           });
         });
     });
