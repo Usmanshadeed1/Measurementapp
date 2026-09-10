@@ -91,6 +91,9 @@ window.MM = window.MM || {};
     btn.textContent = 'Save changes';
 
     document.getElementById('mm-modal-jobedit').classList.add('open');
+    // The address box is built fresh each time this opens, so suggestions are
+    // attached to the new one. Does nothing when no key is saved.
+    if (window.MM.addressauto) window.MM.addressauto.attach('mm-je-addr');
     document.getElementById('mm-je-first').focus();
   }
 

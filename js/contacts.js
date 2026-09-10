@@ -121,6 +121,8 @@ window.MM = window.MM || {};
     var btn = document.getElementById('mm-ce-save');
     btn.disabled = false; btn.textContent = 'Save changes';
     document.getElementById('mm-modal-contactedit').classList.add('open');
+    // Rebuilt each time this opens, so suggestions attach to the new box.
+    if (window.MM.addressauto) window.MM.addressauto.attach('mm-ce-address');
     document.getElementById('mm-ce-first').focus();
 
     function field(id, label, val, type) {

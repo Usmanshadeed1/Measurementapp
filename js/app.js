@@ -33,6 +33,7 @@
     else if (tab === 'checklist') { showScreen('checklist'); CHECK.load(); }
     else if (tab === 'templates') { showScreen('templates'); TPL.load(); }
     else if (tab === 'emailtpl') { showScreen('emailtpl'); window.MM.emailtpl.show(); }
+    else if (tab === 'settings') { showScreen('settings'); window.MM.settings.show(); }
     else if (tab === 'workers') { showScreen('workers'); WORKERS.load(); }
     else if (tab === 'history') { showScreen('history'); ACT.loadPage(); }
     else if (tab === 'alljobs') { showScreen('alljobs'); window.MM.alljobs.load(); }
@@ -886,6 +887,11 @@
     document.querySelectorAll('.mm-admin-only, .mm-worker-only').forEach(function (el) {
       el.style.display = '';
     });
+
+    // Address suggestions, for admins and workers alike: only an admin can
+    // save the key, but the address boxes it helps with are used by both.
+    // Silent when no key is saved — the boxes stay ordinary typing boxes.
+    if (window.MM.addressauto) window.MM.addressauto.init();
 
     if (admin) {
       setActiveNavLink('dashboard');
