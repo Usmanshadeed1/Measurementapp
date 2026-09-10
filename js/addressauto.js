@@ -1,11 +1,24 @@
 // js/addressauto.js
 // Google address suggestions on the address boxes.
 //
-// This is an add-on and behaves like one. If no key is saved, or Google's
-// script fails to load, or Google answers with nothing useful, every address
-// box stays exactly the ordinary typing box it is today. Nothing here reads
-// or rewrites an address that is already stored -- suggestions only ever act
-// on what someone is typing right now.
+// This is an add-on and behaves like one. If the key is missing, or Google's
+// script fails to load, every address box stays exactly the ordinary typing
+// box it is today. Nothing here reads or rewrites an address that is already
+// stored -- suggestions only ever act on what someone is typing right now,
+// and only a Save button writes anything anywhere.
+//
+// How it is wired
+// ---------------
+// Google's current widget (PlaceAutocompleteElement) renders its own input;
+// it cannot be attached to one of ours. The old class that could --
+// places.Autocomplete -- was closed to new accounts in March 2025, so it is
+// not an option here.
+//
+// So each address box keeps its place in the form and its id, and is hidden.
+// Google's element is inserted next to it, and whatever the person picks is
+// written back into the hidden box. Every save path -- newjob, jobedit,
+// contacts -- goes on reading the same id it always read, and none of them
+// needed changing.
 //
 // Two kinds of box, because the app wants two different things:
 //
@@ -26,7 +39,7 @@ window.MM = window.MM || {};
 
   var loadState = 'idle';    // idle | loading | ready | failed
   var waiting = [];          // attach calls made before the script arrived
-  var attached = [];         // inputs already wired, so we never double-wire
+  var attached = [];         // boxes already wired, so we never double-wire
 
   // Which boxes get which treatment, and for the full ones, where the rest of
   // the address should land.
@@ -47,23 +60,20 @@ window.MM = window.MM || {};
   // ---- Loading Google's script ---------------------------------------------
 
   function ready() {
-    return !!(window.google && window.google.maps && window.google.maps.places);
+    return !!(window.google && window.google.maps && window.google.maps.places &&
+      window.google.maps.places.PlaceAutocompleteElement);
   }
 
-  // Called once, after the key is known. Everything downstream waits on this
-  // resolving one way or the other.
   function loadScript(key) {
-    if (loadState === 'ready' || loadState === 'failed') return;
-    if (loadState === 'loading') return;
+    if (loadState !== 'idle') return;
     if (!key) { loadState = 'failed'; return; }
 
     loadState = 'loading';
 
     var s = document.createElement('script');
     s.async = true;
-    s.defer = true;
     s.src = 'https://maps.googleapis.com/maps/api/js' +
-      '?key=' + encodeURIComponent(key) + '&libraries=places';
+      '?key=' + encodeURIComponent(key) + '&libraries=places&loading=async';
 
     s.onload = function () {
       loadState = ready() ? 'ready' : 'failed';
@@ -80,7 +90,7 @@ window.MM = window.MM || {};
   }
 
   function flush() {
-    if (loadState !== 'ready') return;
+    if (loadState !== 'ready') { waiting.length = 0; return; }
     var pending = waiting.slice();
     waiting.length = 0;
     pending.forEach(function (id) { wire(id); });
@@ -88,104 +98,138 @@ window.MM = window.MM || {};
 
   // ---- Reading Google's answer ---------------------------------------------
 
-  function part(place, type, useShort) {
-    var comps = (place && place.address_components) || [];
-    for (var i = 0; i < comps.length; i++) {
-      if (comps[i].types.indexOf(type) > -1) {
-        return (useShort ? comps[i].short_name : comps[i].long_name) || '';
+  // Google returns each part as { types: [...], longText, shortText }.
+  function part(components, type, useShort) {
+    for (var i = 0; i < components.length; i++) {
+      var c = components[i];
+      if (c.types && c.types.indexOf(type) > -1) {
+        return (useShort ? c.shortText : c.longText) || '';
       }
     }
     return '';
   }
 
   // "3535 1st St N" -- the number and the road, nothing after it.
-  function street(place) {
-    var num = part(place, 'street_number');
-    var road = part(place, 'route');
-    var s = (num ? num + ' ' : '') + road;
-    return s.trim();
+  function street(components) {
+    var num = part(components, 'street_number');
+    var road = part(components, 'route');
+    return ((num ? num + ' ' : '') + road).trim();
   }
 
-  // Only fills a box that exists and is currently empty of the right thing:
-  // writing into a box the user already typed in would be rude.
+  // Writes into one of the app's own boxes and tells the page it changed, so
+  // anything listening -- the live job-name preview, say -- reacts exactly as
+  // it does to typing.
   function put(id, value) {
     if (!id || !value) return;
     var el = document.getElementById(id);
     if (!el) return;
     el.value = value;
-    // Anything listening for typing -- a live job-name preview, say -- should
-    // see this the same way it sees a keystroke.
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   // ---- Wiring one box ------------------------------------------------------
 
   function wire(id) {
+    if (loadState === 'failed') return;
     if (loadState !== 'ready') {
       if (waiting.indexOf(id) === -1) waiting.push(id);
       return;
     }
 
     var cfg = FIELDS[id];
-    var el = document.getElementById(id);
-    if (!cfg || !el) return;
+    var input = document.getElementById(id);
+    if (!cfg || !input) return;
 
-    // A modal that reopens builds a fresh input, so the old wiring goes with
-    // it. Comparing the element itself, not the id, is what makes that safe.
-    if (attached.indexOf(el) > -1) return;
-    attached.push(el);
+    // A modal that reopens builds a fresh box, so the old wiring goes with it.
+    // Comparing the element itself, not the id, is what makes that safe.
+    if (attached.indexOf(input) > -1) return;
+    attached.push(input);
 
     var ac;
     try {
-      ac = new window.google.maps.places.Autocomplete(el, {
-        types: ['address'],
-        componentRestrictions: { country: ['us'] },
-        fields: ['address_components'],
+      ac = new window.google.maps.places.PlaceAutocompleteElement({
+        includedPrimaryTypes: ['street_address', 'premise', 'subpremise'],
+        includedRegionCodes: ['us'],
       });
     } catch (e) {
       return;   // Suggestions are optional; typing is not.
     }
 
-    // Browsers offer their own saved-address dropdown over Google's list.
-    el.setAttribute('autocomplete', 'off');
+    ac.className = 'mm-gplace';
 
-    ac.addListener('place_changed', function () {
-      var place = ac.getPlace();
-      if (!place || !place.address_components) return;   // free text, left alone
+    // Whatever is already stored shows as the starting text, so opening an
+    // edit box looks the way it always has.
+    if (input.value) {
+      try { ac.value = input.value; } catch (e) { /* older builds ignore this */ }
+    }
+    if (input.placeholder) {
+      try { ac.placeholder = input.placeholder; } catch (e) { /* optional */ }
+    }
 
-      var st = street(place);
-      if (!st) return;   // no road in the answer, so nothing worth replacing
+    // The app's own box stays in the form, holding the value every save path
+    // already reads. Google's element sits in its place visually.
+    input.type = 'hidden';
+    input.parentNode.insertBefore(ac, input.nextSibling);
 
-      el.value = st;
-      el.dispatchEvent(new Event('input', { bubbles: true }));
+    // Two things the rest of the app does to a visible box, which a hidden
+    // one cannot answer on its own. Handling them here keeps newjob.js,
+    // jobedit.js and contacts.js exactly as they were.
+    //
+    // focus() -- "you forgot the address" puts the cursor in the box. On a
+    // hidden input that goes nowhere, so it is sent to Google's instead.
+    input.focus = function () {
+      var box = ac.querySelector('input');
+      if (box) box.focus(); else if (ac.focus) ac.focus();
+    };
 
-      if (cfg.mode !== 'full') return;
-
-      put(cfg.city, part(place, 'locality') ||
-        part(place, 'sublocality') || part(place, 'postal_town'));
-      put(cfg.state, part(place, 'administrative_area_level_1', true));
-      put(cfg.postal, part(place, 'postal_code'));
-      put(cfg.country, part(place, 'country', true));
+    // Clearing -- reopening the New Job form sets .value = '' to empty the
+    // box. Google's element keeps its own text, so the old address would
+    // still be on screen while the real value was empty. Watching the
+    // property keeps the two in step.
+    var raw = input.value;
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      get: function () { return raw; },
+      set: function (v) {
+        raw = v == null ? '' : String(v);
+        try { ac.value = raw; } catch (e) { /* older builds ignore this */ }
+      },
     });
 
-    // Enter on a highlighted suggestion would otherwise submit the form
-    // before the address has been filled in.
-    el.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter' && document.querySelector('.pac-container:not([style*="display: none"])')) {
-        ev.preventDefault();
-      }
+    ac.addEventListener('gmp-select', function (ev) {
+      var prediction = ev && ev.placePrediction;
+      if (!prediction) return;
+
+      var place = prediction.toPlace();
+      place.fetchFields({ fields: ['addressComponents'] })
+        .then(function () {
+          var comps = place.addressComponents || [];
+          if (!comps.length) return;
+
+          var st = street(comps);
+          if (!st) return;   // no road in the answer, nothing worth writing
+
+          put(id, st);
+
+          if (cfg.mode !== 'full') return;
+
+          put(cfg.city, part(comps, 'locality') ||
+            part(comps, 'sublocality') || part(comps, 'postal_town'));
+          put(cfg.state, part(comps, 'administrative_area_level_1', true));
+          put(cfg.postal, part(comps, 'postal_code'));
+          put(cfg.country, part(comps, 'country', true));
+        })
+        // A lookup that fails leaves whatever was typed alone.
+        .catch(function () { });
     });
   }
 
   // Called by whatever opens a form. Safe to call as often as you like, and
   // safe to call when there is no key: it simply does nothing.
-  function attach(id) {
-    if (loadState === 'failed') return;
-    wire(id);
-  }
+  function attach(id) { wire(id); }
 
-  // Wire whichever of the four are already in the page, and remember the rest
-  // for when their form opens.
+  // Wire whichever of the four are already in the page; the rest are attached
+  // when their form opens.
   function attachAll() {
     Object.keys(FIELDS).forEach(function (id) {
       if (document.getElementById(id)) attach(id);
@@ -194,14 +238,9 @@ window.MM = window.MM || {};
 
   // ---- Start ---------------------------------------------------------------
 
-  // Loads Google, then wires whichever address boxes are already in the page.
-  // Called once at sign-in. With no key set it does nothing at all, and every
-  // address box stays the ordinary typing box it was.
   function init() {
     if (!GOOGLE_KEY) { loadState = 'failed'; return; }
     loadScript(GOOGLE_KEY);
-    // The boxes in the page markup can be queued now; the ones built by JS
-    // get attached when their form opens.
     attachAll();
   }
 

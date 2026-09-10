@@ -1,0 +1,35 @@
+/* ==========================================================================
+   Google's address box.
+
+   Google supplies this element and renders its own input inside it, so it
+   arrives with its own look. These rules bring it as close to the app's own
+   .mm-input as the element allows: same width, same rounding, same spacing.
+   Some of its internals sit in shadow DOM and cannot be reached from here,
+   so a small difference from the fields around it is expected.
+   ========================================================================== */
+
+.mm-gplace{display:block;width:100%;margin-bottom:14px;
+  /* Google reads these custom properties for its own input. */
+  --gmp-mat-color-surface:var(--input-bg);
+  --gmp-mat-color-on-surface:var(--text);
+  --gmp-mat-color-on-surface-variant:var(--text2);
+  --gmp-mat-color-outline:var(--input-border);
+  --gmp-mat-color-primary:var(--accent)}
+
+/* The widget's own input, where the browser lets us reach it. */
+.mm-gplace input{width:100%;box-sizing:border-box;
+  font-family:inherit;font-size:1em;
+  padding:12px 14px;border-radius:10px;
+  background:var(--input-bg);color:var(--text);
+  border:1px solid var(--input-border)}
+.mm-gplace input:focus{outline:3px solid var(--accent);outline-offset:2px}
+
+/* The suggestion list is appended to <body>, outside the app's styling, and
+   defaults to a light box that reads wrong in dark mode -- and, left alone,
+   can fall behind an open modal. */
+.pac-container,
+gmp-place-autocomplete .dropdown{z-index:100000}
+
+@media (max-width: 620px){
+  .mm-gplace{margin-bottom:12px}
+}
