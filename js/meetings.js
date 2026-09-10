@@ -136,9 +136,12 @@ window.MM = window.MM || {};
     meetings = [];
     adding = false; showAll = false;
 
+    // Drawn by jobsteps.js as part of the step list, so it does not exist
+    // until that has rendered.
     var el = document.getElementById('mm-job-meetings');
     if (!el) return Promise.resolve();
-    el.innerHTML = head(0) + '<div class="mm-empty">Loading...</div>';
+    el.innerHTML = head(0) +
+      '<div class="mm-step-body"><div class="mm-empty">Loading...</div></div>';
 
     return api.getOpportunity(job.id)
       .then(function (opp) {
@@ -146,18 +149,24 @@ window.MM = window.MM || {};
         render();
       })
       .catch(function (e) {
-        el.innerHTML = head(0) + '<div class="mm-empty">' + U.esc(e.message) + '</div>';
+        el.innerHTML = head(0) +
+          '<div class="mm-step-body"><div class="mm-empty">' +
+          U.esc(e.message) + '</div></div>';
       });
   }
 
+  // The panel now lives inside Job Progress rather than in a card of its own,
+  // so the heading is a step label with the count beside it -- the same shape
+  // as the numbered steps around it.
   function head(n) {
-    return '<div class="mm-steps-head">' +
-      '<span class="mm-steps-title">Design Meetings</span>' +
-      (n
-        ? '<span class="mm-steps-badge mm-steps-badge-done">' + n +
-          (n === 1 ? ' meeting' : ' meetings') + '</span>'
-        : '<span class="mm-steps-badge mm-steps-badge-todo">None yet</span>') +
-    '</div>';
+    return '<div class="mm-step-mark" aria-hidden="true">&#128197;</div>' +
+      '<div class="mm-dm-head">' +
+        '<span class="mm-step-label">Design meetings</span>' +
+        (n
+          ? '<span class="mm-steps-badge mm-steps-badge-done">' + n +
+            (n === 1 ? ' meeting' : ' meetings') + '</span>'
+          : '<span class="mm-steps-badge mm-steps-badge-todo">None yet</span>') +
+      '</div>';
   }
 
   // ---- Rendering -----------------------------------------------------------
@@ -174,6 +183,7 @@ window.MM = window.MM || {};
 
     el.innerHTML =
       head(meetings.length) +
+      '<div class="mm-step-body">' +
       (adding ? '' :
         '<div class="mm-dm-actions">' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-dm-add">+ Add Meeting</button>' +
@@ -197,10 +207,13 @@ window.MM = window.MM || {};
                 : '')
             : '')
         : (adding ? '' : '<p class="mm-task-empty">No meetings booked yet.</p>')) +
-      '<p class="mm-task-error" id="mm-dm-error" role="alert"></p>';
+      '<p class="mm-task-error" id="mm-dm-error" role="alert"></p>' +
+      '</div>';
 
     bind(el);
-    if (window.MM.wireJobPanels) window.MM.wireJobPanels();
+    // No wireJobPanels here any more: this is a row inside Job Progress, not
+    // a collapsible card of its own, and re-wiring the panels from in here
+    // would fight the step list that just drew it.
   }
 
   function row(m, i) {

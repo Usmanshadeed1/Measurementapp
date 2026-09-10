@@ -7,9 +7,21 @@
    space every time the panel opens.
    ========================================================================== */
 
+/* This lives inside Job Progress now, as a row among the numbered steps
+   rather than a card that opens and closes. The rules that used to hide its
+   insides until the card was open have gone with it: there is no card to
+   open, so they would simply have hidden everything. */
+
+.mm-step-meetings{align-items:flex-start}
+.mm-step-meetings .mm-step-mark{font-size:1.05em}
+
+/* The label and the count sit on one line, like a step's own heading. */
+.mm-dm-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin-bottom:8px}
+.mm-dm-head .mm-step-label{margin:0}
+
 .mm-dm-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;
   margin-bottom:10px}
-.mm-steps-card.is-open .mm-dm-actions{display:flex}
 
 .mm-dm-label{font-size:0.72em;font-weight:700;text-transform:uppercase;
   letter-spacing:.06em;color:var(--text2);margin-bottom:6px}
@@ -36,12 +48,10 @@
 .mm-dm-more:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 .mm-dm-earlier{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-.mm-steps-card.is-open .mm-dm-earlier{display:flex}
 
 .mm-dm-form{display:flex;flex-direction:column;margin-bottom:12px;padding:14px;
   border:1px dashed var(--control-border);border-radius:10px;
   background:var(--card)}
-.mm-steps-card.is-open .mm-dm-form{display:flex}
 .mm-dm-form .mm-input{margin-bottom:10px}
 .mm-dm-row{display:flex;gap:10px}
 .mm-dm-row .mm-field-group{flex:1 1 0;min-width:0}

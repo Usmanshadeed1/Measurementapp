@@ -838,6 +838,10 @@
     if (!job || o.id !== job.id) return;
     refreshStageButton(o);
     STEPS.render(o);   // which steps are available depends on the stage
+    // The meetings row is drawn inside the step list, so redrawing the steps
+    // empties it. It has to be filled in again or it would vanish whenever
+    // the stage changed.
+    MEET.showForJob(o);
   });
 
   // ===== BOOT =====

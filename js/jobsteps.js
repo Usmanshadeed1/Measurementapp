@@ -323,6 +323,11 @@ window.MM = window.MM || {};
         waitingText: 'Finish the design first',
         note: pricing ? '' : (design ? 'Saving this moves the job to Pricing Complete.' : ''),
       }) +
+      // Design meetings sit here, after pricing. Not a numbered step: a job
+      // does not pass through them once the way it passes through a date, and
+      // three meetings are not three steps forward. meetings.js owns
+      // everything inside -- this only gives it somewhere to draw.
+      '<div class="mm-step mm-step-meetings" id="mm-job-meetings"></div>' +
       stepHtml({
         num: 6, label: 'Proposal sent',
         state: sent ? 'done' : (pricing ? 'active' : 'waiting'),
