@@ -64,6 +64,35 @@
   }
   hamburgerBtn.addEventListener('click', toggleMobileNav);
 
+  // ===== ACCOUNT MENU (the name, top right) =====
+  var acctBtn = document.getElementById('mm-whoami');
+  var acctMenu = document.getElementById('mm-account-menu');
+  function closeAcctMenu() {
+    if (!acctMenu) return;
+    acctMenu.classList.remove('open');
+    acctBtn.setAttribute('aria-expanded', 'false');
+  }
+  if (acctBtn && acctMenu) {
+    acctBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = acctMenu.classList.toggle('open');
+      acctBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    // Clicking anywhere else, or pressing Escape, puts it away — what a menu
+    // is expected to do.
+    document.addEventListener('click', function (e) {
+      if (acctMenu.classList.contains('open') && !acctMenu.contains(e.target)) closeAcctMenu();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeAcctMenu();
+    });
+    // The Settings link inside is wired by the same nav handler as every
+    // other data-tab link; this only closes the menu behind it.
+    acctMenu.querySelectorAll('[data-tab]').forEach(function (a) {
+      a.addEventListener('click', closeAcctMenu);
+    });
+  }
+
   // Sign out appears twice — in the header on desktop, in the menu on a
   // phone — so both need wiring to the same handler.
   document.querySelectorAll('.mm-signout-m').forEach(function (b) {

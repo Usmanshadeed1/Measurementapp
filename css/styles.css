@@ -146,8 +146,7 @@ html,body{
   /* Theme and text size stay in the bar — they are used often enough that a
      menu would be a step backwards. The name, role and sign-out move inside,
      since those are read rarely and cost the most width. */
-  .mm-header-controls > .mm-whoami,
-  .mm-header-controls > .mm-signout{display:none}
+  .mm-header-controls > .mm-account{display:none}
 }
 
 @media (min-width: 721px){

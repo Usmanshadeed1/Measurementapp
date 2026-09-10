@@ -34,13 +34,37 @@
 .mm-auth-error:empty{display:none}
 
 /* ---- Who is signed in, in the header ---- */
+/* The name is a button that opens an account menu. It keeps the look it had
+   as a plain label until it is hovered, so the header does not gain another
+   thing shouting for attention. */
+.mm-account{position:relative}
 .mm-whoami{display:flex;flex-direction:column;line-height:1.2;text-align:right;
-           margin-right:4px;min-width:0}
+           margin-right:4px;min-width:0;
+           font-family:inherit;cursor:pointer;
+           background:none;border:1px solid transparent;border-radius:8px;
+           padding:6px 10px;min-height:44px;justify-content:center}
+.mm-whoami:hover{background:var(--card);border-color:var(--border)}
+.mm-whoami[aria-expanded="true"]{background:var(--card);border-color:var(--accent)}
+
+.mm-account-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;
+  min-width:190px;z-index:1000;padding:6px;
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  box-shadow:var(--card-shadow)}
+.mm-account-menu.open{display:block}
+
+.mm-account-item{display:block;width:100%;box-sizing:border-box;
+  text-align:left;font-family:inherit;font-size:0.92em;font-weight:700;
+  color:var(--text2);text-decoration:none;cursor:pointer;
+  background:none;border:none;border-radius:8px;padding:11px 12px;
+  min-height:44px;line-height:1.4}
+.mm-account-item:hover{color:var(--text);background:var(--card2)}
+.mm-account-out{color:var(--danger-text)}
+.mm-account-out:hover{color:var(--danger-text);
+  background:color-mix(in srgb,var(--danger-text) 12%,transparent)}
 .mm-whoami-name{font-size:0.86em;font-weight:700;color:var(--text);
                 overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
 .mm-whoami-role{font-size:0.86em;font-weight:700;letter-spacing:.06em;
                 text-transform:uppercase;color:var(--accent)}
-.mm-signout{font-size:1.2em;line-height:1}
 
 @media (max-width: 720px){
   .mm-auth-box{padding:26px 20px}

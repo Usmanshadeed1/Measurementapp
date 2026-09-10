@@ -89,14 +89,21 @@
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
-      <a href="#" class="mm-nav-link mm-admin-only" data-tab="settings">Settings</a>
     </nav>
     <div class="mm-header-controls">
       <button class="font-btn mm-theme-toggle" aria-label="Switch to light mode">☀️</button>
       <button class="font-btn mm-font-down" aria-label="Decrease text size">A-</button>
       <button class="font-btn mm-font-up" aria-label="Increase text size">A+</button>
-      <span class="mm-whoami" id="mm-whoami"></span>
-      <button class="font-btn mm-signout" id="mm-signout" title="Sign out" aria-label="Sign out">&#8631;</button>
+      <!-- The name opens a menu, the way a signed-in account does everywhere
+           else. Settings lives in here rather than in the nav: it is opened
+           rarely, and the nav is already full. -->
+      <div class="mm-account">
+        <button class="mm-whoami" id="mm-whoami" aria-haspopup="true" aria-expanded="false" aria-controls="mm-account-menu"></button>
+        <div class="mm-account-menu" id="mm-account-menu" role="menu">
+          <a href="#" class="mm-account-item mm-admin-only" role="menuitem" data-tab="settings">Settings</a>
+          <button type="button" class="mm-account-item mm-account-out" role="menuitem" id="mm-signout">Sign out</button>
+        </div>
+      </div>
       <button class="mm-hamburger" id="mm-hamburger-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mm-mobile-nav">
         <span></span><span></span><span></span>
       </button>
@@ -113,7 +120,7 @@
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="settings">Settings</a>
-    <div class="mm-mobile-foot">
+    <div class="mm-mobile-foot" id="mm-mobile-foot">
       <div class="mm-mobile-who" id="mm-whoami-mobile"></div>
       <div class="mm-mobile-tools">
         <button class="font-btn mm-signout-m" aria-label="Sign out">Sign out</button>
