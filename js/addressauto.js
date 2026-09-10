@@ -16,6 +16,14 @@
 window.MM = window.MM || {};
 
 (function () {
+  // The Google Places key. A browser key is visible in the page source
+  // whatever we do with it, so keeping it here rather than in the database
+  // gives away nothing extra -- what actually protects it is the restriction
+  // in Google Cloud: this domain only, Places API only.
+  //
+  // To change it: edit this line and deploy.
+  var GOOGLE_KEY = 'AIzaSyBZyOzRVyZPTXTPsHSPxUEOW4TXb0ch8As';
+
   var loadState = 'idle';    // idle | loading | ready | failed
   var waiting = [];          // attach calls made before the script arrived
   var attached = [];         // inputs already wired, so we never double-wire
@@ -186,21 +194,15 @@ window.MM = window.MM || {};
 
   // ---- Start ---------------------------------------------------------------
 
-  // Reads the saved key, then loads Google if there is one. Called once at
-  // sign-in, when the database is reachable.
+  // Loads Google, then wires whichever address boxes are already in the page.
+  // Called once at sign-in. With no key set it does nothing at all, and every
+  // address box stays the ordinary typing box it was.
   function init() {
-    var settings = window.MM.settings;
-    if (!settings) return Promise.resolve();
-
-    return settings.loadKey()
-      .then(function (key) {
-        if (!key) { loadState = 'failed'; return; }
-        loadScript(key);
-        // The boxes in the page markup can be queued now; the ones built by
-        // JS get attached when their form opens.
-        attachAll();
-      })
-      .catch(function () { loadState = 'failed'; });
+    if (!GOOGLE_KEY) { loadState = 'failed'; return; }
+    loadScript(GOOGLE_KEY);
+    // The boxes in the page markup can be queued now; the ones built by JS
+    // get attached when their form opens.
+    attachAll();
   }
 
   window.MM.addressauto = {

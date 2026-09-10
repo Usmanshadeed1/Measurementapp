@@ -21,7 +21,6 @@
 <link rel="stylesheet" href="css/roomsize.css">
 <link rel="stylesheet" href="css/jobedit.css">
 <link rel="stylesheet" href="css/senddesign.css">
-<link rel="stylesheet" href="css/settings.css">
 </head>
 <body>
 
@@ -100,7 +99,6 @@
       <div class="mm-account">
         <button class="mm-whoami" id="mm-whoami" aria-haspopup="true" aria-expanded="false" aria-controls="mm-account-menu"></button>
         <div class="mm-account-menu" id="mm-account-menu" role="menu">
-          <a href="#" class="mm-account-item mm-admin-only" role="menuitem" data-tab="settings">Settings</a>
           <button type="button" class="mm-account-item mm-account-out" role="menuitem" id="mm-signout">Sign out</button>
         </div>
       </div>
@@ -119,7 +117,6 @@
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="contacts">Contacts</a>
-    <a href="#" class="mm-nav-link mm-admin-only" data-tab="settings">Settings</a>
     <div class="mm-mobile-foot" id="mm-mobile-foot">
       <div class="mm-mobile-who" id="mm-whoami-mobile"></div>
       <div class="mm-mobile-tools">
@@ -372,17 +369,6 @@
 </div>
 
 <!-- TASK TEMPLATES — reusable task lists -->
-<div class="screen" id="screen-settings">
-  <div class="mm-content">
-    <div class="section-header">
-      <span class="section-title">Settings</span>
-    </div>
-    <p class="mm-view-note">Keys and switches for the whole app. Only admins
-      can see this page.</p>
-    <div id="mm-set-body"><div class="mm-empty">Loading...</div></div>
-  </div>
-</div>
-
 <div class="screen" id="screen-emailtpl">
   <div class="mm-content">
     <div class="section-header">
@@ -893,7 +879,6 @@
 <script src="js/templates.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/import.js"></script>
-<script src="js/settings.js"></script>
 <script src="js/addressauto.js"></script>
 <script src="js/app.js"></script>
 </body>
