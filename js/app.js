@@ -33,6 +33,7 @@
     else if (tab === 'checklist') { showScreen('checklist'); CHECK.load(); }
     else if (tab === 'templates') { showScreen('templates'); TPL.load(); }
     else if (tab === 'emailtpl') { showScreen('emailtpl'); window.MM.emailtpl.show(); }
+    else if (tab === 'settings') { showScreen('settings'); window.MM.settings.show(); }
     else if (tab === 'workers') { showScreen('workers'); WORKERS.load(); }
     else if (tab === 'history') { showScreen('history'); ACT.loadPage(); }
     else if (tab === 'alljobs') { showScreen('alljobs'); window.MM.alljobs.load(); }

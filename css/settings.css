@@ -1,0 +1,40 @@
+/* ==========================================================================
+   Settings — the connections and switches an admin owns.
+
+   One card per setting. Whoever reads this is not the person who wrote the
+   code, so each card carries its own explanation above the controls and says
+   in plain words whether the thing is on.
+   ========================================================================== */
+
+.mm-set{background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:18px;max-width:640px;
+  box-shadow:var(--card-shadow)}
+
+.mm-set-head{font-size:1.05em;font-weight:700;color:var(--text);
+  margin-bottom:6px}
+
+.mm-set-note{font-size:0.88em;color:var(--text2);line-height:1.5;
+  margin:0 0 16px}
+
+/* Whether the thing is actually on, said plainly rather than left to be
+   inferred from which buttons are showing. */
+.mm-set-state{font-size:0.86em;font-weight:700;color:var(--text2);
+  border-radius:8px;padding:9px 12px;margin-bottom:14px;
+  background:var(--card2);border:1px solid var(--border)}
+.mm-set-state.is-on{color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 12%,transparent);
+  border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+
+.mm-set-hint{font-size:0.82em;color:var(--text2);line-height:1.5;
+  margin:14px 0 0}
+
+/* The message line doubles as confirmation and as an error, so it drops the
+   alarming colour when nothing has gone wrong. */
+#mm-set-msg:empty{display:none}
+.mm-set-ok{color:var(--text2)!important}
+
+@media (max-width: 620px){
+  .mm-set{padding:14px}
+  .mm-set .mm-btn-row{flex-wrap:wrap}
+  .mm-set .mm-btn-row .mm-btn-sm{flex:1 1 100%}
+}
