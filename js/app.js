@@ -46,7 +46,7 @@
       a.classList.toggle('active', a.getAttribute('data-tab') === tab);
     });
   }
-  document.querySelectorAll('.mm-nav-link, .mm-brand').forEach(function (a) {
+  document.querySelectorAll('.mm-nav-link, .mm-brand, .mm-account-item[data-tab]').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();
       goToTab(a.getAttribute('data-tab') ||
