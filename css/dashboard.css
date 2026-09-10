@@ -242,9 +242,13 @@
 
 /* ---- Phone ---- */
 @media (max-width: 620px){
-  .mm-stats{grid-template-columns:1fr 1fr;gap:8px}
-  .mm-stat{padding:12px 14px}
-  .mm-stat-num{font-size:1.6em}
+  /* All four across one line. They are a glance, not a read: the number is
+     what matters and the label only has to be recognisable, so both shrink
+     rather than the row wrapping onto a second line. */
+  .mm-stats{grid-template-columns:repeat(4,1fr);gap:6px}
+  .mm-stat{padding:10px 8px;border-left-width:3px;min-width:0}
+  .mm-stat-num{font-size:1.35em}
+  .mm-stat-label{font-size:0.68em;line-height:1.25;overflow-wrap:anywhere}
   .mm-views{width:100%}
   .mm-view-tab{flex:1 1 0;padding:12px 14px;text-align:center}
   .mm-agroup-head{padding:14px;gap:10px;min-height:60px}
