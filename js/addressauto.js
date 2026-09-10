@@ -260,10 +260,33 @@ window.MM = window.MM || {};
     attachAll();
   }
 
+  // Reports what actually happened, for when suggestions do not appear and
+  // the reason is not obvious from the outside.
+  function diag() {
+    var g = window.google && window.google.maps;
+    var p = g && g.places;
+    return {
+      loadState: loadState,
+      keySet: !!GOOGLE_KEY,
+      scriptTag: !!document.querySelector('script[src*="maps.googleapis.com"]'),
+      googleMaps: !!g,
+      importLibrary: !!(g && g.importLibrary),
+      places: !!p,
+      placeAutocompleteElement: !!(p && p.PlaceAutocompleteElement),
+      placesKeys: p ? Object.keys(p) : [],
+      waiting: waiting.slice(),
+      attachedCount: attached.length,
+      boxesInPage: Object.keys(FIELDS).filter(function (id) {
+        return !!document.getElementById(id);
+      }),
+    };
+  }
+
   window.MM.addressauto = {
     init: init,
     attach: attach,
     attachAll: attachAll,
+    diag: diag,
     isOn: function () { return loadState === 'ready'; },
   };
 })();
