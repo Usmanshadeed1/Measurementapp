@@ -319,8 +319,37 @@ window.MM = window.MM || {};
     return list.filter(passes).filter(inRange).filter(matchesSearch);
   }
 
+  // A day reads in the order it happens. Without this the items came out in
+  // whatever order they were built -- tasks, then visits by job -- so a noon
+  // visit could sit above an eleven o'clock one.
+  //
+  // Everything with a time comes first, earliest to latest. Tasks and design
+  // work carry no time and cannot claim a place in the morning, so they
+  // follow. Ties keep their original order, so nothing shuffles between
+  // renders.
   function itemsOn(d) {
-    return spans().filter(function (s) { return d >= s.start && d <= s.end; });
+    return spans()
+      .filter(function (s) { return d >= s.start && d <= s.end; })
+      .map(function (s, i) { return { s: s, i: i }; })
+      .sort(function (a, b) {
+        var ta = minutesOf(a.s.time), tb = minutesOf(b.s.time);
+        if (ta !== tb) {
+          if (ta === null) return 1;
+          if (tb === null) return -1;
+          return ta - tb;
+        }
+        return a.i - b.i;
+      })
+      .map(function (x) { return x.s; });
+  }
+
+  // "14:30" -> 870. Anything without a usable time sorts last.
+  function minutesOf(hhmm) {
+    var p = String(hhmm || '').split(':');
+    if (p.length < 2) return null;
+    var h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    return h * 60 + m;
   }
 
   // ---- Rendering -----------------------------------------------------------
