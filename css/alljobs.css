@@ -1,0 +1,84 @@
+/* ==========================================================================
+   All Jobs — every job in one flat list.
+
+   A row is one line of information: who and where on the left, what stage and
+   when on the right. The list is long, so each row stays compact and the
+   stage reads as a chip rather than another line of text.
+   ========================================================================== */
+
+.mm-aj-total{font-size:0.86em;color:var(--text2);font-weight:600;
+  white-space:nowrap}
+
+.mm-aj-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  margin-bottom:14px}
+.mm-aj-filters .mm-aj-search{width:auto;flex:1 1 260px;min-width:0;
+  margin-bottom:0}
+.mm-aj-filters .mm-select{width:auto;min-width:180px;flex:0 1 auto;
+  margin-bottom:0}
+.mm-aj-filters .mm-btn-sm{flex:0 0 auto}
+
+.mm-aj-list{display:flex;flex-direction:column;gap:8px}
+
+.mm-aj{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  font-family:inherit;font-size:1em;cursor:pointer;
+  background:var(--card);border:1px solid var(--border);
+  border-left:4px solid var(--accent);border-radius:10px;
+  padding:12px 14px;min-height:60px;box-shadow:var(--card-shadow)}
+.mm-aj:hover{border-color:var(--accent)}
+.mm-aj:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.mm-aj-main{display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0}
+.mm-aj-name{font-size:1.02em;font-weight:700;color:var(--text);line-height:1.3}
+.mm-aj-addr{font-size:0.84em;color:var(--text2);overflow-wrap:anywhere}
+
+.mm-aj-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;
+  flex:0 0 auto}
+.mm-aj-stage{font-size:0.78em;font-weight:700;white-space:nowrap;
+  color:var(--accent);border-radius:999px;padding:3px 11px;
+  background:color-mix(in srgb,var(--accent) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--accent) 32%,transparent)}
+.mm-aj-when{font-size:0.76em;color:var(--text2);white-space:nowrap}
+
+/* ---- Filters behind a button, on a phone --------------------------------- */
+/* Same pattern as the schedule: three controls in a row push the list below
+   the fold, and the list is what the page is for. */
+
+.mm-aj-filterbtn{display:none}
+
+@media (max-width: 620px){
+  .mm-aj-filterbtn{display:flex;align-items:center;gap:8px;width:100%;
+    min-height:46px;margin-bottom:10px;padding:0 14px;
+    border:1px solid var(--control-border);border-radius:10px;
+    background:var(--card2);color:var(--text);
+    font-family:inherit;font-size:0.95em;font-weight:700;cursor:pointer}
+  .mm-aj-filterbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+  .mm-aj-filterlabel{flex:1 1 auto;text-align:left}
+
+  /* Only shown when something is filtering, so a collapsed panel never leaves
+     the list looking mysteriously short. */
+  .mm-aj-filtercount{flex:0 0 auto;min-width:22px;height:22px;padding:0 7px;
+    display:none;align-items:center;justify-content:center;
+    border-radius:999px;font-size:0.78em;font-weight:700;
+    background:var(--accent);color:var(--bg)}
+  .mm-aj-filtercount.is-on{display:flex}
+
+  .mm-aj-filterarrow{flex:0 0 auto;color:var(--accent);font-size:1.1em;
+    line-height:1;transition:transform .15s ease}
+  .mm-aj-filterbtn.is-open .mm-aj-filterarrow{transform:rotate(180deg)}
+  .mm-aj-filterbtn.is-open{border-color:var(--accent)}
+
+  .mm-aj-filters{display:none}
+  .mm-aj-filters.is-open{display:flex;
+    padding:12px;margin-bottom:12px;border-radius:10px;
+    background:var(--card2);border:1px solid var(--border)}
+  .mm-aj-filters .mm-aj-search,
+  .mm-aj-filters .mm-select,
+  .mm-aj-filters .mm-btn-sm{flex:1 1 100%;min-width:0}
+
+  /* The stage and date move under the name: at phone width a right-hand
+     column leaves the customer name three words wide. */
+  .mm-aj{flex-wrap:wrap;gap:8px}
+  .mm-aj-main{flex:1 1 100%}
+  .mm-aj-side{flex-direction:row;align-items:center;gap:8px;width:100%}
+}

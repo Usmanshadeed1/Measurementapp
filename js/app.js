@@ -35,6 +35,7 @@
     else if (tab === 'emailtpl') { showScreen('emailtpl'); window.MM.emailtpl.show(); }
     else if (tab === 'workers') { showScreen('workers'); WORKERS.load(); }
     else if (tab === 'history') { showScreen('history'); ACT.loadPage(); }
+    else if (tab === 'alljobs') { showScreen('alljobs'); window.MM.alljobs.load(); }
     else if (tab === 'contacts') { showScreen('contacts'); loadContacts(); }
     setActiveNavLink(tab);
     closeMobileNav();
@@ -739,6 +740,7 @@
   DASH.initDashboard(function (o) { pickJob(o); });
   ACT.initPage();
   MY.onOpenJob(pickJob);
+  window.MM.alljobs.init(pickJob);
   MEASURE.init(pickJob);
   // A task on the calendar belongs to the Tasks tab, not the overview.
   SCHED.init(function (o) { pickJob(o, 'tasks', 'schedule'); });
@@ -769,6 +771,12 @@
   // between "what is in the pipeline" and "what is happening this week".
   document.getElementById('mm-dash-schedule').addEventListener('click', function () {
     goToTab('schedule');
+  });
+
+  // The flat list of every job. The dashboard groups by stage, which is the
+  // wrong shape for finding one job by name.
+  document.getElementById('mm-dash-alljobs').addEventListener('click', function () {
+    goToTab('alljobs');
   });
 
   // + Task: a task belongs to a job, so the only question is which one. The

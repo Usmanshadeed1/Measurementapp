@@ -544,8 +544,6 @@ window.MM = window.MM || {};
       }, 200);
     });
 
-    document.getElementById('mm-dash-refresh').addEventListener('click', loadDashboard);
-
     document.getElementById('mm-stage-cancel').addEventListener('click', closeStage);
     document.getElementById('mm-modal-stage').addEventListener('click', function (e) {
       if (e.target === this) closeStage();
