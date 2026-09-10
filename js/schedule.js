@@ -327,6 +327,25 @@ window.MM = window.MM || {};
   // work carry no time and cannot claim a place in the morning, so they
   // follow. Ties keep their original order, so nothing shuffles between
   // renders.
+  function activeFilterCount() {
+    var n = 0;
+    if (filters.worker) n++;
+    if (filters.job) n++;
+    if (filters.status && filters.status !== 'all') n++;
+    if (filters.kind && filters.kind !== 'all') n++;
+    if (searchTerm) n++;
+    if (rangeFrom || rangeTo) n++;
+    return n;
+  }
+
+  function updateFilterCount() {
+    var el = document.getElementById('mm-sc-filtercount');
+    if (!el) return;
+    var n = activeFilterCount();
+    el.textContent = n ? String(n) : '';
+    el.classList.toggle('is-on', n > 0);
+  }
+
   function itemsOn(d) {
     return spans()
       .filter(function (s) { return d >= s.start && d <= s.end; })
@@ -362,6 +381,7 @@ window.MM = window.MM || {};
       b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
     document.getElementById('mm-sc-title').textContent = title();
+    updateFilterCount();
 
 
     var el = document.getElementById('mm-sc-body');
@@ -719,6 +739,20 @@ window.MM = window.MM || {};
         render();
       });
     });
+
+    // On a phone the filters live behind a button. The panel is plain CSS --
+    // hidden below 620px until opened -- so this only flips the classes and
+    // keeps the count in step.
+    var fBtn = document.getElementById('mm-sc-filterbtn');
+    var fPanel = document.getElementById('mm-sched-filters');
+    if (fBtn && fPanel) {
+      fBtn.addEventListener('click', function () {
+        var open = !fPanel.classList.contains('is-open');
+        fPanel.classList.toggle('is-open', open);
+        fBtn.classList.toggle('is-open', open);
+        fBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
 
     document.getElementById('mm-sc-clear').addEventListener('click', function () {
       filters = { worker: '', job: '', status: 'all', kind: 'all' };

@@ -225,7 +225,14 @@
       </div>
     </div>
 
-    <div class="mm-sched-filters">
+    <button type="button" class="mm-sc-filterbtn" id="mm-sc-filterbtn"
+            aria-expanded="false" aria-controls="mm-sched-filters">
+      <span class="mm-sc-filterlabel">Filters</span>
+      <span class="mm-sc-filtercount" id="mm-sc-filtercount"></span>
+      <span class="mm-sc-filterarrow" aria-hidden="true">&#9662;</span>
+    </button>
+
+    <div class="mm-sched-filters" id="mm-sched-filters">
       <div class="mm-sc-find">
         <label class="sr-only" for="mm-sc-search">Search</label>
         <input class="mm-input mm-sc-search" id="mm-sc-search" type="search"
