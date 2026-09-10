@@ -255,26 +255,6 @@ window.MM = window.MM || {};
   // below use, so a card can never disagree with the section it names. The
   // earlier cards inferred urgency from dates and read 37 of 38 urgent, which
   // told nobody anything.
-  function countAtStage(id) {
-    return allJobs.filter(function (o) { return o.pipelineStageId === id; }).length;
-  }
-
-  function renderStats() {
-    var el = document.getElementById('mm-dash-stats');
-
-    function stat(label, value, tone) {
-      return '<div class="mm-stat mm-stat-' + tone + '">' +
-        '<div class="mm-stat-num">' + value + '</div>' +
-        '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
-    }
-
-    el.innerHTML =
-      stat('All jobs', allJobs.length, 'neutral') +
-      stat('New Leads', countAtStage(api.STAGE.newLead), 'warn') +
-      stat('Hired Maximus', countAtStage(api.STAGE_WON), 'good') +
-      stat('Job Completed', countAtStage(api.STAGE_COMPLETED), 'good');
-  }
-
   // ---- Assign staff -------------------------------------------------------
 
   var assigningJob = null;
@@ -483,7 +463,6 @@ window.MM = window.MM || {};
   }
 
   function render() {
-    renderStats();
     renderBody();
   }
 
@@ -491,8 +470,6 @@ window.MM = window.MM || {};
 
   function loadDashboard() {
     var tableEl = document.getElementById('mm-dash-table');
-    var statsEl = document.getElementById('mm-dash-stats');
-    statsEl.innerHTML = '';
     tableEl.innerHTML = '<div class="mm-empty">Loading...</div>';
 
     Promise.all([
@@ -519,14 +496,12 @@ window.MM = window.MM || {};
         allJobs = ops.filter(function (o) { return o.pipelineId === api.SALES_PIPELINE_ID; });
 
         if (!allJobs.length) {
-          statsEl.innerHTML = '';
           tableEl.innerHTML = '<div class="mm-empty">No jobs yet.</div>';
           return;
         }
         render();
       })
       .catch(function (e) {
-        statsEl.innerHTML = '';
         tableEl.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
       });
   }
