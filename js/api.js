@@ -52,7 +52,6 @@ window.MM = window.MM || {};
   var STAGE = {
     newLead:      '388a6d1b-15dd-4146-ac7d-caa1c3e07deb',
     apptBooked:   'f7bb3e4e-82e9-4617-96a9-d6a8bb52d7e3',  // Measurement Appointment
-    measured:     '4c348bc2-30b5-4b41-a7aa-c6e299f4b062',  // Measurement Complete
     needDesign:   'b55fead3-6ba6-4f1b-bd4a-ac6db94035a9',  // Need Design
     design:       '5abda84b-8753-436f-8d4d-34d93620f5f0',  // Design Complete
     // One stage for every email to the customer, whatever it contained. A job
@@ -70,7 +69,6 @@ window.MM = window.MM || {};
   };
 
   // Kept as named exports because several modules read them directly.
-  var STAGE_AFTER_MEASURED = STAGE.measured;
   var STAGE_AFTER_PRICING = STAGE.pricing;
   var STAGE_PROPOSAL_SENT = STAGE.proposalSent;
   var STAGE_MATERIAL_ORDERING = STAGE.materials;
@@ -436,7 +434,6 @@ window.MM = window.MM || {};
     SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
     DATE_FIELD_IDS: DATE_FIELD_IDS, APPT_DT_FIELD_ID: APPT_DT_FIELD_ID,
     apptDateTime: apptDateTime, setApptDateTime: setApptDateTime,
-    STAGE_AFTER_MEASURED: STAGE_AFTER_MEASURED,
     STAGE_AFTER_PRICING: STAGE_AFTER_PRICING, STAGE_PROPOSAL_SENT: STAGE_PROPOSAL_SENT,
     STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
     STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
