@@ -12,16 +12,18 @@
    insides until the card was open have gone with it: there is no card to
    open, so they would simply have hidden everything. */
 
-.mm-step-meetings{align-items:flex-start}
-.mm-step-meetings .mm-step-mark{font-size:1.05em}
+/* The marker holds an emoji rather than a number, which needs no bold. */
+.mm-step-meetings .mm-step-mark{font-size:1em;font-weight:400}
 
-/* The label and the count sit on one line, like a step's own heading. */
+/* The label and the count on one line, like a step's own heading. It wraps on
+   a narrow screen rather than pushing the badge off the edge. */
 .mm-dm-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  margin-bottom:8px}
+  margin-bottom:10px}
 .mm-dm-head .mm-step-label{margin:0}
 
-.mm-dm-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;
-  margin-bottom:10px}
+/* Left, under the heading. Right-aligned it floated away from the label it
+   belongs to once this became a step rather than a card. */
+.mm-dm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 
 .mm-dm-label{font-size:0.72em;font-weight:700;text-transform:uppercase;
   letter-spacing:.06em;color:var(--text2);margin-bottom:6px}

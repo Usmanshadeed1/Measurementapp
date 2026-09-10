@@ -140,8 +140,9 @@ window.MM = window.MM || {};
     // until that has rendered.
     var el = document.getElementById('mm-job-meetings');
     if (!el) return Promise.resolve();
-    el.innerHTML = head(0) +
-      '<div class="mm-step-body"><div class="mm-empty">Loading...</div></div>';
+    el.innerHTML = mark() +
+      '<div class="mm-step-body">' + head(0) +
+      '<div class="mm-empty">Loading...</div></div>';
 
     return api.getOpportunity(job.id)
       .then(function (opp) {
@@ -149,24 +150,30 @@ window.MM = window.MM || {};
         render();
       })
       .catch(function (e) {
-        el.innerHTML = head(0) +
-          '<div class="mm-step-body"><div class="mm-empty">' +
-          U.esc(e.message) + '</div></div>';
+        el.innerHTML = mark() +
+          '<div class="mm-step-body">' + head(0) +
+          '<div class="mm-empty">' + U.esc(e.message) + '</div></div>';
       });
   }
 
-  // The panel now lives inside Job Progress rather than in a card of its own,
-  // so the heading is a step label with the count beside it -- the same shape
-  // as the numbered steps around it.
+  // A step is a two-column grid: the round marker, then everything else in a
+  // single body. So this emits the marker only, and the heading goes inside
+  // the body with the rest -- a third child would wrap onto its own row and
+  // squeeze the body into the 34px marker column.
+  function mark() {
+    return '<div class="mm-step-mark" aria-hidden="true">&#128197;</div>';
+  }
+
+  // The heading, first thing inside the body: the label with the count beside
+  // it, the same shape as the numbered steps around it.
   function head(n) {
-    return '<div class="mm-step-mark" aria-hidden="true">&#128197;</div>' +
-      '<div class="mm-dm-head">' +
-        '<span class="mm-step-label">Design meetings</span>' +
-        (n
-          ? '<span class="mm-steps-badge mm-steps-badge-done">' + n +
-            (n === 1 ? ' meeting' : ' meetings') + '</span>'
-          : '<span class="mm-steps-badge mm-steps-badge-todo">None yet</span>') +
-      '</div>';
+    return '<div class="mm-dm-head">' +
+      '<span class="mm-step-label">Design meetings</span>' +
+      (n
+        ? '<span class="mm-steps-badge mm-steps-badge-done">' + n +
+          (n === 1 ? ' meeting' : ' meetings') + '</span>'
+        : '<span class="mm-steps-badge mm-steps-badge-todo">None yet</span>') +
+    '</div>';
   }
 
   // ---- Rendering -----------------------------------------------------------
@@ -182,8 +189,9 @@ window.MM = window.MM || {};
     var rest = meetings.slice(1);
 
     el.innerHTML =
-      head(meetings.length) +
+      mark() +
       '<div class="mm-step-body">' +
+      head(meetings.length) +
       (adding ? '' :
         '<div class="mm-dm-actions">' +
           '<button class="mm-btn-sm mm-btn-primary" id="mm-dm-add">+ Add Meeting</button>' +
