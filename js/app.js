@@ -285,6 +285,21 @@
     var admin = window.MM.auth.isAdmin();
     var crewEl = document.getElementById('mm-job-crew');
     if (crewEl) crewEl.style.display = admin ? '' : 'none';
+
+    // Deleting a job cannot be undone, so it is admin-only and goes through
+    // the typed confirmation rather than a plain confirm().
+    var jobDelBtn = document.getElementById('mm-job-delete');
+    if (jobDelBtn) {
+      jobDelBtn.style.display = admin ? '' : 'none';
+      jobDelBtn.onclick = function () {
+        if (!window.MM.deletething) return;
+        window.MM.deletething.confirmJob(o, function () {
+          // Back where the job was opened from, and that list is reloaded so
+          // the deleted job goes rather than lingering until a refresh.
+          goToTab(jobCameFrom === 'contact' ? 'contacts' : jobCameFrom);
+        });
+      };
+    }
     var tasksTab = document.querySelector('#mm-jobtabs [data-jobtab="tasks"]');
     if (tasksTab) tasksTab.style.display = '';
 
@@ -874,6 +889,8 @@
     if (e.target === this) closeModal('mm-modal-loadtpl');
   });
   C.onOpenJob(function (o) { pickJob(o, 'overview', 'contact'); });
+  // After a customer is deleted there is no detail page left to show.
+  C.onContactDeleted(function () { goToTab('contacts'); });
   C.initEdit(function () { loadContacts(); });
   C.initSort();
   document.getElementById('mm-measure-refresh').addEventListener('click', function () { MEASURE.load(); });
@@ -978,6 +995,8 @@
   document.getElementById('mm-modal-new').addEventListener('click', function (e) {
     if (e.target === this) closeModal('mm-modal-new');
   });
+
+  if (window.MM.deletething) window.MM.deletething.init();
 
   window.MM.auth.init(function () {
     var admin = window.MM.auth.isAdmin();

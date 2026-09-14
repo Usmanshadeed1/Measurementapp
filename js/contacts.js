@@ -250,6 +250,22 @@ window.MM = window.MM || {};
       editBtn.style.display = auth.isAdmin() ? '' : 'none';
       editBtn.onclick = function () { openEdit(c); };
     }
+
+    // Deleting a customer destroys their jobs and their whole message
+    // history, so it is admin-only and goes through the typed confirmation
+    // in deletething.js rather than a plain confirm().
+    var delBtn = document.getElementById('mm-contact-delete');
+    if (delBtn) {
+      delBtn.style.display = auth.isAdmin() ? '' : 'none';
+      delBtn.onclick = function () {
+        if (!window.MM.deletething) return;
+        window.MM.deletething.confirmContact(c, function () {
+          // Back to the list, which is reloaded so the deleted customer is
+          // gone rather than sitting there until the next refresh.
+          if (onDeleted) onDeleted();
+        });
+      };
+    }
     var el = document.getElementById('mm-contact-info');
     var details =
       field('Name', name) +
@@ -283,6 +299,7 @@ window.MM = window.MM || {};
   // going back to the dashboard and searching by name.
 
   var onOpenJob = null;
+  var onDeleted = null;
 
   function renderJobs(contactId) {
     var el = document.getElementById('mm-contact-jobs');
@@ -392,6 +409,7 @@ window.MM = window.MM || {};
 
   window.MM.contacts = {
     onOpenJob: function (fn) { onOpenJob = fn; },
+    onContactDeleted: function (fn) { onDeleted = fn; },
     initSort: initSort,
     initEdit: initEdit,
     contactAdded: contactAdded,

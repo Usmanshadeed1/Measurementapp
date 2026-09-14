@@ -407,6 +407,25 @@ window.MM = window.MM || {};
       .then(function (d) { return d.contact; });
   }
 
+  // Deleting a job. Removes the opportunity and everything GoHighLevel keeps
+  // against it. The customer and their other jobs are untouched.
+  //
+  // Rooms, walls and photos are custom object records related to the job
+  // rather than owned by it, so GHL leaves them behind. They are orphaned
+  // rather than deleted -- invisible in the app, because every list starts
+  // from a job. Removing them one by one would be a long chain of calls that
+  // could fail halfway and leave the job half-deleted, which is worse.
+  function deleteOpportunity(oppId) {
+    return apiFetch('DELETE', '/opportunities/' + oppId);
+  }
+
+  // Deleting a customer. GoHighLevel removes the contact, every opportunity
+  // belonging to them, and their whole conversation history -- SMS, email,
+  // notes, tasks, appointments. None of it can be recovered.
+  function deleteContact(contactId) {
+    return apiFetch('DELETE', '/contacts/' + contactId);
+  }
+
   function getTags() {
     return apiFetch('GET', '/locations/' + LOC + '/tags').then(function (d) { return d.tags || []; });
   }
@@ -443,6 +462,7 @@ window.MM = window.MM || {};
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact, updateContact: updateContact,
+    deleteOpportunity: deleteOpportunity, deleteContact: deleteContact,
     getTags: getTags, findDuplicateContact: findDuplicateContact, enrollContactInWorkflow: enrollContactInWorkflow, getWorkflows: getWorkflows,
   };
 })();

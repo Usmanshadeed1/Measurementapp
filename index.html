@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="css/senddesign.css">
 <link rel="stylesheet" href="css/addressauto.css">
 <link rel="stylesheet" href="css/settings.css">
+<link rel="stylesheet" href="css/deletething.css">
 </head>
 <body>
 
@@ -754,6 +755,14 @@
   </div>
 </div>
 
+<!-- DELETE CONFIRMATION - jobs and customers, the only undoable actions -->
+<div class="mm-modal-overlay" id="mm-modal-delete">
+  <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-del-title">
+    <div class="mm-modal-title mm-del-heading" id="mm-del-title">Delete</div>
+    <div id="mm-del-body"></div>
+  </div>
+</div>
+
 <!-- CONTACT DETAIL -->
 <div class="screen" id="screen-contact">
   <div class="topbar">
@@ -761,6 +770,9 @@
     <h1 id="mm-contact-title">Contact</h1>
     <button class="mm-icon-btn" id="mm-contact-edit" title="Edit contact"
             aria-label="Edit contact" style="display:none">&#9998;</button>
+    <button class="mm-icon-btn mm-icon-danger" id="mm-contact-delete"
+            title="Delete contact" aria-label="Delete contact"
+            style="display:none">&#128465;</button>
   </div>
   <div class="mm-content">
     <div class="card" id="mm-contact-info"></div>
@@ -773,6 +785,9 @@
   <div class="topbar">
     <button class="back-btn" id="mm-back-to-jobs" aria-label="Back">&#8249;</button>
     <h1 id="mm-job-title">Job</h1>
+    <button class="mm-icon-btn mm-icon-danger" id="mm-job-delete"
+            title="Delete job" aria-label="Delete job"
+            style="display:none">&#128465;</button>
   </div>
 
   <!-- Tabs rather than one long scroll: on a phone the measuring tool was
@@ -896,6 +911,7 @@
 <script src="js/import.js"></script>
 <script src="js/addressauto.js"></script>
 <script src="js/drive.js"></script>
+<script src="js/deletething.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/app.js"></script>
 </body>

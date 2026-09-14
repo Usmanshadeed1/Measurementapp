@@ -1,0 +1,47 @@
+/* ==========================================================================
+   Deleting a job or a customer.
+
+   The only irreversible thing the app can do, so the box is allowed to look
+   heavier than the rest of the interface: red heading, the damage listed
+   rather than summarised, and a button that stays dead until the name has
+   been typed.
+   ========================================================================== */
+
+/* A bin icon that reads as dangerous without shouting from the toolbar. */
+.mm-icon-danger{color:var(--danger-text)}
+.mm-icon-danger:hover{background:var(--danger-bg);color:var(--danger-text)}
+
+.mm-del-heading{color:var(--danger-text)}
+
+.mm-del-lead{font-size:0.92em;color:var(--text);line-height:1.5;margin:0 0 12px}
+
+/* What is about to be destroyed, itemised. A sentence saying "and everything
+   attached" is easy to skim past; a list is not. */
+.mm-del-list{margin:0 0 14px;padding-left:20px;color:var(--text2);
+  font-size:0.88em;line-height:1.65}
+.mm-del-list li{margin-bottom:2px}
+
+.mm-del-warn{font-size:0.88em;font-weight:700;line-height:1.5;
+  color:var(--danger-text);background:var(--danger-bg);
+  border-radius:8px;padding:10px 12px;margin:0 0 16px}
+
+/* The name to type, selectable so it can be copied. Monospace because a
+   name being matched character by character is closer to a code than to
+   prose here. */
+.mm-del-name{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:0.95em;font-weight:700;color:var(--text);
+  background:var(--card2);border:1px solid var(--border);border-radius:8px;
+  padding:9px 12px;margin-bottom:8px;
+  user-select:all;overflow-wrap:anywhere}
+
+/* The one button in the app that destroys something. It looks like it. */
+.mm-btn-danger{background:var(--danger-text);color:var(--bg);
+  border:1px solid var(--danger-text);font-weight:700}
+.mm-btn-danger:hover:not(:disabled){filter:brightness(1.1)}
+.mm-btn-danger:disabled{opacity:.45;cursor:not-allowed}
+
+@media (max-width: 620px){
+  .mm-del-list{padding-left:18px}
+  #mm-modal-delete .mm-btn-row{flex-wrap:wrap}
+  #mm-modal-delete .mm-btn-row .mm-btn-sm{flex:1 1 100%}
+}
