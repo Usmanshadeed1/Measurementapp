@@ -514,3 +514,11 @@
   .mm-msrow .mm-step-action{flex-wrap:wrap}
   .mm-msrow .mm-step-action .mm-btn-sm{flex:1 1 0;min-width:0}
 }
+
+/* The job count, beside the heading rather than across the page from it.
+   .section-header spreads its children apart, so margin-right:auto takes up
+   the slack and keeps this next to the word it counts. Styled as the heading
+   is, minus the weight, so it reads as part of the same line. */
+.mm-dash-total{margin-right:auto;
+  font-size:0.86em;font-weight:800;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
