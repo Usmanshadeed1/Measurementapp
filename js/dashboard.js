@@ -418,8 +418,9 @@ window.MM = window.MM || {};
   function renderTotal() {
     var el = document.getElementById('mm-dash-total');
     if (!el) return;
-    var n = openJobs().length;
-    el.textContent = n + (n === 1 ? ' job' : ' jobs');
+    // The number alone: it sits directly after the word "Jobs", so spelling
+    // the word again reads as "Jobs 49 jobs".
+    el.textContent = String(openJobs().length);
   }
 
   function bindBody(el) {
