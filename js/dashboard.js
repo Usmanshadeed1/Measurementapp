@@ -412,15 +412,17 @@ window.MM = window.MM || {};
     renderTotal();
   }
 
-  // The count beside the heading. Open jobs, not every job ever: finished and
-  // lost ones are deliberately absent from the stages below, so counting them
-  // here would give a total that none of the sections add up to.
+  // Every job, finished and lost included, so this agrees with the count on
+  // the All Jobs page. Counting only open ones was defensible -- the stage
+  // sections below leave finished jobs out -- but two different totals for
+  // "jobs" in one app is worse than a total the sections do not add up to.
+  //
+  // The number alone: it sits directly after the word "Jobs", so spelling the
+  // word again reads as "Jobs 49 jobs".
   function renderTotal() {
     var el = document.getElementById('mm-dash-total');
     if (!el) return;
-    // The number alone: it sits directly after the word "Jobs", so spelling
-    // the word again reads as "Jobs 49 jobs".
-    el.textContent = String(openJobs().length);
+    el.textContent = String(allJobs.length);
   }
 
   function bindBody(el) {
