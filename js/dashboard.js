@@ -409,6 +409,17 @@ window.MM = window.MM || {};
     var el = document.getElementById('mm-dash-table');
     el.innerHTML = renderWorkList();
     bindBody(el);
+    renderTotal();
+  }
+
+  // The count beside the heading. Open jobs, not every job ever: finished and
+  // lost ones are deliberately absent from the stages below, so counting them
+  // here would give a total that none of the sections add up to.
+  function renderTotal() {
+    var el = document.getElementById('mm-dash-total');
+    if (!el) return;
+    var n = openJobs().length;
+    el.textContent = n + (n === 1 ? ' job' : ' jobs');
   }
 
   function bindBody(el) {
@@ -471,6 +482,10 @@ window.MM = window.MM || {};
   function loadDashboard() {
     var tableEl = document.getElementById('mm-dash-table');
     tableEl.innerHTML = '<div class="mm-empty">Loading...</div>';
+    // Cleared while loading, so a stale count from the last visit is not left
+    // sitting beside a list that is still being fetched.
+    var totalEl = document.getElementById('mm-dash-total');
+    if (totalEl) totalEl.textContent = '';
 
     Promise.all([
       api.fetchAllOpportunities(),
@@ -497,6 +512,7 @@ window.MM = window.MM || {};
 
         if (!allJobs.length) {
           tableEl.innerHTML = '<div class="mm-empty">No jobs yet.</div>';
+          renderTotal();
           return;
         }
         render();
