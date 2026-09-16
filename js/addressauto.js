@@ -239,18 +239,38 @@ window.MM = window.MM || {};
       if (box) box.focus(); else if (ac.focus) ac.focus();
     };
 
-    // Clearing -- reopening the New Job form sets .value = '' to empty the
-    // box. Google's element keeps its own text, so the old address would
-    // still be on screen while the real value was empty. Watching the
-    // property keeps the two in step.
-    var raw = input.value;
+    // value -- the hidden input is what every save path reads, but Google's
+    // box is what the person actually types into. So the property is wired
+    // straight through to that box in both directions.
+    //
+    // Reading used to return a value cached here, which was only ever written
+    // when a suggestion was picked. Typing an address by hand, correcting a
+    // picked one, or clearing the box all left that cache holding the old
+    // text -- so the edit was silently discarded at save and the previous
+    // address stayed on the job.
+    var seed = input.value;
     Object.defineProperty(input, 'value', {
       configurable: true,
-      get: function () { return raw; },
-      set: function (v) {
-        raw = v == null ? '' : String(v);
-        try { ac.value = raw; } catch (e) { /* older builds ignore this */ }
+      get: function () {
+        var box = ac.querySelector('input');
+        if (box) return box.value;
+        // Before Google has rendered its input, and on builds that expose a
+        // value of their own.
+        try { if (typeof ac.value === 'string') return ac.value; } catch (e) { }
+        return seed;
       },
+      set: function (v) {
+        seed = v == null ? '' : String(v);
+        var box = ac.querySelector('input');
+        if (box) box.value = seed;
+        try { ac.value = seed; } catch (e) { /* older builds ignore this */ }
+      },
+    });
+
+    // Typing in Google's box has to look like typing in the original one, or
+    // the live job-name preview never updates.
+    ac.addEventListener('input', function () {
+      input.dispatchEvent(new Event('input', { bubbles: true }));
     });
 
     ac.addEventListener('gmp-select', function (ev) {
