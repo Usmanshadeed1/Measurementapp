@@ -32,9 +32,12 @@ window.MM = window.MM || {};
   }
 
   // Same shape WF-1 builds, so jobs read identically however they were made.
+  // The address box holds the whole address, but the title takes the street
+  // from it -- the same rule the job editor applies when one is corrected.
   function jobName(c, address) {
     var n = nameOf(c);
-    return address ? n + ' - ' + address : n;
+    var street = U.streetPart(address);
+    return street ? n + ' - ' + street : n;
   }
 
   function open() {

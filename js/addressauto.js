@@ -44,8 +44,11 @@ window.MM = window.MM || {};
   // Which boxes get which treatment, and for the full ones, where the rest of
   // the address should land.
   var FIELDS = {
-    'mm-nj-address': { mode: 'street' },
-    'mm-je-addr': { mode: 'street' },
+    // A job's address is one box with no city or postcode beside it, so the
+    // whole address goes in the box. The job TITLE still gets the street
+    // alone -- that trim happens where the title is built, not here.
+    'mm-nj-address': { mode: 'oneline' },
+    'mm-je-addr': { mode: 'oneline' },
     'mm-ct-address': {
       mode: 'full',
       city: 'mm-ct-city', state: 'mm-ct-state',
@@ -143,6 +146,23 @@ window.MM = window.MM || {};
     var num = part(components, 'street_number');
     var road = part(components, 'route');
     return ((num ? num + ' ' : '') + road).trim();
+  }
+
+  // "630 Dewey Road, North Brunswick Township, NJ 08902" -- everything, on one
+  // line, for a field that has no city or postcode boxes beside it.
+  //
+  // Built from the parts rather than taken from Google's formattedAddress,
+  // which appends ", USA" to every American address and would put it in every
+  // job title.
+  function oneLine(components) {
+    var road = street(components);
+    var city = part(components, 'locality') ||
+      part(components, 'sublocality') || part(components, 'postal_town');
+    var state = part(components, 'administrative_area_level_1', true);
+    var zip = part(components, 'postal_code');
+
+    var tail = [state, zip].filter(Boolean).join(' ');
+    return [road, city, tail].filter(Boolean).join(', ');
   }
 
   // Writes into one of the app's own boxes and tells the page it changed, so
@@ -249,7 +269,7 @@ window.MM = window.MM || {};
           var st = street(comps);
           if (!st) return;
 
-          put(id, st);
+          put(id, cfg.mode === 'oneline' ? oneLine(comps) : st);
 
           if (cfg.mode !== 'full') return;
 

@@ -45,7 +45,8 @@ window.MM = window.MM || {};
   // A job is a property, and the street line is how the property is named --
   // matching the GoHighLevel workflow, which titles jobs "Customer - Street".
   // The town, postcode and country are not stored here at all.
-  function streetOf(addr) { return String(addr || '').trim(); }
+  // The field stores the whole address; the title takes the street from it.
+  function streetOf(addr) { return U.streetPart(addr); }
 
   // Jobs are titled "Customer - Address", and the workflow that creates them
   // fills the title but not the address field.

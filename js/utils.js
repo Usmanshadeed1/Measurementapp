@@ -80,6 +80,22 @@ window.MM = window.MM || {};
     return out;
   }
 
+  // The street half of an address: "630 Dewey Road, North Brunswick, NJ 08902"
+  // becomes "630 Dewey Road".
+  //
+  // Job titles are built as "Customer - Street". The Property Address field
+  // holds the whole address, because that is what is useful on the job, but a
+  // title carrying the town, state and postcode of every job makes a list of
+  // them unreadable -- which is why the title takes the first part only.
+  //
+  // An address typed by hand with no commas is returned as it is: there is no
+  // town to drop, and guessing where one ends would mangle it.
+  function streetPart(addr) {
+    var s = String(addr || '').trim();
+    var at = s.indexOf(',');
+    return at === -1 ? s : s.slice(0, at).trim();
+  }
+
   function esc(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -212,7 +228,7 @@ window.MM = window.MM || {};
   }
 
   window.MM.utils = {
-    esc: esc, titleCase: titleCase, phone: phone, ghlContactUrl: ghlContactUrl, callButtons: callButtons, pv: pv, uid: uid, fbk: fbk,
+    esc: esc, streetPart: streetPart, titleCase: titleCase, phone: phone, ghlContactUrl: ghlContactUrl, callButtons: callButtons, pv: pv, uid: uid, fbk: fbk,
     FONT_SIZES: FONT_SIZES, getFontIndex: getFontIndex, applyFont: applyFont,
     getTheme: getTheme, applyTheme: applyTheme, toggleTheme: toggleTheme,
     fld: fld, radios: radios, sel: sel, gv: gv, sv: sv, gr: gr, sr: sr, clearIfPlaceholder: clearIfPlaceholder,
