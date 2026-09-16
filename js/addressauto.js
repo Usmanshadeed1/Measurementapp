@@ -200,7 +200,20 @@ window.MM = window.MM || {};
     // A modal that reopens builds a fresh box, so the old wiring goes with it.
     // Comparing the element itself, not the id, is what makes that safe.
     if (attached.indexOf(input) > -1) return;
+
+    // Elements from a previous opening of the same form are no longer in the
+    // page. Dropping them keeps this list from growing every time a modal is
+    // opened, and -- more importantly -- stops a stale entry standing in for
+    // a box that has been replaced.
+    attached = attached.filter(function (el) { return el.isConnected; });
     attached.push(input);
+
+    // Google's element is a sibling of the input, and rebuilding the form
+    // leaves the old one behind. Two of them in the same place means
+    // querySelector can find the wrong one, which is a value read from a box
+    // nobody is typing into.
+    var stale = input.parentNode.querySelectorAll('.mm-gplace');
+    for (var i = 0; i < stale.length; i++) stale[i].remove();
 
     var ac;
     try {

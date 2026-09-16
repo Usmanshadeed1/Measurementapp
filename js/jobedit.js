@@ -165,18 +165,22 @@ window.MM = window.MM || {};
     }
 
     // The job is titled "Customer - Address", so it goes stale the moment
-    // either half is corrected. Renamed only when BOTH halves are present:
-    // with an empty address the title would collapse to the bare name and the
-    // address in it would be lost for good.
-    // The street line alone, matching how the GoHighLevel workflow names a
-    // job. The full postal address is kept in the field; repeating the town,
-    // postcode and country in the title makes every list unreadable.
+    // either half is corrected.
+    //
+    // The street line alone: the full postal address is kept in the field,
+    // and repeating the town, postcode and country in every title makes a
+    // list of jobs unreadable.
+    //
+    // Clearing the address gives the bare customer name, with no trailing
+    // dash. An earlier version refused to rename at all when the address was
+    // empty, to avoid titles like "Peace - " -- but that meant a cleared
+    // address left the old one sitting in the title, which is worse: the job
+    // then claims a property it is no longer for.
     var street = streetOf(addr);
-    var newName = '';
-    if (street) {
-      newName = U.titleCase(name) + ' - ' + street;
-      if (newName !== job.name) work.push(api.renameOpportunity(jobId, newName));
-    }
+    var newName = street
+      ? U.titleCase(name) + ' - ' + street
+      : U.titleCase(name);
+    if (newName !== job.name) work.push(api.renameOpportunity(jobId, newName));
 
     Promise.all(work)
       .then(function () {
