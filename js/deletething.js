@@ -81,11 +81,20 @@ window.MM = window.MM || {};
     var typed = document.getElementById('mm-del-type');
     var go = document.getElementById('mm-del-go');
 
-    // Case and outside spaces are forgiven; the name itself is not. Someone
-    // who types a different customer's name has not confirmed this one.
+    // Case and spacing are forgiven; the name itself is not. Someone who
+    // types a different customer's name has not confirmed this one.
+    //
+    // Runs of whitespace collapse to a single space before comparing: a title
+    // shown over two lines invites a line break or a double space when it is
+    // retyped, and refusing the delete over that only teaches people that the
+    // box is broken.
+    function tidy(s) {
+      return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
     function matches() {
       if (!pending) return false;
-      return typed.value.trim().toLowerCase() === pending.name.trim().toLowerCase();
+      return tidy(typed.value) === tidy(pending.name);
     }
 
     typed.addEventListener('input', function () {

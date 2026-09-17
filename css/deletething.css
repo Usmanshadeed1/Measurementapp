@@ -32,7 +32,10 @@
   font-size:0.95em;font-weight:700;color:var(--text);
   background:var(--card2);border:1px solid var(--border);border-radius:8px;
   padding:9px 12px;margin-bottom:8px;
-  user-select:all;overflow-wrap:anywhere}
+  user-select:all;
+  /* A title too long for one line has to wrap, not disappear: what cannot be
+     read cannot be typed, and the button stays dead until it matches. */
+  white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
 
 /* The one button in the app that destroys something. It looks like it. */
 .mm-btn-danger{background:var(--danger-text);color:var(--bg);
