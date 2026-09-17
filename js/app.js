@@ -974,7 +974,26 @@
 
   // + New — one button, because on a phone there is only room for one. It
   // asks which of the two things is being added rather than guessing.
-  NEWJOB.init(function () { DASH.loadDashboard(); });
+  // The dashboard reads jobs through GoHighLevel's opportunity SEARCH, whose
+  // index runs a second or two behind a write. A job is created in two calls
+  // -- the opportunity, then its four address fields -- so a reload fired the
+  // instant the second returns comes back with the address missing, and the
+  // new job shows only the street its title can be read for.
+  //
+  // Waiting is the honest fix: the index is not ours to hurry, and a job that
+  // appears a moment later with the right address beats one that appears at
+  // once with the wrong one.
+  NEWJOB.init(function () {
+    // Said straight away, so the pause reads as the app working rather than
+    // as the new job having failed to appear.
+    var tableEl = document.getElementById('mm-dash-table');
+    if (tableEl) {
+      tableEl.innerHTML = '<div class="mm-loading">' +
+        '<span class="mm-spinner" aria-hidden="true"></span>' +
+        '<span>Saving the new job&hellip;</span></div>';
+    }
+    setTimeout(function () { DASH.loadDashboard(); }, 2500);
+  });
   document.getElementById('mm-new-btn').addEventListener('click', function () {
     openModal('mm-modal-new');
   });
