@@ -314,8 +314,12 @@ window.MM = window.MM || {};
         var parts = typeof fields.address === 'string'
           ? { street: fields.address }
           : fields.address;
+        // The opportunity that comes back from the address write is the one
+        // to return: the one from the create call above predates the custom
+        // fields and carries none of them, so a job opened straight after
+        // being made showed only the street that its title could be read for.
         return setJobAddress(opp.id, parts)
-          .then(function () { return opp; })
+          .then(function (fresh) { return fresh || opp; })
           .catch(function () { return opp; });
       });
   }
