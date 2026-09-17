@@ -55,14 +55,9 @@ window.MM = window.MM || {};
     var n = o.name || '';
     return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
-  function jobAddress(o) {
-    // Cards created before the Property Address action was fixed keep their
-    // address inside the opportunity name instead.
-    var addr = api.oppField(o, api.ADDR_FIELD_ID);
-    if (addr) return addr;
-    var n = o.name || '';
-    return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ') : '';
-  }
+  // Cards created before the Property Address action was fixed keep their
+  // address inside the opportunity name instead, which jobAddressLine handles.
+  function jobAddress(o) { return api.jobAddressLine(o); }
   function staffName(o) {
     if (!o.assignedTo) return '';
     return userNames[o.assignedTo] || 'Unknown user';

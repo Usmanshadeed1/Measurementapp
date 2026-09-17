@@ -154,12 +154,7 @@
   // showed a dash on a job whose own heading names the property.
   //
   // Same rule the dashboard uses, so one job never reads two ways.
-  function jobAddress(o) {
-    var addr = api.oppField(o, api.ADDR_FIELD_ID);
-    if (addr) return addr;
-    var n = o.name || '';
-    return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ') : '';
-  }
+  function jobAddress(o) { return api.jobAddressLine(o); }
 
   // ===== JOB =====
   // ---- Collapsible job panels ---------------------------------------------

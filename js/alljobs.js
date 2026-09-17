@@ -86,14 +86,10 @@ window.MM = window.MM || {};
     return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
 
-  // The job's own address, or the one inside its name. Jobs created by the
-  // GoHighLevel workflow carry the address in the title but not the field.
-  function jobAddress(o) {
-    var addr = api.oppField(o, api.ADDR_FIELD_ID);
-    if (addr) return addr;
-    var n = o.name || '';
-    return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ') : '';
-  }
+  // The job's whole address, on one line. Jobs created by the GoHighLevel
+  // workflow carry it in the title and not in the fields, which jobAddressLine
+  // falls back to.
+  function jobAddress(o) { return api.jobAddressLine(o); }
 
   function stageOf(o) { return stageNames[o.pipelineStageId] || 'No stage'; }
 

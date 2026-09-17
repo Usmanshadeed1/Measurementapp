@@ -110,7 +110,7 @@ window.MM = window.MM || {};
         '<p class="mm-crew-note">Open a job to take measurements or record a date.</p>' +
         myJobs.map(function (o) {
           var name = (o.contact && o.contact.name) || o.name || 'Job';
-          var addr = window.MM.api.oppField(o, window.MM.api.ADDR_FIELD_ID) || '';
+          var addr = window.MM.api.jobAddressLine(o);
           return '<button type="button" class="mm-myjob" data-job="' + U.esc(o.id) + '">' +
             '<span class="mm-myjob-main">' +
               '<span class="mm-myjob-name">' + U.esc(name) + '</span>' +

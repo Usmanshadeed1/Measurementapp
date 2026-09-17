@@ -44,11 +44,17 @@ window.MM = window.MM || {};
   // Which boxes get which treatment, and for the full ones, where the rest of
   // the address should land.
   var FIELDS = {
-    // A job's address is one box with no city or postcode beside it, so the
-    // whole address goes in the box. The job TITLE still gets the street
-    // alone -- that trim happens where the title is built, not here.
-    'mm-nj-address': { mode: 'oneline' },
-    'mm-je-addr': { mode: 'oneline' },
+    // A job's address has its own city, state and postcode boxes now, the
+    // same as a contact's. The street stays in its own field, which is what
+    // the job title is built from.
+    'mm-nj-address': {
+      mode: 'full',
+      city: 'mm-nj-city', state: 'mm-nj-state', postal: 'mm-nj-postal',
+    },
+    'mm-je-addr': {
+      mode: 'full',
+      city: 'mm-je-city', state: 'mm-je-state', postal: 'mm-je-postal',
+    },
     'mm-ct-address': {
       mode: 'full',
       city: 'mm-ct-city', state: 'mm-ct-state',

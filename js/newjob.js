@@ -25,26 +25,41 @@ window.MM = window.MM || {};
   // The address GHL holds for the person, used as a starting point. Most
   // second jobs are at a different property, so it is only a default.
   function addressOf(c) {
-    var line = c.address1 || '';
-    var rest = [c.city, c.state].filter(Boolean).join(', ');
-    if (c.postalCode) rest += (rest ? ' ' : '') + c.postalCode;
-    return [line, rest].filter(Boolean).join(', ');
+    return {
+      street: c.address1 || '',
+      city: c.city || '',
+      state: c.state || '',
+      postal: c.postalCode || '',
+    };
+  }
+
+  function parts() {
+    var v = function (id) {
+      return (document.getElementById(id).value || '').trim();
+    };
+    return {
+      street: v('mm-nj-address'),
+      city: v('mm-nj-city'),
+      state: v('mm-nj-state'),
+      postal: v('mm-nj-postal'),
+    };
   }
 
   // Same shape WF-1 builds, so jobs read identically however they were made.
-  // The address box holds the whole address, but the title takes the street
-  // from it -- the same rule the job editor applies when one is corrected.
-  function jobName(c, address) {
+  // The street alone: the city and postcode have their own fields, and a
+  // title carrying all of them makes a list of jobs unreadable.
+  function jobName(c, street) {
     var n = nameOf(c);
-    var street = U.streetPart(address);
-    return street ? n + ' - ' + street : n;
+    var s = String(street || '').trim();
+    return s ? n + ' - ' + s : n;
   }
 
   function open() {
     picked = null;
     document.getElementById('mm-nj-error').textContent = '';
     document.getElementById('mm-nj-search').value = '';
-    document.getElementById('mm-nj-address').value = '';
+    ['mm-nj-address', 'mm-nj-city', 'mm-nj-state', 'mm-nj-postal']
+      .forEach(function (id) { document.getElementById(id).value = ''; });
     document.getElementById('mm-nj-chosen').innerHTML = '';
     document.getElementById('mm-nj-preview').textContent = '';
     setStep(1);
@@ -125,8 +140,12 @@ window.MM = window.MM || {};
 
     // Prefill with the customer's own address: often right for a first job,
     // and quicker to correct than to type from nothing.
+    var a = addressOf(c);
     var addr = document.getElementById('mm-nj-address');
-    addr.value = addressOf(c);
+    addr.value = a.street;
+    document.getElementById('mm-nj-city').value = a.city;
+    document.getElementById('mm-nj-state').value = a.state;
+    document.getElementById('mm-nj-postal').value = a.postal;
     updatePreview();
     setStep(2);
     addr.focus();
@@ -134,16 +153,16 @@ window.MM = window.MM || {};
 
   function updatePreview() {
     if (!picked) return;
-    var address = (document.getElementById('mm-nj-address').value || '').trim();
-    document.getElementById('mm-nj-preview').textContent = jobName(picked, address);
+    document.getElementById('mm-nj-preview').textContent =
+      jobName(picked, parts().street);
   }
 
   function create() {
     if (!picked) { setStep(1); return; }
-    var addr = (document.getElementById('mm-nj-address').value || '').trim();
+    var addr = parts();
     var err = document.getElementById('mm-nj-error');
-    if (!addr) {
-      err.textContent = 'Enter the property address for this job.';
+    if (!addr.street) {
+      err.textContent = 'Enter the street address for this job.';
       document.getElementById('mm-nj-address').focus();
       return;
     }
@@ -154,14 +173,14 @@ window.MM = window.MM || {};
 
     api.createOpportunity({
       contactId: picked.id,
-      name: jobName(picked, addr),
+      name: jobName(picked, addr.street),
       address: addr,
     })
       .then(function (opp) {
         window.MM.activity.log('job_added', 'Created the job', {
           jobId: opp && opp.id,
-          jobName: jobName(picked, addr),
-          detail: addr,
+          jobName: jobName(picked, addr.street),
+          detail: [addr.street, addr.city].filter(Boolean).join(', '),
         });
 
         // The job's Google Drive folder, made in the background. Deliberately
@@ -194,6 +213,12 @@ window.MM = window.MM || {};
     });
 
     document.getElementById('mm-nj-address').addEventListener('input', updatePreview);
+    // The title is built from the street alone, so only that box changes it --
+    // but the others are wired too, so a pasted address updates the preview
+    // however it arrives.
+    ['mm-nj-city', 'mm-nj-state', 'mm-nj-postal'].forEach(function (id) {
+      document.getElementById(id).addEventListener('input', updatePreview);
+    });
     document.getElementById('mm-nj-create').addEventListener('click', create);
     document.getElementById('mm-nj-cancel').addEventListener('click', close);
     document.getElementById('mm-modal-newjob').addEventListener('click', function (e) {

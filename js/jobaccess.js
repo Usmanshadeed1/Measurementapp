@@ -160,12 +160,7 @@ window.MM = window.MM || {};
     var n = o.name || '';
     return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
-  function jobAddr(o) {
-    var a = window.MM.api.oppField(o, window.MM.api.ADDR_FIELD_ID);
-    if (a) return a;
-    var n = o.name || '';
-    return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ') : '';
-  }
+  function jobAddr(o) { return window.MM.api.jobAddressLine(o); }
 
   window.MM.jobaccess = {
     loadMine: loadMine, canOpen: canOpen, mineOnly: mineOnly, count: count,

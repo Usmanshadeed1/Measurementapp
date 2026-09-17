@@ -21,12 +21,7 @@ window.MM = window.MM || {};
     var n = o.name || '';
     return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
-  function jobAddress(o) {
-    var a = api.oppField(o, api.ADDR_FIELD_ID);
-    if (a) return a;
-    var n = o.name || '';
-    return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ') : '';
-  }
+  function jobAddress(o) { return api.jobAddressLine(o); }
   function measuredDate(o) { return api.oppField(o, api.DATE_FIELD_IDS.measured); }
   function apptDate(o) { return api.apptDateTime(o).date; }
 

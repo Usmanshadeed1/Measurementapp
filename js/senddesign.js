@@ -73,8 +73,10 @@ window.MM = window.MM || {};
     return U.titleCase(full.split(' ')[0] || 'there');
   }
 
+  // The whole address, not just the street: this goes to the customer, on a
+  // quote or a design, where a bare street line would read as unfinished.
   function addressOf() {
-    return api.oppField(job, api.ADDR_FIELD_ID) || '';
+    return api.jobAddressLine(job);
   }
 
   // The saved template for this kind, with the customer's details filled in.

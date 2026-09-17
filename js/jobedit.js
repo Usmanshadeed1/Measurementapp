@@ -38,16 +38,6 @@ window.MM = window.MM || {};
   }
 
 
-  // The first line of an address: what a job is named after. "Street 105,
-  // I 10-4 Islamabad, Islamabad, Pakistan 44000, US" is the property, but
-  // "Street 105, I 10-4 Islamabad" is what identifies it to a person.
-  //
-  // A job is a property, and the street line is how the property is named --
-  // matching the GoHighLevel workflow, which titles jobs "Customer - Street".
-  // The town, postcode and country are not stored here at all.
-  // The field stores the whole address; the title takes the street from it.
-  function streetOf(addr) { return U.streetPart(addr); }
-
   // Jobs are titled "Customer - Address", and the workflow that creates them
   // fills the title but not the address field.
   function addressInName(o) {
@@ -62,16 +52,17 @@ window.MM = window.MM || {};
     contact = c || {};
     onSaved = after || null;
 
-    // The job's own address if it has one, otherwise the customer's, already
-    // filled in. Asking someone to retype an address the app can see, or to
-    // press a button to accept it, is work for no reason.
-    // The job's own address if it has one; then the address inside its name,
-    // which is where the GoHighLevel workflow puts it; and only then the
-    // customer's own address. A second job is usually at a different
-    // property, so the contact's address is the last resort, not the first.
-    var addr = api.oppField(job, api.ADDR_FIELD_ID) ||
-      addressInName(job) ||
-      (contact.address1 ? String(contact.address1).trim() : '');
+    // The job's own address, split the way an address form splits one.
+    var parts = api.jobAddressParts(job);
+
+    // A street the job does not have yet: the one inside its name, which is
+    // where the GoHighLevel workflow puts it, and only then the customer's
+    // own. A second job is usually at a different property, so the contact's
+    // address is the last resort rather than the first.
+    if (!parts.street) {
+      parts.street = addressInName(job) ||
+        (contact.address1 ? String(contact.address1).trim() : '');
+    }
 
     var f = document.getElementById('mm-je-form');
     f.innerHTML =
@@ -83,8 +74,12 @@ window.MM = window.MM || {};
         field('mm-je-phone', 'Phone', contact.phone || '', 'tel') +
         field('mm-je-email', 'Email', contact.email || '', 'email')) +
       group('This job',
-        'The property being worked on. Only this job uses it.',
-        field('mm-je-addr', 'Property address', addr));
+        'The property being worked on. Only this job uses it. The job is ' +
+        'named after the street, so the rest stays out of its title.',
+        field('mm-je-addr', 'Street address', parts.street) +
+        field('mm-je-city', 'City', parts.city) +
+        field('mm-je-state', 'State', parts.state) +
+        field('mm-je-postal', 'Postal code', parts.postal));
 
     document.getElementById('mm-je-error').textContent = '';
     var btn = document.getElementById('mm-je-save');
@@ -139,7 +134,12 @@ window.MM = window.MM || {};
     btn.textContent = 'Saving...';
     err.textContent = '';
 
-    var addr = v('mm-je-addr');
+    var parts = {
+      street: v('mm-je-addr'),
+      city: v('mm-je-city'),
+      state: v('mm-je-state'),
+      postal: v('mm-je-postal'),
+    };
     var name = [first, v('mm-je-last')].filter(Boolean).join(' ');
 
     // Every field is sent, including empty ones, so clearing a value in the
@@ -154,29 +154,28 @@ window.MM = window.MM || {};
 
     var jobId = job.id;
     var contactId = contact.id;
-    var oldAddr = api.oppField(job, api.ADDR_FIELD_ID) || '';
+    var was = api.jobAddressParts(job);
 
     var work = [api.updateContact(contactId, fields)];
 
-    // Only written when it actually changed: every avoidable write to live
-    // data is one that cannot go wrong.
-    if (addr !== oldAddr) {
-      work.push(api.setOpportunityField(jobId, api.ADDR_FIELD_ID, addr));
-    }
+    // Only written when something actually changed: every avoidable write to
+    // live data is one that cannot go wrong. All four go in one call, so a
+    // half-written address is not possible.
+    var addrChanged = parts.street !== was.street || parts.city !== was.city ||
+      parts.state !== was.state || parts.postal !== was.postal;
+    if (addrChanged) work.push(api.setJobAddress(jobId, parts));
 
-    // The job is titled "Customer - Address", so it goes stale the moment
-    // either half is corrected.
+    // The job is titled "Customer - Street", so it goes stale the moment
+    // either half is corrected. The street is its own field now, so there is
+    // nothing to cut out of a longer address -- and a GoHighLevel workflow
+    // can build exactly the same title by copying that one field.
     //
-    // The street line alone: the full postal address is kept in the field,
-    // and repeating the town, postcode and country in every title makes a
-    // list of jobs unreadable.
-    //
-    // Clearing the address gives the bare customer name, with no trailing
+    // Clearing the street gives the bare customer name, with no trailing
     // dash. An earlier version refused to rename at all when the address was
     // empty, to avoid titles like "Peace - " -- but that meant a cleared
     // address left the old one sitting in the title, which is worse: the job
     // then claims a property it is no longer for.
-    var street = streetOf(addr);
+    var street = parts.street;
     var newName = street
       ? U.titleCase(name) + ' - ' + street
       : U.titleCase(name);

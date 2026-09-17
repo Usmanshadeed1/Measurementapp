@@ -6,7 +6,27 @@ window.MM = window.MM || {};
 
 (function () {
   var LOC = 'Ga7nrS4d8EFtep9LkHS3';
-  var ADDR_FIELD_ID = 'np5Bh2jzG5zvdz3qukWV';
+
+  // A job's property address, split the way an address form splits one. The
+  // street keeps the original field -- every existing job already has its
+  // address there, and moving it would mean rewriting live data for no gain.
+  //
+  // Splitting is what lets the job title stay short: the title is built from
+  // the street alone, so a GoHighLevel workflow can now build the same title
+  // the app does, by copying one field rather than trying to cut a longer
+  // one up.
+  //
+  // This is the JOB's address, not the customer's. A customer's own address
+  // lives on the contact and is edited on the Contacts page; the two are
+  // deliberately separate, because a second job is usually a different
+  // property.
+  var ADDR_FIELD_ID = 'np5Bh2jzG5zvdz3qukWV';   // street, named "Property Address"
+  var ADDR_FIELD_IDS = {
+    street: ADDR_FIELD_ID,
+    city: 'bVuLJGI2Qs6YntCEWYOz',
+    state: 'XyhBbG75AsylsCSEJ3hA',
+    postal: 'I04WrVEVq4ZhY5CefsiN',
+  };
 
   // The sales pipeline the dashboard reports on. Opportunities in other
   // pipelines (e.g. the older Marketing Pipeline) are ignored there.
@@ -287,9 +307,14 @@ window.MM = window.MM || {};
       .then(function (d) {
         var opp = d.opportunity;
         if (!fields.address || !opp) return opp;
-        // The address is a custom field, so it is a second call — but doing
-        // it here means every job made in the app has one from the start.
-        return setOpportunityField(opp.id, ADDR_FIELD_ID, fields.address)
+        // The address is four custom fields, so it is a second call — but
+        // doing it here means every job made in the app has one from the
+        // start. A plain string is still accepted as the street alone, for
+        // any caller that has only that.
+        var parts = typeof fields.address === 'string'
+          ? { street: fields.address }
+          : fields.address;
+        return setJobAddress(opp.id, parts)
           .then(function () { return opp; })
           .catch(function () { return opp; });
       });
@@ -318,6 +343,52 @@ window.MM = window.MM || {};
   function setOpportunityField(oppId, fieldId, value) {
     return apiFetch('PUT', '/opportunities/' + oppId, {
       customFields: [{ id: fieldId, value: value || '' }],
+    }).then(function (d) { return d.opportunity; });
+  }
+
+  // The four parts of a job's address, as stored.
+  function jobAddressParts(o) {
+    return {
+      street: oppField(o, ADDR_FIELD_IDS.street) || '',
+      city: oppField(o, ADDR_FIELD_IDS.city) || '',
+      state: oppField(o, ADDR_FIELD_IDS.state) || '',
+      postal: oppField(o, ADDR_FIELD_IDS.postal) || '',
+    };
+  }
+
+  // The whole address on one line: "630 Dewey Road, North Brunswick, NJ 08902".
+  //
+  // Jobs made before the address was split have only a street, and jobs made
+  // by the GoHighLevel workflow carry the address in their title and nothing
+  // in the field at all -- so both fall back rather than showing nothing.
+  function jobAddressLine(o) {
+    var p = jobAddressParts(o);
+    var tail = [p.state, p.postal].filter(Boolean).join(' ');
+    var line = [p.street, p.city, tail].filter(Boolean).join(', ');
+    if (line) return line;
+
+    var n = (o && o.name) || '';
+    return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ').trim() : '';
+  }
+
+  // The street alone, which is what a job is titled after.
+  function jobStreet(o) {
+    var street = oppField(o, ADDR_FIELD_IDS.street);
+    if (street) return String(street).trim();
+    var n = (o && o.name) || '';
+    return n.indexOf(' - ') > -1 ? n.split(' - ').slice(1).join(' - ').trim() : '';
+  }
+
+  // Writes all four parts. Empty ones are written too, so clearing a field in
+  // the form actually clears it rather than silently keeping the old value.
+  function setJobAddress(oppId, parts) {
+    return apiFetch('PUT', '/opportunities/' + oppId, {
+      customFields: [
+        { id: ADDR_FIELD_IDS.street, value: parts.street || '' },
+        { id: ADDR_FIELD_IDS.city, value: parts.city || '' },
+        { id: ADDR_FIELD_IDS.state, value: parts.state || '' },
+        { id: ADDR_FIELD_IDS.postal, value: parts.postal || '' },
+      ],
     }).then(function (d) { return d.opportunity; });
   }
 
@@ -449,7 +520,9 @@ window.MM = window.MM || {};
   }
 
   window.MM.api = {
-    LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
+    LOC: LOC, ADDR_FIELD_ID: ADDR_FIELD_ID, ADDR_FIELD_IDS: ADDR_FIELD_IDS,
+    jobAddressParts: jobAddressParts, jobAddressLine: jobAddressLine,
+    jobStreet: jobStreet, setJobAddress: setJobAddress, A: A, PHOTO: PHOTO, VIDEO: VIDEO,
     SALES_PIPELINE_ID: SALES_PIPELINE_ID, STATUS_FIELD_IDS: STATUS_FIELD_IDS,
     DATE_FIELD_IDS: DATE_FIELD_IDS, APPT_DT_FIELD_ID: APPT_DT_FIELD_ID,
     apptDateTime: apptDateTime, setApptDateTime: setApptDateTime,
