@@ -96,6 +96,67 @@ window.MM = window.MM || {};
     return at === -1 ? s : s.slice(0, at).trim();
   }
 
+  // A small button that copies one value. The value rides on the button as a
+  // data attribute rather than being closed over, so this stays usable from
+  // the innerHTML strings the app builds its panels with.
+  //
+  // Wired by delegation in copyInit below, once, rather than per button.
+  function copyBtn(value, label) {
+    if (!value) return '';
+    return '<button type="button" class="mm-copy" data-copy="' + esc(value) + '"' +
+      ' title="Copy ' + esc(label || 'to clipboard') + '"' +
+      ' aria-label="Copy ' + esc(label || 'to clipboard') + '">' +
+      '<span class="mm-copy-icon" aria-hidden="true">&#128203;</span></button>';
+  }
+
+  // One listener for every copy button in the app, now and later.
+  function copyInit() {
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.mm-copy');
+      if (!btn) return;
+      // These often sit inside a panel header that collapses on click.
+      e.preventDefault();
+      e.stopPropagation();
+
+      var text = btn.getAttribute('data-copy') || '';
+      if (!text) return;
+
+      write(text).then(function (ok) {
+        btn.classList.toggle('is-done', ok);
+        btn.classList.toggle('is-failed', !ok);
+        setTimeout(function () {
+          btn.classList.remove('is-done', 'is-failed');
+        }, 1200);
+      });
+    });
+
+    // navigator.clipboard needs a secure context and is refused in some
+    // in-app browsers, so the old execCommand path stays as a fallback: a
+    // copy button that silently does nothing is worse than an ugly one.
+    function write(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text)
+          .then(function () { return true; })
+          .catch(function () { return legacy(text); });
+      }
+      return Promise.resolve(legacy(text));
+    }
+
+    function legacy(text) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch (e) { return false; }
+    }
+  }
+
   function esc(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -228,7 +289,8 @@ window.MM = window.MM || {};
   }
 
   window.MM.utils = {
-    esc: esc, streetPart: streetPart, titleCase: titleCase, phone: phone, ghlContactUrl: ghlContactUrl, callButtons: callButtons, pv: pv, uid: uid, fbk: fbk,
+    esc: esc, streetPart: streetPart, titleCase: titleCase,
+    copyBtn: copyBtn, copyInit: copyInit, phone: phone, ghlContactUrl: ghlContactUrl, callButtons: callButtons, pv: pv, uid: uid, fbk: fbk,
     FONT_SIZES: FONT_SIZES, getFontIndex: getFontIndex, applyFont: applyFont,
     getTheme: getTheme, applyTheme: applyTheme, toggleTheme: toggleTheme,
     fld: fld, radios: radios, sel: sel, gv: gv, sv: sv, gr: gr, sr: sr, clearIfPlaceholder: clearIfPlaceholder,

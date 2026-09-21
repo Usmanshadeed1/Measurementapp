@@ -315,12 +315,19 @@
           : '') +
       '</div>' +
       '<div class="mm-field-display"><div class="flabel">Customer</div><div class="fvalue">' + U.esc(customerName(o)) + '</div></div>' +
+      // The raw number is copied, not the prettified one: a number pasted
+      // into a dialler or another system has to be the real thing.
       (c.phone
         ? '<div class="mm-field-display"><div class="flabel">Phone</div><div class="fvalue">' +
-          U.esc(U.phone(c.phone)) + U.callButtons(c.phone, c.id, c.name) + '</div></div>' : '') +
+          '<span class="mm-copyline">' + U.esc(U.phone(c.phone)) +
+            U.copyBtn(c.phone, 'phone number') + '</span>' +
+          U.callButtons(c.phone, c.id, c.name) + '</div></div>' : '') +
       (c.email
         ? '<div class="mm-field-display"><div class="flabel">Email</div><div class="fvalue">' +
-          '<a href="mailto:' + U.esc(c.email) + '">' + U.esc(c.email) + '</a></div></div>' : '') +
+          '<span class="mm-copyline">' +
+            '<a href="mailto:' + U.esc(c.email) + '">' + U.esc(c.email) + '</a>' +
+            U.copyBtn(c.email, 'email address') + '</span>' +
+          '</div></div>' : '') +
       addressLine(o, c) +
       '<div class="mm-field-display"><div class="flabel">Job ID</div><div class="fvalue mono">' + U.esc(o.id) + '</div></div>';
 
@@ -1030,6 +1037,8 @@
   });
 
   if (window.MM.deletething) window.MM.deletething.init();
+  // One delegated listener behind every copy button in the app.
+  U.copyInit();
 
   window.MM.auth.init(function () {
     var admin = window.MM.auth.isAdmin();
