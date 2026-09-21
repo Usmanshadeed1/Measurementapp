@@ -170,11 +170,18 @@ window.MM = window.MM || {};
   // No date: the client asked for a button that moves the stage and nothing
   // else, and a date would mean another GoHighLevel field to keep in step.
   function wonButton(sent, won) {
+    // Once the job is won the button is replaced by the fact, rather than by
+    // nothing: an empty space under the step left no way to tell whether the
+    // customer had said yes or whether the button had simply gone missing.
+    if (won) {
+      return '<div class="mm-step-wonrow mm-step-value">' +
+        '&#10003; Hired Maximus</div>';
+    }
+
     // Shown whether or not a proposal date is recorded: a customer can say yes
     // on the phone before anyone gets round to filling the step in, and making
     // the button wait for paperwork meant the stage stayed wrong in the
-    // meantime. Hidden only once the job is already won.
-    if (won) return '';
+    // meantime.
     return '<div class="mm-step-action mm-step-wonrow">' +
       '<button type="button" class="mm-btn-sm mm-btn-primary" id="mm-step-won">' +
         'Hired Maximus</button>' +
