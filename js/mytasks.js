@@ -41,7 +41,7 @@ window.MM = window.MM || {};
       test: function (t) { return !(t.status === 'done') && daysTo(t.end) === 0; } },
     { id: 'soon',  title: 'Coming up',
       test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && d !== null && d > 0 && d <= 7; } },
-    { id: 'later', title: 'Later',
+    { id: 'later', title: 'Tasks',
       test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && (d === null || d > 7); } },
     // Finished work stays on screen: a worker who ticked the wrong task needs
     // a way back, and seeing what they got through is worth something.
@@ -133,10 +133,6 @@ window.MM = window.MM || {};
 
   function render() {
     var el = document.getElementById('mm-my-body');
-    var me = auth.user();
-
-    var greet = document.getElementById('mm-my-greet');
-    if (greet && me) greet.textContent = 'Hello ' + (me.name || '').split(' ')[0];
 
     var openRows = rows.filter(function (t) { return !(t.status === 'done'); });
     if (!openRows.length && !rows.length) {

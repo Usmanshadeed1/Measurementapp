@@ -83,7 +83,7 @@
     </a>
     <nav class="mm-nav" aria-label="Main">
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
-      <a href="#" class="mm-nav-link" data-tab="mytasks">My Tasks</a>
+      <a href="#" class="mm-nav-link" data-tab="mytasks">Tasks</a>
       <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
       <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
@@ -113,7 +113,7 @@
   </div>
   <nav class="mm-mobile-nav" id="mm-mobile-nav" aria-label="Main (mobile)">
     <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
-    <a href="#" class="mm-nav-link" data-tab="mytasks">My Tasks</a>
+    <a href="#" class="mm-nav-link" data-tab="mytasks">Tasks</a>
     <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
     <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
@@ -213,9 +213,11 @@
 <div class="screen" id="screen-mytasks">
   <div class="mm-content">
     <div class="section-header">
-      <span class="section-title" id="mm-my-greet">My tasks</span>
+      <span class="section-title" id="mm-my-greet">Tasks</span>
+      <div class="mm-btn-row">
+        <button class="mm-btn-sm mm-btn-primary mm-admin-only" id="mm-my-addtask">+ Task</button>
+      </div>
     </div>
-    <p class="mm-view-note">Everything assigned to you. Tick a task off when it is finished.</p>
     <div class="mm-stats" id="mm-my-stats"></div>
     <div id="mm-my-jobs"></div>
     <div id="mm-my-body"></div>

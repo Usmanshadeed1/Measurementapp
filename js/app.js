@@ -969,7 +969,13 @@
     });
   }
 
-  document.getElementById('mm-quicktask-btn').addEventListener('click', openQuickTask);
+  // The same box from two places: the dashboard, and the tasks page. Adding a
+  // task is the thing most often wanted while looking at the task list, and
+  // going back to the dashboard to do it was a step for nothing.
+  ['mm-quicktask-btn', 'mm-my-addtask'].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b) b.addEventListener('click', openQuickTask);
+  });
   document.getElementById('mm-qt-cancel').addEventListener('click', function () {
     closeModal('mm-modal-quicktask');
   });
