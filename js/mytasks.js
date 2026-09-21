@@ -14,7 +14,7 @@ window.MM = window.MM || {};
   var jobsById = {};   // every job the tasks came from, for opening one
 
   // What is narrowing the list. Empty means everything.
-  var filters = { worker: '', job: '', show: 'all', search: '' };
+  var filters = { worker: '', job: '', show: 'all', search: '', when: '' };
   var workerDefaulted = false;   // a worker is filtered to themselves once
 
   function db(method, path, body) { return auth.dbFetch(method, path, body); }
@@ -156,6 +156,20 @@ window.MM = window.MM || {};
     if (filters.show === 'open' && done) return false;
     if (filters.show === 'done' && !done) return false;
 
+    // The date window. Measured against the finish date, which is the one a
+    // task is judged by -- "due today" means due today, not started today.
+    if (filters.when) {
+      var d = daysTo(t.end);
+      if (filters.when === 'none' && d !== null) return false;
+      if (filters.when === 'today' && d !== 0) return false;
+      if (filters.when === 'tomorrow' && d !== 1) return false;
+      if (filters.when === 'week' && (d === null || d < 0 || d > 7)) return false;
+      // Overdue counts only work still outstanding: a task finished late is
+      // finished, and listing it as overdue would be asking for it twice.
+      if (filters.when === 'late' &&
+          (d === null || d >= 0 || t.status === 'done')) return false;
+    }
+
     if (filters.search) {
       var hay = [t.title, t.jobName, t.who].join(' ').toLowerCase();
       var words = filters.search.toLowerCase().split(/\s+/);
@@ -172,6 +186,7 @@ window.MM = window.MM || {};
     if (filters.worker) n++;
     if (filters.job) n++;
     if (filters.search) n++;
+    if (filters.when) n++;
     // Everything is the resting state, not a choice someone made.
     if (filters.show !== 'all') n++;
     return n;
@@ -479,6 +494,9 @@ window.MM = window.MM || {};
 
     var showSel = document.getElementById('mm-my-show');
     if (showSel) showSel.value = filters.show;
+
+    var whenSel = document.getElementById('mm-my-when');
+    if (whenSel) whenSel.value = filters.when;
   }
 
   function initFilters() {
@@ -507,7 +525,8 @@ window.MM = window.MM || {};
       });
     }
 
-    [['mm-my-worker', 'worker'], ['mm-my-job', 'job'], ['mm-my-show', 'show']]
+    [['mm-my-worker', 'worker'], ['mm-my-job', 'job'], ['mm-my-show', 'show'],
+     ['mm-my-when', 'when']]
       .forEach(function (pair) {
         var sel = document.getElementById(pair[0]);
         if (!sel) return;
@@ -519,7 +538,7 @@ window.MM = window.MM || {};
 
     var clear = document.getElementById('mm-my-clear');
     if (clear) clear.addEventListener('click', function () {
-      filters = { worker: '', job: '', show: 'all', search: '' };
+      filters = { worker: '', job: '', show: 'all', search: '', when: '' };
       if (search) search.value = '';
       fillFilterOptions();
       render();

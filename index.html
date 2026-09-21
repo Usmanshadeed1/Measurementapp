@@ -85,7 +85,9 @@
       <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
       <a href="#" class="mm-nav-link" data-tab="mytasks">Tasks</a>
       <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
-      <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
+      <!-- Checklist View is hidden while the Tasks page takes over from it.
+         The screen and its code are left in place: nothing is lost if it has
+         to come back, and subtasks are still only visible there. -->
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="emailtpl">Email Templates</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
@@ -115,7 +117,9 @@
     <a href="#" class="mm-nav-link active mm-admin-only" data-tab="dashboard">Dashboard</a>
     <a href="#" class="mm-nav-link" data-tab="mytasks">Tasks</a>
     <a href="#" class="mm-nav-link" data-tab="schedule">Schedule</a>
-    <a href="#" class="mm-nav-link" data-tab="checklist">Checklist View</a>
+    <!-- Checklist View is hidden while the Tasks page takes over from it.
+         The screen and its code are left in place: nothing is lost if it has
+         to come back, and subtasks are still only visible there. -->
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="emailtpl">Email Templates</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
@@ -233,6 +237,14 @@
       <input class="mm-input mm-my-search" id="mm-my-search" placeholder="Search tasks...">
       <select class="mm-select" id="mm-my-worker"><option value="">Everyone</option></select>
       <select class="mm-select" id="mm-my-job"><option value="">All jobs</option></select>
+      <select class="mm-select" id="mm-my-when">
+        <option value="">Any date</option>
+        <option value="today">Today</option>
+        <option value="tomorrow">Tomorrow</option>
+        <option value="week">Next 7 days</option>
+        <option value="late">Overdue</option>
+        <option value="none">No date set</option>
+      </select>
       <select class="mm-select" id="mm-my-show">
         <option value="all">Everything</option>
         <option value="open">Not done yet</option>

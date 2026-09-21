@@ -361,8 +361,20 @@ window.MM = window.MM || {};
   }
 
   function form(i) {
+    // A new task starts assigned to whoever is adding it. Most tasks someone
+    // writes down are their own, and it can be unticked or shared with others
+    // before saving.
+    //
+    // Only when that person is in the worker list: assigning a task to a name
+    // nothing else recognises would leave it belonging to nobody.
+    var me = window.MM.auth.user();
+    var myName = (me && me.name) || '';
+    var known = staff.some(function (w) { return w.name === myName; });
+
     var t = i === null
-      ? { title: '', start: '', end: '', who: '', status: 'todo', notes: '', items: [] }
+      ? { title: '', start: '', end: '',
+          who: known ? myName : '',
+          status: 'todo', notes: '', items: [] }
       : tasks[i];
 
     return '<div class="mm-gt-form">' +
