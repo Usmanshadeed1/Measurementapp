@@ -66,7 +66,12 @@ window.MM = window.MM || {};
   // not the thing anyone checks before tapping.
   function callButtons(phoneNumber, contactId, who) {
     if (!phoneNumber) return '';
-    var name = titleCase(String(who || '').trim().split(/\s+/)[0] || '');
+    // A contact with no name comes back from GoHighLevel with its phone
+    // number standing in for one, and taking the first word of that gave
+    // buttons reading "Call (856)". A name has to look like a name: at least
+    // one letter, and no digits.
+    var first = String(who || '').trim().split(/\s+/)[0] || '';
+    var name = /[a-z]/i.test(first) && !/\d/.test(first) ? titleCase(first) : '';
     var out = '<span class="mm-callrow">';
     if (contactId) {
       out += '<a class="mm-callbtn mm-callbtn-ghl" href="' + esc(ghlContactUrl(contactId)) + '" ' +
@@ -76,7 +81,10 @@ window.MM = window.MM || {};
     out += '<a class="mm-callbtn mm-callbtn-direct" href="tel:' + esc(phoneNumber) + '" ' +
       'aria-label="Call ' + esc(name || 'this customer') + ' from this phone">' +
       '<span aria-hidden="true">&#128222;</span> ' +
-      esc(name ? 'Call ' + name : 'Call') + '</a></span>';
+      // With no name to use, the number itself is the most useful label --
+      // formatted, so it reads as a phone number rather than as whatever
+      // GoHighLevel happened to store.
+      esc(name ? 'Call ' + name : 'Call ' + phone(phoneNumber)) + '</a></span>';
     return out;
   }
 
