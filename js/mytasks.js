@@ -30,6 +30,17 @@ window.MM = window.MM || {};
     var t = new Date(todayStr() + 'T00:00:00');
     return Math.round((d - t) / 86400000);
   }
+  // The date a task is judged by: its finish date, or its start date when it
+  // has no finish. Many tasks here carry only a start -- judging those by the
+  // finish alone put a task starting today under "No date set", which is both
+  // wrong and invisible to the Today filter.
+  //
+  // One definition, used by the groups and the filter alike, so the two can
+  // never disagree about what "today" means.
+  function taskDay(t) {
+    return t.end || t.start || '';
+  }
+
   function fmt(dateStr) {
     if (!dateStr) return '';
     var d = new Date(String(dateStr).slice(0, 10) + 'T00:00:00');
@@ -40,13 +51,15 @@ window.MM = window.MM || {};
   // Buckets in the order a person cares about them.
   var BUCKETS = [
     { id: 'late',  title: 'Overdue',
-      test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && d !== null && d < 0; } },
+      test: function (t) { var d = daysTo(taskDay(t)); return !(t.status === 'done') && d !== null && d < 0; } },
     { id: 'today', title: 'Due today',
-      test: function (t) { return !(t.status === 'done') && daysTo(t.end) === 0; } },
+      test: function (t) { return !(t.status === 'done') && daysTo(taskDay(t)) === 0; } },
     { id: 'soon',  title: 'Coming up',
-      test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && d !== null && d > 0 && d <= 7; } },
-    { id: 'later', title: 'No date set',
-      test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && (d === null || d > 7); } },
+      test: function (t) { var d = daysTo(taskDay(t)); return !(t.status === 'done') && d !== null && d > 0 && d <= 7; } },
+    // Later on, or no date at all: both are "not this week", and splitting
+    // them would leave two groups nobody reads differently.
+    { id: 'later', title: 'Later',
+      test: function (t) { var d = daysTo(taskDay(t)); return !(t.status === 'done') && (d === null || d > 7); } },
     // Finished work stays on screen: a worker who ticked the wrong task needs
     // a way back, and seeing what they got through is worth something.
     { id: 'done',  title: 'Finished', test: function (t) { return !!(t.status === 'done'); } },
@@ -159,7 +172,7 @@ window.MM = window.MM || {};
     // The date window. Measured against the finish date, which is the one a
     // task is judged by -- "due today" means due today, not started today.
     if (filters.when) {
-      var d = daysTo(t.end);
+      var d = daysTo(taskDay(t));
       if (filters.when === 'none' && d !== null) return false;
       if (filters.when === 'today' && d !== 0) return false;
       if (filters.when === 'tomorrow' && d !== 1) return false;
@@ -266,19 +279,25 @@ window.MM = window.MM || {};
     // Both dates live in the badge, which is where someone looks for "when".
     // A start date on its own line below the job read as a second, competing
     // answer -- "From Aug 26" beside a badge saying "No date".
-    var d = daysTo(t.end);
+    // The same date the groups and the filter use: the finish date, or the
+    // start date when there is no finish. A task starting today showed as
+    // "From Mon, Sep 21" while sitting under a heading saying it had no date.
+    var day = taskDay(t);
+    var d = daysTo(day);
     var flag = d === null ? ''
       : d < 0 ? Math.abs(d) + 'd late'
       : d === 0 ? 'Due today'
       : d === 1 ? 'Due tomorrow'
-      : 'Due ' + fmtShort(t.end);
+      : 'Due ' + fmtShort(day);
     var cls = d !== null && d < 0 ? 'urgent' : d === 0 ? 'soon' : '';
 
     // Short enough to stay on one line. The weekday is dropped once both
     // dates are shown -- "Aug 26 - Sep 12" is the span, and the day name is
     // decoration that costs the badge a second line.
-    var from = t.start ? fmt(t.start) : '';
-    if (!flag) flag = from ? 'From ' + from : 'No dates';
+    // Only when the two differ: a task judged by its start date would
+    // otherwise read "Sep 21 -> today", which says one thing twice.
+    var from = (t.start && t.end && t.start !== t.end) ? fmt(t.start) : '';
+    if (!flag) flag = 'No dates';
     else if (from) flag = fmtShort(t.start) + ' \u2192 ' + flag.replace(/^Due /, '');
 
 
