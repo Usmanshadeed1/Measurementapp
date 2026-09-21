@@ -13,6 +13,10 @@ window.MM = window.MM || {};
   var rows = [];
   var jobsById = {};   // every job the tasks came from, for opening one
 
+  // What is narrowing the list. Empty means everything.
+  var filters = { worker: '', job: '', show: 'open', search: '' };
+  var workerDefaulted = false;   // a worker is filtered to themselves once
+
   function db(method, path, body) { return auth.dbFetch(method, path, body); }
 
   function todayStr() {
@@ -52,11 +56,7 @@ window.MM = window.MM || {};
 
   function load() {
     var el = document.getElementById('mm-my-body');
-    el.innerHTML = '<div class="mm-empty">Loading your tasks...</div>';
-    // The counters keep their last values while loading, which reads as a
-    // real answer of zero rather than as work still in progress.
-    var stats = document.getElementById('mm-my-stats');
-    if (stats) stats.innerHTML = '';
+    el.innerHTML = '<div class="mm-empty">Loading tasks...</div>';
     var me = auth.user();
     if (!me) return Promise.resolve();
 
@@ -66,6 +66,9 @@ window.MM = window.MM || {};
     return Promise.all([
       window.MM.api.fetchAllOpportunities(),
       window.MM.jobaccess.loadMine(),
+      // Names for the worker filter. A failure here must not cost the page
+      // its tasks, so it resolves either way.
+      window.MM.workerlist.load().catch(function () { return null; }),
     ])
       .then(function (res) {
         var ops = (res[0] || []).filter(function (o) {
@@ -75,15 +78,25 @@ window.MM = window.MM || {};
         jobsById = {};
         ops.forEach(function (o) { jobsById[o.id] = o; });
 
-        // A task now records its worker as a name, so that is what is matched.
-        rows = window.MM.ghltasks.tasksFromJobs(ops).filter(function (t) {
-          return window.MM.ghltasks.isAssignedTo(t.who, me.name);
-        });
+        // Every task on every job. This page used to show only your own,
+        // which left an admin -- who assigns work rather than doing it --
+        // looking at an empty screen while the work sat elsewhere.
+        //
+        // A worker still opens on their own tasks: the worker filter is set
+        // to their name the first time they arrive. They can clear it and see
+        // everyone's, which is what the client asked for.
+        rows = window.MM.ghltasks.tasksFromJobs(ops);
+
+        if (!auth.isAdmin() && !workerDefaulted) {
+          filters.worker = me.name || '';
+          workerDefaulted = true;
+        }
 
         // Not built for an admin at all: the list is not shown to them, and
         // filtering every job for nothing is wasted work.
         myJobs = auth.isAdmin() ? [] : window.MM.jobaccess.mineOnly(ops);
 
+        fillFilterOptions();
         render();
         renderJobs();
       })
@@ -131,26 +144,60 @@ window.MM = window.MM || {};
 
   var onOpenJob = null;
 
+  // A task survives every filter that is set. Search looks at the task, its
+  // job and whoever it is assigned to, because any of the three is what
+  // someone has in mind when they type.
+  function passes(t) {
+    if (filters.worker &&
+        !window.MM.ghltasks.isAssignedTo(t.who, filters.worker)) return false;
+    if (filters.job && t.jobId !== filters.job) return false;
+
+    var done = t.status === 'done';
+    if (filters.show === 'open' && done) return false;
+    if (filters.show === 'done' && !done) return false;
+
+    if (filters.search) {
+      var hay = [t.title, t.jobName, t.who].join(' ').toLowerCase();
+      var words = filters.search.toLowerCase().split(/\s+/);
+      // Every word has to appear, so a second word narrows rather than widens.
+      for (var i = 0; i < words.length; i++) {
+        if (words[i] && hay.indexOf(words[i]) === -1) return false;
+      }
+    }
+    return true;
+  }
+
+  function activeFilterCount() {
+    var n = 0;
+    if (filters.worker) n++;
+    if (filters.job) n++;
+    if (filters.search) n++;
+    // "Not done yet" is the resting state, not a choice someone made.
+    if (filters.show !== 'open') n++;
+    return n;
+  }
+
   function render() {
     var el = document.getElementById('mm-my-body');
 
-    var openRows = rows.filter(function (t) { return !(t.status === 'done'); });
-    if (!openRows.length && !rows.length) {
+    updateFilterCount();
+
+    var shown = rows.filter(passes);
+
+    if (!shown.length) {
       el.innerHTML = '<div class="mm-my-clear">' +
         '<div class="mm-my-clear-tick" aria-hidden="true">&#10003;</div>' +
-        '<h2>Nothing to do right now</h2>' +
-        '<p>When your manager gives you a task it will show up here.</p></div>';
-      renderCounts(0, 0, 0);
+        '<h2>' + (rows.length ? 'Nothing matches those filters'
+                              : 'Nothing to do right now') + '</h2>' +
+        '<p>' + (rows.length ? 'Clear a filter to see more.'
+                             : 'Tasks show up here as soon as they are added.') +
+        '</p></div>';
       return;
     }
 
-    var late = rows.filter(BUCKETS[0].test).length;
-    var today = rows.filter(BUCKETS[1].test).length;
-    renderCounts(late, today, openRows.length);
-
     var used = {};
     el.innerHTML = BUCKETS.map(function (b) {
-      var mine = rows.filter(function (t) { return !used[t.id] && b.test(t); });
+      var mine = shown.filter(function (t) { return !used[t.id] && b.test(t); });
       mine.forEach(function (t) { used[t.id] = true; });
       if (!mine.length) return '';
       mine.sort(function (a, z) { return String(a.end_date || '') < String(z.end_date || '') ? -1 : 1; });
@@ -166,18 +213,14 @@ window.MM = window.MM || {};
     bind(el);
   }
 
-  function renderCounts(late, today, open) {
-    var el = document.getElementById('mm-my-stats');
+  // The number of filters narrowing the list, shown on the button. A closed
+  // panel must never leave someone wondering why the list looks short.
+  function updateFilterCount() {
+    var el = document.getElementById('mm-my-filtercount');
     if (!el) return;
-    function stat(label, n, tone) {
-      return '<div class="mm-stat mm-stat-' + tone + '">' +
-        '<div class="mm-stat-num">' + n + '</div>' +
-        '<div class="mm-stat-label">' + U.esc(label) + '</div></div>';
-    }
-    el.innerHTML =
-      stat('To do', open, open ? 'neutral' : 'good') +
-      stat('Due today', today, today ? 'warn' : 'good') +
-      stat('Overdue', late, late ? 'bad' : 'good');
+    var n = activeFilterCount();
+    el.textContent = n ? String(n) : '';
+    el.classList.toggle('is-on', n > 0);
   }
 
   function checklist(t) {
@@ -401,7 +444,88 @@ window.MM = window.MM || {};
 
   // The editor lives outside the list, so its buttons are wired once rather
   // than on every render.
+  // The job and worker lists are built from what is actually on screen, so
+  // the dropdowns never offer a name or a job with no tasks behind it.
+  function fillFilterOptions() {
+    var jobSel = document.getElementById('mm-my-job');
+    if (jobSel) {
+      var seen = {}, jobOpts = [];
+      rows.forEach(function (t) {
+        if (!t.jobId || seen[t.jobId]) return;
+        seen[t.jobId] = true;
+        jobOpts.push({ id: t.jobId, name: t.jobName || 'Untitled job' });
+      });
+      jobOpts.sort(function (a, b) { return a.name.localeCompare(b.name); });
+      jobSel.innerHTML = '<option value="">All jobs</option>' +
+        jobOpts.map(function (j) {
+          return '<option value="' + U.esc(j.id) + '">' + U.esc(j.name) + '</option>';
+        }).join('');
+      jobSel.value = filters.job;
+    }
+
+    var whoSel = document.getElementById('mm-my-worker');
+    if (whoSel) {
+      var names = window.MM.workerlist && window.MM.workerlist.assignableNames
+        ? window.MM.workerlist.assignableNames() : [];
+      whoSel.innerHTML = '<option value="">Everyone</option>' +
+        names.map(function (n) {
+          return '<option value="' + U.esc(n) + '">' + U.esc(n) + '</option>';
+        }).join('');
+      whoSel.value = filters.worker;
+    }
+
+    var showSel = document.getElementById('mm-my-show');
+    if (showSel) showSel.value = filters.show;
+  }
+
+  function initFilters() {
+    var btn = document.getElementById('mm-my-filterbtn');
+    var panel = document.getElementById('mm-my-filters');
+    if (btn && panel) {
+      btn.addEventListener('click', function () {
+        var open = !panel.classList.contains('is-open');
+        panel.classList.toggle('is-open', open);
+        btn.classList.toggle('is-open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+
+    var search = document.getElementById('mm-my-search');
+    if (search) {
+      var timer = null;
+      search.addEventListener('input', function () {
+        clearTimeout(timer);
+        // Waits for a pause in typing: redrawing on every keystroke makes a
+        // long list feel sluggish.
+        timer = setTimeout(function () {
+          filters.search = search.value.trim();
+          render();
+        }, 200);
+      });
+    }
+
+    [['mm-my-worker', 'worker'], ['mm-my-job', 'job'], ['mm-my-show', 'show']]
+      .forEach(function (pair) {
+        var sel = document.getElementById(pair[0]);
+        if (!sel) return;
+        sel.addEventListener('change', function () {
+          filters[pair[1]] = sel.value;
+          render();
+        });
+      });
+
+    var clear = document.getElementById('mm-my-clear');
+    if (clear) clear.addEventListener('click', function () {
+      filters = { worker: '', job: '', show: 'open', search: '' };
+      if (search) search.value = '';
+      fillFilterOptions();
+      render();
+    });
+  }
+
   function init() {
+    initFilters();
+
     var cancel = document.getElementById('mm-mte-cancel');
     if (cancel) cancel.addEventListener('click', closeEdit);
     var save = document.getElementById('mm-mte-save');

@@ -251,3 +251,45 @@ input[type="time"]::-webkit-calendar-picker-indicator{
   .mm-note-add{flex-direction:column}
   .mm-note-add .mm-btn-sm{width:100%}
 }
+
+/* ---- Filters on the Tasks page ----
+   Behind a button on every size, not just on a phone. The page is opened to
+   read the tasks, so the list starts at the top of the screen and the
+   controls appear only when asked for. */
+.mm-my-filterbtn{display:flex;align-items:center;gap:8px;width:100%;
+  min-height:46px;margin-bottom:10px;padding:0 14px;
+  border:1px solid var(--control-border);border-radius:10px;
+  background:var(--card2);color:var(--text);
+  font-family:inherit;font-size:0.95em;font-weight:700;cursor:pointer}
+.mm-my-filterbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-my-filterbtn.is-open{border-color:var(--accent)}
+
+.mm-my-filterlabel{flex:1 1 auto;text-align:left}
+
+/* Shown only when something is filtering, so a closed panel never leaves the
+   list looking mysteriously short. */
+.mm-my-filtercount{flex:0 0 auto;min-width:22px;height:22px;padding:0 7px;
+  display:none;align-items:center;justify-content:center;
+  border-radius:999px;font-size:0.78em;font-weight:700;
+  background:var(--accent);color:var(--bg)}
+.mm-my-filtercount.is-on{display:flex}
+
+.mm-my-filterarrow{flex:0 0 auto;color:var(--accent);font-size:1.1em;
+  line-height:1;transition:transform .15s ease}
+.mm-my-filterbtn.is-open .mm-my-filterarrow{transform:rotate(180deg)}
+
+.mm-my-filters{display:none;gap:8px;flex-wrap:wrap;align-items:center;
+  padding:12px;margin-bottom:12px;border-radius:10px;
+  background:var(--card2);border:1px solid var(--border)}
+.mm-my-filters.is-open{display:flex}
+.mm-my-filters .mm-my-search{flex:1 1 220px;min-width:0;margin-bottom:0}
+.mm-my-filters .mm-select{flex:1 1 160px;min-width:0;margin-bottom:0}
+.mm-my-filters .mm-btn-sm{flex:0 0 auto}
+
+@media (max-width: 620px){
+  /* One control per row on a phone: two half-width dropdowns leave no room
+     for the job names they carry. */
+  .mm-my-filters .mm-my-search,
+  .mm-my-filters .mm-select,
+  .mm-my-filters .mm-btn-sm{flex:1 1 100%}
+}

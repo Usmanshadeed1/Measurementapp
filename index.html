@@ -221,7 +221,30 @@
         <button class="mm-btn-sm mm-btn-primary mm-admin-only" id="mm-my-addtask">+ Task</button>
       </div>
     </div>
-    <div class="mm-stats" id="mm-my-stats"></div>
+
+    <!-- Filters behind a button. The page is opened to read the tasks, so the
+         list starts at the top of the screen and the controls stay out of the
+         way until asked for. The count on the button says how many filters are
+         narrowing the list, so a short list is never a mystery. -->
+    <button type="button" class="mm-my-filterbtn" id="mm-my-filterbtn"
+            aria-expanded="false" aria-controls="mm-my-filters">
+      <span class="mm-my-filterlabel">Filters</span>
+      <span class="mm-my-filtercount" id="mm-my-filtercount"></span>
+      <span class="mm-my-filterarrow" aria-hidden="true">&#9662;</span>
+    </button>
+
+    <div class="mm-my-filters" id="mm-my-filters">
+      <input class="mm-input mm-my-search" id="mm-my-search" placeholder="Search tasks...">
+      <select class="mm-select" id="mm-my-worker"><option value="">Everyone</option></select>
+      <select class="mm-select" id="mm-my-job"><option value="">All jobs</option></select>
+      <select class="mm-select" id="mm-my-show">
+        <option value="open">Not done yet</option>
+        <option value="done">Done</option>
+        <option value="all">Everything</option>
+      </select>
+      <button class="mm-btn-sm mm-btn-secondary" id="mm-my-clear">Clear</button>
+    </div>
+
     <div id="mm-my-jobs"></div>
     <div id="mm-my-body"></div>
     <p class="mm-task-error" id="mm-my-error" role="alert"></p>
