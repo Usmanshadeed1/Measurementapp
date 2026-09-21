@@ -98,6 +98,20 @@ window.MM = window.MM || {};
     return txt;
   }
 
+  // Winning the job. A proposal goes out, the customer says yes, and until now
+  // the only way to record that was to leave the panel and change the stage by
+  // hand -- which step 7 actually told you to do.
+  //
+  // No date: the client asked for a button that moves the stage and nothing
+  // else, and a date would mean another GoHighLevel field to keep in step.
+  function wonButton(sent, won) {
+    if (!sent || won) return '';
+    return '<div class="mm-step-action mm-step-wonrow">' +
+      '<button type="button" class="mm-btn-won" id="mm-step-won">' +
+        'Customer said yes &mdash; Hired Maximus</button>' +
+    '</div>';
+  }
+
   // ---- One step in the chain ---------------------------------------------
 
   // Steps render as done / active / waiting. Only the active one is
@@ -334,7 +348,8 @@ window.MM = window.MM || {};
         valueText: fmtLong(sent), value: toInputDate(sent) || todayInput(),
         inputId: 'mm-step-sent', btnId: 'mm-step-sent-save',
         waitingText: 'Finish the pricing first',
-        note: sent ? waitingNote(sent, won) : (pricing ? 'Email the customer yourself, then record the date here.' : ''),
+        note: (sent ? waitingNote(sent, won) : (pricing ? 'Email the customer yourself, then record the date here.' : '')) +
+              wonButton(sent, won),
       }) +
       stepHtml({
         num: 7, label: 'Material ordering',
@@ -487,6 +502,30 @@ window.MM = window.MM || {};
 
     if (st.pricing && !st.sent) wire('mm-step-sent-save', 'mm-step-sent', function (val) {
       return saveDateThenStage(o, 'proposalSent', val, api.STAGE_PROPOSAL_SENT);
+    });
+
+    // Moves the stage and nothing else: no date is written, so there is no
+    // field to go stale and nothing to undo but the stage itself.
+    var wonBtn = document.getElementById('mm-step-won');
+    if (wonBtn) wonBtn.addEventListener('click', function () {
+      wonBtn.disabled = true;
+      wonBtn.textContent = 'Saving...';
+      showError('');
+      api.setOpportunityStage(o.id, api.STAGE_WON)
+        .then(function () {
+          o.pipelineStageId = api.STAGE_WON;
+          window.MM.activity.log('stage', 'Customer hired Maximus', {
+            jobId: o.id,
+            jobName: (o.contact && o.contact.name) || o.name,
+          });
+          render(o);
+          if (onJobChanged) onJobChanged(o);
+        })
+        .catch(function (e) {
+          wonBtn.disabled = false;
+          wonBtn.textContent = 'Customer said yes — Hired Maximus';
+          showError('Could not update: ' + e.message);
+        });
     });
 
     if (st.won && !st.cabinets) wire('mm-step-cab-save', 'mm-step-cab', function (val) {
