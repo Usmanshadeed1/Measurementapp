@@ -42,9 +42,12 @@ window.MM = window.MM || {};
     { v: 'done',  label: 'Done' },
   ];
 
-  // Undated tasks first — they are the ones not yet scheduled — then the
-  // dated ones oldest to newest. The original order is kept as a tiebreak so
-  // a loaded template still reads in its own sequence.
+  // Dated tasks first, soonest to latest, then the undated ones. A job's task
+  // list is read to find out what is happening and when, and undated tasks
+  // sitting on top pushed the answer out of sight.
+  //
+  // The original order is kept as a tiebreak so a loaded template still reads
+  // in its own sequence.
   function sortTasks(list) {
     return list.map(function (t, i) { return { t: t, i: i }; })
       .sort(function (a, b) {
@@ -55,12 +58,12 @@ window.MM = window.MM || {};
         var fb = b.t.status === 'done' ? 1 : 0;
         if (fa !== fb) return fa - fb;
 
-        // Within each half: undated first, then oldest to newest.
+        // Within each half: dated first, oldest to newest, then undated.
         var da = a.t.start || a.t.end || '';
         var db = b.t.start || b.t.end || '';
         if (!da && !db) return a.i - b.i;
-        if (!da) return -1;
-        if (!db) return 1;
+        if (!da) return 1;
+        if (!db) return -1;
         if (da !== db) return da < db ? -1 : 1;
         return a.i - b.i;
       })
