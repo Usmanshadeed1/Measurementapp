@@ -737,7 +737,16 @@
 
   document.getElementById('mm-photo-camera').addEventListener('click', function () {
     var btn = this;
-    var input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*,video/*'; input.capture = 'environment';
+    // android/allowCamera is a non-standard MIME type Chrome on Android looks
+    // for. Android 14 and 15 dropped the Camera option from file inputs, so
+    // this button opened the gallery instead of the camera; this restores it.
+    // Safari does not know the type and ignores it, so the iPhone behaves
+    // exactly as before.
+    //
+    // It is a workaround, not a standard: if a future Chrome stops honouring
+    // it, the button falls back to the gallery -- which is where it already
+    // was, so nothing is lost by trying.
+    var input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*,video/*,android/allowCamera'; input.capture = 'environment';
     input.addEventListener('change', function () {
       if (!input.files[0]) return;
       var file = input.files[0];
@@ -794,7 +803,11 @@
   function addJobMedia(btn, label, capture) {
     var input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*,video/*';
+    // Only the camera button carries the Android hint -- see the room camera
+    // above. The upload button is a plain file picker and stays one.
+    input.accept = capture
+      ? 'image/*,video/*,android/allowCamera'
+      : 'image/*,video/*';
     if (capture) input.capture = 'environment';
 
     input.addEventListener('change', function () {
