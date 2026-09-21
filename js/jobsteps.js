@@ -588,23 +588,23 @@ window.MM = window.MM || {};
         btn.disabled = true;
         btn.textContent = 'Saving...';
         showError('');
-        // "No" moves the job to Email Customer: a job needing no design should
-        // not sit in a stage called Need Design, where the reminder workflow
-        // would go on chasing it.
+        // The answer sets the stage, both ways: "Yes" means the job needs a
+        // design, so it belongs in Need Design; "No" means it does not, so it
+        // goes to Email Customer.
         //
-        // "Yes" moves nothing. The measurement step already put the job in
-        // Need Design, and forcing the stage here dragged jobs BACKWARDS --
-        // a job already designed, quoted or won was pulled back to Need
-        // Design just for answering a question about it.
-        var stage = value === 'No' ? api.STAGE.emailCustomer : null;
+        // This can move a job backwards -- answering Yes on a job sitting in
+        // Hired Maximus returns it to Need Design. That is deliberate. It is
+        // an admin saying the job needs designing after all, and the stage
+        // should say what is true rather than what used to be.
+        var stage = value === 'No' ? api.STAGE.emailCustomer : api.STAGE.needDesign;
 
         api.setRequiresDesign(o.id, value)
           .then(function () {
-            if (!stage || o.pipelineStageId === stage) return null;
+            if (o.pipelineStageId === stage) return null;
             return api.setOpportunityStage(o.id, stage);
           })
           .then(function () {
-            if (stage) o.pipelineStageId = stage;
+            o.pipelineStageId = stage;
             // The answer is written into the job we already hold rather than
             // read back: GoHighLevel's read runs a moment behind its write,
             // so re-fetching returned the OLD answer and redrew the step
