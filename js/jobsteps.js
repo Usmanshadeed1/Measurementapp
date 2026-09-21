@@ -593,12 +593,30 @@ window.MM = window.MM || {};
         // and deliberately leaves the pipeline stage alone: moving it dragged
         // jobs backwards past work they had already finished.
         api.setRequiresDesign(o.id, value)
-          .then(function () { return api.getOpportunity(o.id); })
-          .then(function (fresh) {
-            if (fresh) {
-              o.customFields = fresh.customFields;
-              o.pipelineStageId = fresh.pipelineStageId;
+          .then(function () {
+            // The answer is written into the job we already hold rather than
+            // read back: GoHighLevel's read runs a moment behind its write,
+            // so re-fetching returned the OLD answer and redrew the step
+            // exactly as it was -- which looked like the button doing nothing.
+            var fields = o.customFields || [];
+            var found = false;
+            for (var i = 0; i < fields.length; i++) {
+              if (fields[i].id === api.REQUIRES_DESIGN_FIELD_ID) {
+                fields[i].fieldValue = value;
+                fields[i].fieldValueString = value;
+                found = true;
+                break;
+              }
             }
+            if (!found) {
+              fields.push({
+                id: api.REQUIRES_DESIGN_FIELD_ID,
+                fieldValue: value,
+                fieldValueString: value,
+              });
+            }
+            o.customFields = fields;
+
             render(o);
             if (onJobChanged) onJobChanged(o);
           })
