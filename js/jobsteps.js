@@ -582,10 +582,23 @@ window.MM = window.MM || {};
         btn.disabled = true;
         btn.textContent = 'Saving...';
         showError('');
+        // The answer moves the job as well as recording itself. "No" skips
+        // Design Complete entirely and hands the job to Email Customer, which
+        // is the next thing anyone will actually do; "Yes" puts it in Need
+        // Design, where the reminder workflow watches for it.
+        var stage = value === 'No' ? api.STAGE.emailCustomer : api.STAGE.needDesign;
+
         api.setRequiresDesign(o.id, value)
+          .then(function () {
+            if (o.pipelineStageId === stage) return null;
+            return api.setOpportunityStage(o.id, stage);
+          })
           .then(function () { return api.getOpportunity(o.id); })
           .then(function (fresh) {
-            if (fresh) o.customFields = fresh.customFields;
+            if (fresh) {
+              o.customFields = fresh.customFields;
+              o.pipelineStageId = fresh.pipelineStageId;
+            }
             render(o);
             if (onJobChanged) onJobChanged(o);
           })
