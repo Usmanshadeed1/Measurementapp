@@ -14,7 +14,7 @@ window.MM = window.MM || {};
   var jobsById = {};   // every job the tasks came from, for opening one
 
   // What is narrowing the list. Empty means everything.
-  var filters = { worker: '', job: '', show: 'open', search: '' };
+  var filters = { worker: '', job: '', show: 'all', search: '' };
   var workerDefaulted = false;   // a worker is filtered to themselves once
 
   function db(method, path, body) { return auth.dbFetch(method, path, body); }
@@ -172,8 +172,8 @@ window.MM = window.MM || {};
     if (filters.worker) n++;
     if (filters.job) n++;
     if (filters.search) n++;
-    // "Not done yet" is the resting state, not a choice someone made.
-    if (filters.show !== 'open') n++;
+    // Everything is the resting state, not a choice someone made.
+    if (filters.show !== 'all') n++;
     return n;
   }
 
@@ -516,7 +516,7 @@ window.MM = window.MM || {};
 
     var clear = document.getElementById('mm-my-clear');
     if (clear) clear.addEventListener('click', function () {
-      filters = { worker: '', job: '', show: 'open', search: '' };
+      filters = { worker: '', job: '', show: 'all', search: '' };
       if (search) search.value = '';
       fillFilterOptions();
       render();
