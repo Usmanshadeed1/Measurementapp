@@ -455,6 +455,13 @@ window.MM = window.MM || {};
     return apiFetch('POST', '/contacts/' + contactId + '/notes', payload)
       .then(function (d) { return d.note; });
   }
+  // Changes a note in place. GoHighLevel has a real update endpoint, so an
+  // edited note keeps its id, its date and its link to the job -- unlike
+  // deleting and re-adding, which would make an old note look new.
+  function updateNote(contactId, noteId, body) {
+    return apiFetch('PUT', '/contacts/' + contactId + '/notes/' + noteId, { body: body })
+      .then(function (d) { return d.note; });
+  }
   function deleteNote(contactId, noteId) {
     return apiFetch('DELETE', '/contacts/' + contactId + '/notes/' + noteId);
   }
@@ -535,7 +542,7 @@ window.MM = window.MM || {};
     STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, createOpportunity: createOpportunity, opportunitiesForContact: opportunitiesForContact,
     setOpportunityField: setOpportunityField, renameOpportunity: renameOpportunity, sendEmailToContact: sendEmailToContact,
-    getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, deleteNote: deleteNote,
+    getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, updateNote: updateNote, deleteNote: deleteNote,
     rels: rels, getRec: getRec, makeRec: makeRec, updateRec: updateRec, deleteRec: deleteRec, makeRel: makeRel,
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact, updateContact: updateContact,

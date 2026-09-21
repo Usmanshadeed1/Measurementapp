@@ -211,9 +211,32 @@ input[type="time"]::-webkit-calendar-picker-indicator{
          border-left:3px solid var(--accent);border-radius:10px;padding:12px 14px}
 .mm-note-body{color:var(--text);line-height:1.5;white-space:pre-wrap;
               overflow-wrap:anywhere;font-size:0.94em}
-.mm-note-foot{display:flex;align-items:center;justify-content:space-between;
-              gap:12px;margin-top:8px}
-.mm-note-when{font-size:0.86em;color:var(--text2);font-variant-numeric:tabular-nums}
+/* The date sits left and the buttons group right. margin-right:auto on the
+   date rather than space-between, which spread three items evenly and left
+   Edit floating in the middle of the row. */
+.mm-note-foot{display:flex;align-items:center;gap:6px;margin-top:8px;
+              flex-wrap:wrap}
+.mm-note-when{font-size:0.86em;color:var(--text2);font-variant-numeric:tabular-nums;
+              margin-right:auto}
+
+/* Edit and Cancel share the Delete shape in a quieter colour: the same row,
+   the same size, without three red buttons competing. */
+.mm-note-edit-btn,.mm-note-cancel{background:transparent;color:var(--text2);
+             border:none;font-family:inherit;font-size:0.86em;font-weight:700;
+             cursor:pointer;padding:4px 8px;border-radius:6px}
+.mm-note-edit-btn:hover,.mm-note-cancel:hover{background:var(--card);color:var(--text)}
+.mm-note-edit-btn:focus-visible,.mm-note-cancel:focus-visible{
+             outline:3px solid var(--accent);outline-offset:2px}
+
+.mm-note-save{background:var(--accent-strong);color:#fff;border:none;
+             font-family:inherit;font-size:0.86em;font-weight:700;cursor:pointer;
+             padding:5px 12px;border-radius:6px}
+.mm-note-save:hover:not(:disabled){filter:brightness(1.1)}
+.mm-note-save:disabled{opacity:.6;cursor:not-allowed}
+.mm-note-save:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.mm-note.is-editing{border-left-color:var(--accent-strong)}
+.mm-note-edit{margin-bottom:0;min-height:72px;width:100%}
 .mm-note-del{background:transparent;color:var(--danger-text);border:none;
              font-family:inherit;font-size:0.86em;font-weight:700;cursor:pointer;
              padding:4px 6px;border-radius:6px}

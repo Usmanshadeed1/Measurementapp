@@ -47,6 +47,10 @@ window.MM = window.MM || {};
     return String(raw).trim();
   }
 
+  // The note currently open for editing, by id. One at a time: two open
+  // boxes invite saving the wrong one.
+  var editingId = null;
+
   function render() {
     var el = document.getElementById('mm-job-notes');
     if (!el) return;
@@ -76,13 +80,32 @@ window.MM = window.MM || {};
   }
 
   function noteRow(n) {
+    var text = plain(n);
+
+    // The one being edited turns into a box in place, so the note stays where
+    // it was in the list rather than jumping into a form somewhere else.
+    if (editingId === n.id) {
+      return '<div class="mm-note is-editing">' +
+        '<textarea class="mm-input mm-note-edit" id="mm-note-edit" rows="3">' +
+          U.esc(text) + '</textarea>' +
+        '<div class="mm-note-foot">' +
+          '<span class="mm-note-when">' + U.esc(fmtWhen(n.dateAdded)) + '</span>' +
+          '<button type="button" class="mm-note-cancel" data-cancel="1">Cancel</button>' +
+          '<button type="button" class="mm-note-save" data-save="' + U.esc(n.id) + '">Save</button>' +
+        '</div>' +
+      '</div>';
+    }
+
     return '<div class="mm-note">' +
-      '<div class="mm-note-body">' + U.esc(plain(n)) + '</div>' +
+      '<div class="mm-note-body">' + U.esc(text) + '</div>' +
       '<div class="mm-note-foot">' +
         '<span class="mm-note-when">' + U.esc(fmtWhen(n.dateAdded)) + '</span>' +
         (auth.isAdmin()
-          ? '<button type="button" class="mm-note-del" data-note="' + U.esc(n.id) + '" ' +
-            'aria-label="Delete this note">Delete</button>' : '') +
+          ? '<button type="button" class="mm-note-edit-btn" data-edit="' + U.esc(n.id) + '" ' +
+            'aria-label="Edit this note">Edit</button>' +
+            '<button type="button" class="mm-note-del" data-note="' + U.esc(n.id) + '" ' +
+            'aria-label="Delete this note">Delete</button>'
+          : '') +
       '</div>' +
     '</div>';
   }
@@ -99,6 +122,54 @@ window.MM = window.MM || {};
     el.querySelectorAll('[data-note]').forEach(function (b) {
       b.addEventListener('click', function () { removeNote(b.getAttribute('data-note'), b); });
     });
+
+    el.querySelectorAll('[data-edit]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        editingId = b.getAttribute('data-edit');
+        noteError('');
+        render();
+        var box = document.getElementById('mm-note-edit');
+        if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+      });
+    });
+
+    var cancel = el.querySelector('[data-cancel]');
+    if (cancel) cancel.addEventListener('click', function () {
+      editingId = null;
+      noteError('');
+      render();
+    });
+
+    var saveEdit = el.querySelector('[data-save]');
+    if (saveEdit) saveEdit.addEventListener('click', function () {
+      saveNote(saveEdit.getAttribute('data-save'), saveEdit);
+    });
+  }
+
+  function saveNote(noteId, btn) {
+    var box = document.getElementById('mm-note-edit');
+    if (!box) return;
+
+    var text = (box.value || '').trim();
+    if (!text) { noteError('A note cannot be empty.'); box.focus(); return; }
+
+    var cid = contactId();
+    if (!cid) { noteError('This job has no customer attached.'); return; }
+
+    noteError('');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    api.updateNote(cid, noteId, text)
+      .then(function () {
+        editingId = null;
+        return load();
+      })
+      .catch(function (e) {
+        btn.disabled = false;
+        btn.textContent = 'Save';
+        noteError('Could not save: ' + e.message);
+      });
   }
 
   function addNote() {
@@ -201,6 +272,9 @@ window.MM = window.MM || {};
   function showForJob(job) {
     currentJob = job;
     notes = [];
+    // An edit box left open on the previous job would otherwise reappear over
+    // a note belonging to this one.
+    editingId = null;
     var el = document.getElementById('mm-job-notes');
     if (el) {
       el.innerHTML = '<div class="mm-steps-head"><span class="mm-steps-title">Notes</span></div>' +
