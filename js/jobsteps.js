@@ -588,12 +588,23 @@ window.MM = window.MM || {};
         btn.disabled = true;
         btn.textContent = 'Saving...';
         showError('');
-        // Records the answer and nothing else. The answer decides which STEP
-        // comes next -- Design Complete, or straight to Email the Customer --
-        // and deliberately leaves the pipeline stage alone: moving it dragged
-        // jobs backwards past work they had already finished.
+        // "No" moves the job to Email Customer: a job needing no design should
+        // not sit in a stage called Need Design, where the reminder workflow
+        // would go on chasing it.
+        //
+        // "Yes" moves nothing. The measurement step already put the job in
+        // Need Design, and forcing the stage here dragged jobs BACKWARDS --
+        // a job already designed, quoted or won was pulled back to Need
+        // Design just for answering a question about it.
+        var stage = value === 'No' ? api.STAGE.emailCustomer : null;
+
         api.setRequiresDesign(o.id, value)
           .then(function () {
+            if (!stage || o.pipelineStageId === stage) return null;
+            return api.setOpportunityStage(o.id, stage);
+          })
+          .then(function () {
+            if (stage) o.pipelineStageId = stage;
             // The answer is written into the job we already hold rather than
             // read back: GoHighLevel's read runs a moment behind its write,
             // so re-fetching returned the OLD answer and redrew the step
