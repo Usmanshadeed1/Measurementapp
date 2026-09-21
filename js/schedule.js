@@ -110,6 +110,28 @@ window.MM = window.MM || {};
     return U.titleCase(n.indexOf(' - ') > -1 ? n.split(' - ')[0] : n);
   }
 
+  // The customer and the property, which is what identifies a task: "Get
+  // Permits" says nothing on its own, and the worker's name said less -- on
+  // your own schedule every row was your own name.
+  //
+  // The address is looked up from the opportunity rather than carried on the
+  // task, because a GoHighLevel task knows only its job's name.
+  function jobSub(item) {
+    var name = item.job || '';
+    var street = '';
+
+    if (item.jobId) {
+      var o = jobs.find(function (j) { return j.id === item.jobId; });
+      if (o) {
+        street = api.jobStreet(o);
+        if (!name) name = jobLabel(o);
+      }
+    }
+
+    if (name && street) return name + ' — ' + street;
+    return name || street;
+  }
+
   // ---- Filters -------------------------------------------------------------
 
   function fillFilters() {
@@ -425,7 +447,7 @@ window.MM = window.MM || {};
     var cls = item.isDesign ? 'mm-ev is-design'
       : item.isVisit ? 'mm-ev is-visit'
       : 'mm-ev' + (item.done ? ' is-done' : (isLate(item) ? ' is-late' : ''));
-    var sub = opts.showWho && item.who ? item.who : item.job;
+    var sub = jobSub(item);
     var title = item.isVisit && item.time
       ? fmtTime(item.time) + ' \u00b7 ' + item.title
       : item.title;
@@ -454,7 +476,7 @@ window.MM = window.MM || {};
     var shown = rows.slice(0, max);
     var rest = rows.length - shown.length;
     return shown.map(function (i) {
-      return chip(i, { note: dayNote(i, d), showWho: opts && opts.showWho });
+      return chip(i, { note: dayNote(i, d) });
     }).join('') +
       (rest > 0
         ? '<button type="button" class="mm-sc-more" data-day="' + key(d) + '">+' +
@@ -469,7 +491,7 @@ window.MM = window.MM || {};
     if (!rows.length) return emptyState();
     return '<div class="mm-sc-day">' +
       rows.map(function (i) {
-        return chip(i, { note: dayNote(i, cursor), showWho: true });
+        return chip(i, { note: dayNote(i, cursor) });
       }).join('') + '</div>';
   }
 
@@ -494,7 +516,7 @@ window.MM = window.MM || {};
           '<span class="mm-sc-dnum">' + d.getDate() + '</span>' +
           (n ? '<span class="mm-sc-cnt">' + n + '</span>' : '') +
         '</button>' +
-        '<div class="mm-sc-colbody">' + chipStack(d, WEEK_MAX, { showWho: true }) + '</div>' +
+        '<div class="mm-sc-colbody">' + chipStack(d, WEEK_MAX) + '</div>' +
       '</section>';
     }
     // On a phone the seven days become a sideways scroller, which is
@@ -576,7 +598,7 @@ window.MM = window.MM || {};
           '<span class="mm-sc-lrel">' + relative(r.start) + '</span>' +
         '</div>';
       }
-      out += chip(r, { showWho: true, note: dayNote(r, r.start) });
+      out += chip(r, { note: dayNote(r, r.start) });
     });
     return '<div class="mm-sc-list">' + out + '</div>';
   }
@@ -605,7 +627,7 @@ window.MM = window.MM || {};
     var body = document.getElementById('mm-sc-popbody');
     body.innerHTML = rows.length
       ? rows.map(function (i) {
-          return chip(i, { showWho: true, note: dayNote(i, d) });
+          return chip(i, { note: dayNote(i, d) });
         }).join('')
       : '<p class="mm-sc-none-lg">Nothing scheduled for this day.</p>';
 
