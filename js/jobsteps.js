@@ -176,8 +176,8 @@ window.MM = window.MM || {};
     // meantime. Hidden only once the job is already won.
     if (won) return '';
     return '<div class="mm-step-action mm-step-wonrow">' +
-      '<button type="button" class="mm-btn-won" id="mm-step-won">' +
-        'Customer said yes &mdash; Hired Maximus</button>' +
+      '<button type="button" class="mm-btn-sm mm-btn-primary" id="mm-step-won">' +
+        'Hired Maximus</button>' +
     '</div>';
   }
 
@@ -416,8 +416,7 @@ window.MM = window.MM || {};
         valueText: fmtLong(sent), value: toInputDate(sent) || todayInput(),
         inputId: 'mm-step-sent', btnId: 'mm-step-sent-save',
         waitingText: 'Finish the pricing first',
-        note: (sent ? waitingNote(sent, won) : (pricing ? 'Email the customer yourself, then record the date here.' : '')) +
-              wonButton(sent, won),
+        note: (sent ? waitingNote(sent, won) : '') + wonButton(sent, won),
       }) +
       stepHtml({
         num: 7, label: 'Material ordering',
@@ -582,17 +581,11 @@ window.MM = window.MM || {};
         btn.disabled = true;
         btn.textContent = 'Saving...';
         showError('');
-        // The answer moves the job as well as recording itself. "No" skips
-        // Design Complete entirely and hands the job to Email Customer, which
-        // is the next thing anyone will actually do; "Yes" puts it in Need
-        // Design, where the reminder workflow watches for it.
-        var stage = value === 'No' ? api.STAGE.emailCustomer : api.STAGE.needDesign;
-
+        // Records the answer and nothing else. The answer decides which STEP
+        // comes next -- Design Complete, or straight to Email the Customer --
+        // and deliberately leaves the pipeline stage alone: moving it dragged
+        // jobs backwards past work they had already finished.
         api.setRequiresDesign(o.id, value)
-          .then(function () {
-            if (o.pipelineStageId === stage) return null;
-            return api.setOpportunityStage(o.id, stage);
-          })
           .then(function () { return api.getOpportunity(o.id); })
           .then(function (fresh) {
             if (fresh) {
@@ -631,7 +624,7 @@ window.MM = window.MM || {};
         })
         .catch(function (e) {
           wonBtn.disabled = false;
-          wonBtn.textContent = 'Customer said yes — Hired Maximus';
+          wonBtn.textContent = 'Hired Maximus';
           showError('Could not update: ' + e.message);
         });
     });
