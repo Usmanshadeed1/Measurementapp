@@ -280,3 +280,13 @@ input[type="time"]::-webkit-calendar-picker-indicator{
   .mm-my-filters .mm-select,
   .mm-my-filters .mm-btn-sm{flex:1 1 100%}
 }
+
+/* ---- Header buttons on the Tasks page, on a phone ----
+   The dashboard stretches every .section-header button to an equal share of
+   the row, which suits its four but made these two enormous. Here there are
+   only ever two, and they should stay the size they are on desktop. */
+@media (max-width: 620px){
+  #screen-mytasks .section-header .mm-btn-row{width:auto;gap:8px}
+  #screen-mytasks .section-header .mm-btn-row .mm-btn-sm{flex:0 0 auto;
+    font-size:0.86em;padding:7px 14px;min-height:38px}
+}

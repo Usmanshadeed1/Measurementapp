@@ -45,7 +45,7 @@ window.MM = window.MM || {};
       test: function (t) { return !(t.status === 'done') && daysTo(t.end) === 0; } },
     { id: 'soon',  title: 'Coming up',
       test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && d !== null && d > 0 && d <= 7; } },
-    { id: 'later', title: 'Tasks',
+    { id: 'later', title: 'No date set',
       test: function (t) { var d = daysTo(t.end); return !(t.status === 'done') && (d === null || d > 7); } },
     // Finished work stays on screen: a worker who ticked the wrong task needs
     // a way back, and seeing what they got through is worth something.
@@ -465,10 +465,13 @@ window.MM = window.MM || {};
 
     var whoSel = document.getElementById('mm-my-worker');
     if (whoSel) {
+      // assignableNames returns { name, hasLogin } objects, not strings --
+      // putting them straight into an option gave a list of [object Object].
       var names = window.MM.workerlist && window.MM.workerlist.assignableNames
         ? window.MM.workerlist.assignableNames() : [];
       whoSel.innerHTML = '<option value="">Everyone</option>' +
-        names.map(function (n) {
+        names.map(function (w) {
+          var n = (w && w.name) || String(w || '');
           return '<option value="' + U.esc(n) + '">' + U.esc(n) + '</option>';
         }).join('');
       whoSel.value = filters.worker;

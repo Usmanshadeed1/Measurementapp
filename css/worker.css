@@ -247,11 +247,20 @@
 @media (max-width: 620px){
   /* On a phone the badge and pencil move BELOW the task, across the full
      width. Stacked in a right-hand column they reserved space the title
-     needed, leaving it three or four words wide. */
-  .mm-mytask{flex-wrap:wrap}
-  .mm-mytask-main{flex:1 1 100%}
+     needed, leaving it three or four words wide.
+     
+     The tick stays BESIDE the title rather than on a row of its own: giving
+     the text 100% pushed the tick onto its own line and spread one task over
+     three rows of a small screen. */
+  .mm-mytask{flex-wrap:wrap;gap:10px;padding:12px}
+  .mm-mytask-main{flex:1 1 0;min-width:0}
+  .mm-mytask .mm-task-tick{width:34px;height:34px;font-size:1.1em}
+
+  /* Date on the left, pencil on the right, on one line under the task. */
   .mm-mytask-side{width:100%;justify-content:space-between;
-    align-items:center;margin-top:10px;padding-left:38px}
+    align-items:center;margin-top:2px;padding-left:44px}
+  .mm-mytask-pencil{width:34px;height:34px}
+  .mm-mytask-title{font-size:1em}
 }
 
 /* One line, always. A date broken across two lines is harder to read than a
