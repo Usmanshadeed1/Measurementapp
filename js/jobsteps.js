@@ -98,6 +98,71 @@ window.MM = window.MM || {};
     return txt;
   }
 
+  // Does this job need a design at all?
+  //
+  // Answered rather than assumed: a straight refacing job goes from measured
+  // to quoted with no drawing, and the old date-only step made every job look
+  // like it was waiting for one.
+  //
+  // Yes keeps the date box exactly as it was. No greys out Design complete
+  // and hands the chain to Email the customer. The answer can be changed --
+  // a customer who asks for a drawing after all must not need GoHighLevel
+  // opened by hand to allow it.
+  function needDesignStep(o, needDesign, measured, answer) {
+    var answered = answer === 'Yes' || answer === 'No';
+    var state = answered ? 'done' : (measured ? 'active' : 'waiting');
+    var cls = 'mm-step mm-step-' + state;
+
+    var body;
+    if (!measured && !answered) {
+      body = '<div class="mm-step-waiting">Measure the property first</div>';
+    } else if (!answered) {
+      body =
+        '<div class="mm-step-action mm-rd-ask">' +
+          '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
+            'id="mm-rd-yes">Yes, design needed</button>' +
+          '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+            'id="mm-rd-no">No design needed</button>' +
+        '</div>';
+    } else if (answer === 'No') {
+      body =
+        '<div class="mm-step-value">No design needed</div>' +
+        '<div class="mm-step-action mm-rd-change">' +
+          '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+            'id="mm-rd-yes">Change to yes</button>' +
+        '</div>';
+    } else {
+      // Yes: the date box it always had, plus a way back to No.
+      body =
+        '<div class="mm-step-action">' +
+          '<input type="date" class="mm-input mm-step-date" id="mm-step-needdesign"' +
+            ' value="' + U.esc(toInputDate(needDesign) || toInputDate(measured) || todayInput()) + '"' +
+            ' aria-label="Need design date">' +
+          '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
+            'id="mm-step-needdesign-save">Save</button>' +
+          (needDesign
+            ? '<button type="button" class="mm-btn-sm mm-btn-secondary mm-step-clear" ' +
+              'id="mm-step-needdesign-clear">Clear</button>'
+            : '') +
+        '</div>' +
+        (needDesign ? '' : '<div class="mm-step-note">Set to the day measuring ' +
+          'finished. Change it if design starts later.</div>') +
+        '<div class="mm-step-action mm-rd-change">' +
+          '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+            'id="mm-rd-no">Change to no design</button>' +
+        '</div>';
+    }
+
+    return '<div class="' + cls + '">' +
+      '<div class="mm-step-mark" aria-hidden="true">' +
+        (answered ? '&#10003;' : '2') + '</div>' +
+      '<div class="mm-step-body">' +
+        '<div class="mm-step-label">Need design</div>' +
+        body +
+      '</div>' +
+    '</div>';
+  }
+
   // Winning the job. A proposal goes out, the customer says yes, and until now
   // the only way to record that was to leave the panel and change the stage by
   // hand -- which step 7 actually told you to do.
@@ -302,33 +367,32 @@ window.MM = window.MM || {};
 
     var apptWhen = api.apptDateTime(o);
 
+    var requires = api.requiresDesign(o);
+    var skipDesign = requires === 'No';
+
     var html =
       measurementStep(appt, apptWhen.time, measured, apptNote) +
-      stepHtml({
-        num: 2, label: 'Need design',
-        state: needDesign ? 'done' : (measured ? 'active' : 'waiting'),
-        valueText: fmtLong(needDesign),
-        // Pre-filled with the measurement date, which is when design becomes
-        // due. Saved like every other step rather than written silently, so
-        // one step never changes another behind the person using it.
-        value: toInputDate(needDesign) || toInputDate(measured) || todayInput(),
-        inputId: 'mm-step-needdesign', btnId: 'mm-step-needdesign-save',
-        // Only once a date is actually stored: the box is pre-filled from the
-        // measurement date, and offering to clear a suggestion is meaningless.
-        clearId: needDesign ? 'mm-step-needdesign-clear' : '',
-        waitingText: 'Measure the property first',
-        note: needDesign ? '' : (measured
-          ? 'Set to the day measuring finished. Change it if design starts later.'
-          : ''),
-      }) +
-      stepHtml({
-        num: 3, label: 'Design complete',
-        state: design ? 'done' : (measured ? 'active' : 'waiting'),
-        valueText: fmtLong(design), value: toInputDate(design) || todayInput(),
-        inputId: 'mm-step-design', btnId: 'mm-step-design-save',
-        waitingText: 'Measure the property first',
-      }) +
-      emailStep(o, design) +
+      needDesignStep(o, needDesign, measured, requires) +
+      // Skipped outright when the job needs no design. Shown greyed rather
+      // than removed, so the chain keeps its shape and it is obvious the step
+      // was passed over on purpose rather than missed.
+      (skipDesign
+        ? '<div class="mm-step mm-step-skipped">' +
+            '<div class="mm-step-mark" aria-hidden="true">&mdash;</div>' +
+            '<div class="mm-step-body">' +
+              '<div class="mm-step-label">Design complete</div>' +
+              '<div class="mm-step-waiting">Not needed for this job</div>' +
+            '</div>' +
+          '</div>'
+        : stepHtml({
+            num: 3, label: 'Design complete',
+            state: design ? 'done' : (measured ? 'active' : 'waiting'),
+            valueText: fmtLong(design), value: toInputDate(design) || todayInput(),
+            inputId: 'mm-step-design', btnId: 'mm-step-design-save',
+            waitingText: 'Measure the property first',
+          })) +
+      // With no design to wait for, emailing becomes the next thing to do.
+      emailStep(o, skipDesign ? !!measured : design) +
       stepHtml({
         num: 5, label: 'Pricing complete',
         state: pricing ? 'done' : (design ? 'active' : 'waiting'),
@@ -503,6 +567,33 @@ window.MM = window.MM || {};
     if (st.pricing && !st.sent) wire('mm-step-sent-save', 'mm-step-sent', function (val) {
       return saveDateThenStage(o, 'proposalSent', val, api.STAGE_PROPOSAL_SENT);
     });
+
+    // Answering the design question. Writes the answer and nothing else: no
+    // stage moves, because the job is already where the measurement put it and
+    // the reminder workflow only fires after a full day of no activity.
+    function answerDesign(btn, value) {
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var was = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+        showError('');
+        api.setRequiresDesign(o.id, value)
+          .then(function () { return api.getOpportunity(o.id); })
+          .then(function (fresh) {
+            if (fresh) o.customFields = fresh.customFields;
+            render(o);
+            if (onJobChanged) onJobChanged(o);
+          })
+          .catch(function (e) {
+            btn.disabled = false;
+            btn.textContent = was;
+            showError('Could not save: ' + e.message);
+          });
+      });
+    }
+    answerDesign(document.getElementById('mm-rd-yes'), 'Yes');
+    answerDesign(document.getElementById('mm-rd-no'), 'No');
 
     // Moves the stage and nothing else: no date is written, so there is no
     // field to go stale and nothing to undo but the stage itself.

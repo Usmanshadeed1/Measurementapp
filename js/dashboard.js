@@ -123,7 +123,11 @@ window.MM = window.MM || {};
       if (dd === 1) return { cls: 'soon', text: 'Visit tomorrow' };
       return { cls: '', text: 'Visit ' + fmtDate(appt) };
     }
-    if (!designDate(o)) return { cls: 'soon', text: 'Needs design' };
+    // A job answered "no design needed" is not waiting for one: saying so
+    // would leave it flagged for work that is never coming.
+    if (!designDate(o) && api.requiresDesign(o) !== 'No') {
+      return { cls: 'soon', text: 'Needs design' };
+    }
     if (!pricingDate(o)) return { cls: 'soon', text: 'Needs pricing' };
     if (!sentDate(o)) return { cls: 'soon', text: 'Proposal not sent' };
     if (!isWon(o)) {
@@ -153,8 +157,14 @@ window.MM = window.MM || {};
   // because that is how many dates a job collects on its way through.
   function jobCard(o, opts) {
     opts = opts || {};
-    var done = [measuredDate(o), designDate(o), pricingDate(o),
-                sentDate(o), cabinetsDate(o), completedDate(o)].filter(Boolean).length;
+    // Six steps, unless this job needs no design -- then five, so a skipped
+    // step does not hold the bar short of full for work nobody will ever do.
+    var skipDesign = api.requiresDesign(o) === 'No';
+    var steps = [measuredDate(o), pricingDate(o), sentDate(o),
+                 cabinetsDate(o), completedDate(o)];
+    if (!skipDesign) steps.push(designDate(o));
+    var total = steps.length;
+    var done = steps.filter(Boolean).length;
 
     var name = customerName(o);
 
@@ -163,8 +173,8 @@ window.MM = window.MM || {};
         '<span class="mm-jcard-main">' +
           '<span class="mm-jcard-name">' + U.esc(name) + '</span>' +
           '<span class="mm-jcard-addr">' + U.esc(jobAddress(o) || 'No address on file') + '</span>' +
-          '<span class="mm-jbar" role="img" aria-label="' + done + ' of 6 steps done">' +
-            '<span class="mm-jbar-fill" style="width:' + Math.round((done / 6) * 100) + '%"></span>' +
+          '<span class="mm-jbar" role="img" aria-label="' + done + ' of ' + total + ' steps done">' +
+            '<span class="mm-jbar-fill" style="width:' + Math.round((done / total) * 100) + '%"></span>' +
           '</span>' +
         '</span>' +
         '<span class="mm-jcard-arrow" aria-hidden="true">&#8250;</span>' +

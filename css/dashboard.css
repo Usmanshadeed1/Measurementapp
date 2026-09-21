@@ -537,3 +537,26 @@
 @media (max-width: 620px){
   .mm-btn-won{width:100%}
 }
+
+/* ---- Does this job need a design? ----
+   Asked once, then remembered. A job that needs no drawing skips the Design
+   Complete step rather than sitting against it forever. */
+.mm-rd-ask{gap:8px;flex-wrap:wrap}
+.mm-rd-ask .mm-btn-sm{flex:0 1 auto}
+
+/* The way back, kept quiet: changing the answer is allowed but is not the
+   thing being asked for on this step. */
+.mm-rd-change{margin-top:8px}
+.mm-rd-change .mm-btn-sm{font-size:0.82em;padding:6px 12px;min-height:34px;
+  opacity:.8}
+.mm-rd-change .mm-btn-sm:hover{opacity:1}
+
+/* A step passed over on purpose. Dimmed and marked with a dash rather than a
+   number, so the chain keeps its shape without claiming work is outstanding. */
+.mm-step-skipped{opacity:.55}
+.mm-step-skipped .mm-step-mark{background:var(--card2);
+  border-color:var(--control-border);color:var(--text2)}
+
+@media (max-width: 620px){
+  .mm-rd-ask .mm-btn-sm{flex:1 1 100%}
+}

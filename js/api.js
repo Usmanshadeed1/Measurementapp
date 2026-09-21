@@ -34,6 +34,16 @@ window.MM = window.MM || {};
 
   // Opportunity custom fields come back as { id, fieldValueString } — by id,
   // never by name — so the three status fields are looked up by id here.
+  // Whether a job needs a design at all. Some jobs -- a straight refacing --
+  // go from measured to quoted with no drawing in between, and forcing them
+  // through a Design Complete step they will never reach made the panel lie
+  // about where the work had got to.
+  //
+  // Yes or No, answered by a person. Deliberately separate from the Need
+  // Design DATE, which records when design became due and is untouched by
+  // this: six live jobs already carry that date.
+  var REQUIRES_DESIGN_FIELD_ID = 'b0ZMvawdYLts1j4EOoCp';
+
   var STATUS_FIELD_IDS = {
     design: 'qoDcsKKATQVI4zKpdFC3',
     pricing: 'Ixc1x6jfSn9FbzxgrOyr',
@@ -89,6 +99,15 @@ window.MM = window.MM || {};
   };
 
   // Kept as named exports because several modules read them directly.
+  // The answer, as stored: 'Yes', 'No', or '' when nobody has said yet.
+  function requiresDesign(o) {
+    return String(oppField(o, REQUIRES_DESIGN_FIELD_ID) || '').trim();
+  }
+
+  function setRequiresDesign(oppId, value) {
+    return setOpportunityField(oppId, REQUIRES_DESIGN_FIELD_ID, value || '');
+  }
+
   var STAGE_AFTER_PRICING = STAGE.pricing;
   var STAGE_PROPOSAL_SENT = STAGE.proposalSent;
   var STAGE_MATERIAL_ORDERING = STAGE.materials;
@@ -540,6 +559,8 @@ window.MM = window.MM || {};
     STAGE_AFTER_PRICING: STAGE_AFTER_PRICING, STAGE_PROPOSAL_SENT: STAGE_PROPOSAL_SENT,
     STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
     STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
+    REQUIRES_DESIGN_FIELD_ID: REQUIRES_DESIGN_FIELD_ID,
+    requiresDesign: requiresDesign, setRequiresDesign: setRequiresDesign,
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, createOpportunity: createOpportunity, opportunitiesForContact: opportunitiesForContact,
     setOpportunityField: setOpportunityField, renameOpportunity: renameOpportunity, sendEmailToContact: sendEmailToContact,
     getOpportunity: getOpportunity, getNotes: getNotes, addNote: addNote, updateNote: updateNote, deleteNote: deleteNote,
