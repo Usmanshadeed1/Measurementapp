@@ -61,8 +61,6 @@ window.MM = window.MM || {};
       '</div>';
 
     el.innerHTML = head +
-      '<p class="mm-crew-note">Notes for this job. They appear on the opportunity ' +
-      'in GoHighLevel too.</p>' +
       (notes.length
         ? '<div class="mm-notelist">' + notes.map(noteRow).join('') + '</div>'
         : '<p class="mm-task-empty">No notes yet.</p>') +
