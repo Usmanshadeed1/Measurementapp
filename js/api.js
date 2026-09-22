@@ -554,11 +554,9 @@ window.MM = window.MM || {};
     if (!conversationId) return Promise.resolve({ messages: [], nextPage: false });
     var qs = 'limit=' + (limit || 50);
     if (lastMessageId) qs += '&lastMessageId=' + encodeURIComponent(lastMessageId);
-    // Every channel, named rather than left to the default: a thread that
-    // showed only texts was hiding the emails sitting beside them.
-    qs += '&type=' + encodeURIComponent(
-      'TYPE_SMS,TYPE_EMAIL,TYPE_CALL,TYPE_VOICEMAIL,TYPE_FACEBOOK,' +
-      'TYPE_INSTAGRAM,TYPE_WHATSAPP,TYPE_GMB,TYPE_LIVE_CHAT,TYPE_REVIEW');
+    // No type filter: unfiltered returns every channel, and naming them
+    // explicitly returned nothing at all -- the parameter wants a different
+    // spelling than the one the message objects come back with.
     return apiFetch('GET', '/conversations/' + conversationId + '/messages?' + qs)
       .then(function (d) {
         // The shape has moved around between versions, so both are accepted
