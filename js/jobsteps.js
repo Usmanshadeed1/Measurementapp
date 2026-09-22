@@ -178,14 +178,14 @@ window.MM = window.MM || {};
 
     var body;
     if (won) {
-      body = '<div class="mm-step-value">Customer signed</div>';
+      body = '<div class="mm-step-value">Hired Maximus</div>';
     } else {
       // Offered whether or not a proposal date is recorded: a customer can say
       // yes on the phone before anyone gets round to filling that in, and
       // making this wait for paperwork left the stage wrong in the meantime.
       body = '<div class="mm-step-action">' +
         '<button type="button" class="mm-btn-sm mm-btn-primary" id="mm-step-won">' +
-          'Customer said yes</button>' +
+          'Hired Maximus</button>' +
       '</div>';
     }
 
