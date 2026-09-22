@@ -66,9 +66,38 @@
   border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);
   border-bottom-right-radius:5px}
 
-/* Only shown when a thread mixes channels -- see render() in chat.js. */
-.mm-msg-kind{font-size:0.68em;font-weight:800;text-transform:uppercase;
-  letter-spacing:.07em;color:var(--accent);margin-bottom:4px}
+/* ---- Telling the channels apart ----
+   An email and a text read differently and are answered differently, so they
+   should not look the same. Each carries its own colour AND its own named
+   label: colour alone fails for anyone who cannot separate these two hues,
+   and on a phone in sunlight it fails for everyone.
+
+   Email is the wider, more formal one, so it gets the calmer violet and a
+   squarer bubble; SMS keeps the blue and stays rounded. */
+.mm-msg-kind{display:inline-block;font-size:0.66em;font-weight:800;
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;
+  padding:1px 7px;border-radius:999px;
+  background:color-mix(in srgb,var(--accent) 22%,transparent);
+  color:var(--accent)}
+
+/* Email: violet, and squarer -- it is a document more than a remark. */
+.mm-msg.chan-email .mm-msg-bubble{border-radius:10px}
+.mm-msg.chan-email.is-in .mm-msg-bubble{
+  background:color-mix(in srgb,#a78bfa 12%,var(--card2));
+  border-color:color-mix(in srgb,#a78bfa 34%,transparent)}
+.mm-msg.chan-email.is-out .mm-msg-bubble{
+  background:color-mix(in srgb,#a78bfa 24%,var(--card2));
+  border-color:color-mix(in srgb,#a78bfa 48%,transparent)}
+.mm-msg.chan-email .mm-msg-kind{
+  background:color-mix(in srgb,#a78bfa 26%,transparent);
+  color:#c4b5fd}
+
+/* A call or voicemail is an event rather than something written: no colour of
+   its own, just the label saying what it was. */
+.mm-msg.chan-call .mm-msg-kind,
+.mm-msg.chan-voicemail .mm-msg-kind{
+  background:color-mix(in srgb,var(--success) 22%,transparent);
+  color:var(--success)}
 
 /* Email arrives as HTML and is stripped to text, so its own line breaks are
    all that is left of its shape -- they are worth keeping. */
@@ -136,3 +165,16 @@
   margin-bottom:4px;overflow-wrap:anywhere}
 .mm-msg-subject + .mm-msg-body{padding-top:4px;
   border-top:1px solid color-mix(in srgb,var(--text2) 22%,transparent)}
+
+/* The violet was mixed against a dark card; on the light theme the same
+   mix washes out and the label loses its contrast. A deeper shade of the
+   same hue keeps email distinct from SMS in both themes. */
+:root[data-theme="light"] .mm-msg.chan-email.is-in .mm-msg-bubble{
+  background:color-mix(in srgb,#6d28d9 8%,var(--card2));
+  border-color:color-mix(in srgb,#6d28d9 30%,transparent)}
+:root[data-theme="light"] .mm-msg.chan-email.is-out .mm-msg-bubble{
+  background:color-mix(in srgb,#6d28d9 16%,var(--card2));
+  border-color:color-mix(in srgb,#6d28d9 42%,transparent)}
+:root[data-theme="light"] .mm-msg.chan-email .mm-msg-kind{
+  background:color-mix(in srgb,#6d28d9 16%,transparent);
+  color:#5b21b6}

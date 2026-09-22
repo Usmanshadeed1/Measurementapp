@@ -280,7 +280,7 @@ window.MM = window.MM || {};
     '</div>';
   }
 
-  function bubble(m, showKind) {
+  function bubble(m) {
     // An activity record is not a message from either side: GoHighLevel wrote
     // it about the job. Centred, quiet, and never in a speech bubble.
     if (isActivity(m)) {
@@ -294,15 +294,19 @@ window.MM = window.MM || {};
     var text = plain(bodyOf(m));
     var subject = subjectOf(m);
     var files = (m.attachments || []).length;
-    var kind = showKind ? kindOf(m) : '';
+    var kind = kindOf(m);
+    // Lower-cased and stripped to a word, for the class name: "Web chat"
+    // becomes is-webchat.
+    var chan = kind.toLowerCase().replace(/[^a-z]/g, '') || 'other';
 
     // An email with no body yet still says what it was about.
     var waiting = !text && !!emailIdOf(m);
 
     return '<div class="mm-msg' + (out ? ' is-out' : ' is-in') +
-      (m.mmNew ? ' is-new' : '') + '">' +
+      ' chan-' + chan + (m.mmNew ? ' is-new' : '') + '">' +
       '<div class="mm-msg-bubble">' +
         (kind ? '<div class="mm-msg-kind">' + U.esc(kind) + '</div>' : '') +
+        ''+
         (subject
           ? '<div class="mm-msg-subject">' + U.esc(subject) + '</div>'
           : '') +
@@ -339,13 +343,6 @@ window.MM = window.MM || {};
       return;
     }
 
-    // The channel is worth labelling only when the thread has more than one.
-    // On an all-SMS thread "SMS" above every bubble is a word repeated for no
-    // reason.
-    var kinds = {};
-    said.forEach(function (m) { kinds[kindOf(m)] = true; });
-    var mixed = Object.keys(kinds).length > 1;
-
     // A date between messages, the way a phone shows one. Without it a long
     // thread is a wall of times with no sense of when anything happened.
     var out = '', lastDay = '';
@@ -356,7 +353,7 @@ window.MM = window.MM || {};
         out += '<div class="mm-chat-day">' +
           U.esc(dayLabel(m.dateAdded)) + '</div>';
       }
-      out += bubble(m, mixed);
+      out += bubble(m);
     });
 
     el.innerHTML = head(said.length) +
