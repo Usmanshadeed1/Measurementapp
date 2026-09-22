@@ -115,3 +115,16 @@
   .mm-msg.is-new .mm-msg-bubble{animation:none}
   .mm-msg.is-new .mm-msg-bubble::after{animation:none;opacity:0}
 }
+
+/* ---- Activity, not a message ----
+   "Opportunity created" and the like: GoHighLevel wrote these about the job,
+   not to or from anybody. Centred and quiet, so the thread still reads as a
+   conversation with the events marked along it. */
+.mm-msg-activity{align-self:center;display:flex;align-items:center;gap:8px;
+  flex-wrap:wrap;justify-content:center;
+  max-width:88%;margin:6px 0;padding:4px 12px;
+  border-radius:999px;background:var(--card2);
+  border:1px dashed var(--border)}
+.mm-msg-activity-text{font-size:0.78em;color:var(--text2);text-align:center}
+.mm-msg-activity-when{font-size:0.7em;color:var(--empty);
+  font-variant-numeric:tabular-nums}

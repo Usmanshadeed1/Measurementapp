@@ -110,6 +110,16 @@ window.MM = window.MM || {};
   // Emails arrive as HTML from whatever wrote them. Only the text is shown:
   // a marketing template dropped into the page would bring its own layout
   // with it, and could carry anything at all.
+  // Where a message keeps its text. GoHighLevel puts it in different places
+  // depending on the channel -- an email carries its own body fields, and an
+  // activity record its own again -- so every one is tried rather than
+  // trusting `body` and showing "no text" when it happens to be empty.
+  function bodyOf(m) {
+    return m.body || m.text || m.message ||
+           m.htmlBody || m.html || m.emailBody ||
+           (m.meta && (m.meta.body || m.meta.text)) || '';
+  }
+
   function plain(raw) {
     var s = String(raw || '');
     if (/<[a-z][\s\S]*>/i.test(s)) {
@@ -219,8 +229,17 @@ window.MM = window.MM || {};
   }
 
   function bubble(m, showKind) {
+    // An activity record is not a message from either side: GoHighLevel wrote
+    // it about the job. Centred, quiet, and never in a speech bubble.
+    if (isActivity(m)) {
+      return '<div class="mm-msg-activity">' +
+        '<span class="mm-msg-activity-text">' + U.esc(plain(bodyOf(m)) || 'Activity') + '</span>' +
+        '<span class="mm-msg-activity-when">' + U.esc(fmtWhen(m.dateAdded)) + '</span>' +
+      '</div>';
+    }
+
     var out = isOutbound(m);
-    var text = plain(m.body);
+    var text = plain(bodyOf(m));
     var files = (m.attachments || []).length;
     var kind = showKind ? kindOf(m) : '';
 
@@ -246,9 +265,10 @@ window.MM = window.MM || {};
     var el = document.getElementById('mm-job-chat');
     if (!el) return;
 
-    // Activity records are dropped here rather than when they arrive, so the
-    // paging marker still follows GoHighLevel's own list.
-    var said = messages.filter(function (m) { return !isActivity(m); });
+    // Everything, activity records included: GoHighLevel's own conversation
+    // shows them inline, and the client asked for the same thing in one
+    // place rather than a tidied-up version of it.
+    var said = messages;
 
     if (!said.length) {
       el.innerHTML = head(0) +
