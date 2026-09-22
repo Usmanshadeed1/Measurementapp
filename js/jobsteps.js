@@ -173,6 +173,100 @@ window.MM = window.MM || {};
   // sent, which read as part of sending the proposal rather than as the thing
   // that happens next -- the customer saying yes is its own event in the job,
   // and the chain should say so.
+  // ---- Proposals sent ------------------------------------------------------
+  //
+  // A proposal is rarely sent once: a price is revised, a second version goes
+  // out after the customer asks for a change. So this keeps a list rather
+  // than a single date, in the same shape as the design meetings above it --
+  // one date per line in a multi-line field, newest first.
+  //
+  // The ORIGINAL single date field is left exactly as it was. Jobs that
+  // recorded a proposal before this existed keep that date and it is read
+  // back here as the oldest entry, so nothing already recorded moves or is
+  // rewritten. Its own date cannot be edited from the list: it belongs to the
+  // old field, and editing it would mean writing to live data that every
+  // other screen still reads.
+
+  function parseDates(text) {
+    var out = [];
+    String(text || '').split(/\r?\n/).forEach(function (raw) {
+      var d = raw.trim();
+      if (d) out.push(d);
+    });
+    return out;
+  }
+
+  // Every proposal on the job, newest first: the old single date, then the
+  // logged ones. The single date is marked so the row can hide its controls.
+  function proposals(o) {
+    var out = parseDates(api.oppField(o, api.DATE_FIELD_IDS.proposalLog))
+      .map(function (d) { return { date: d, old: false }; });
+
+    var first = dateVal(o, 'proposalSent');
+    if (first) {
+      var ymd = toInputDate(first);
+      // Only when the log does not already carry it: a job recorded before
+      // this existed and then edited should not show the same day twice.
+      if (ymd && out.every(function (p) { return p.date !== ymd; })) {
+        out.push({ date: ymd, old: true });
+      }
+    }
+
+    return out.sort(function (a, b) { return b.date.localeCompare(a.date); });
+  }
+
+  function sentStep(o, num, pricing, won, notes) {
+    var list = proposals(o);
+    var sent = list.length > 0;
+    var cls = 'mm-step mm-step-' + (sent ? 'done' : (pricing ? 'active' : 'waiting'));
+
+    var body;
+    if (!pricing && !sent) {
+      body = '<div class="mm-step-waiting">Finish the pricing first</div>';
+    } else {
+      body =
+        (list.length ? '<div class="mm-step-log">' +
+          list.map(function (p, i) {
+            return '<div class="mm-step-logrow" data-prop="' + i + '">' +
+              '<span class="mm-step-logwhen">' + U.esc(fmtLong(p.date)) + '</span>' +
+              (i === 0 ? '<span class="mm-step-logwhat">Latest</span>' : '') +
+              // The date carried over from the old single field is shown but
+              // not edited here -- see the note above.
+              (p.old
+                ? ''
+                : '<span class="mm-step-propacts">' +
+                    '<button type="button" class="mm-step-propedit" ' +
+                      'data-pedit="' + U.esc(p.date) + '" ' +
+                      'aria-label="Change this date">&#9998;</button>' +
+                    '<button type="button" class="mm-step-propdel" ' +
+                      'data-pdel="' + U.esc(p.date) + '" ' +
+                      'aria-label="Remove this proposal">&times;</button>' +
+                  '</span>') +
+            '</div>';
+          }).join('') + '</div>' : '') +
+
+        '<div class="mm-step-action">' +
+          '<input type="date" class="mm-input mm-step-date" id="mm-step-sent" ' +
+            'value="' + U.esc(todayInput()) + '" aria-label="Proposal sent">' +
+          '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
+            'id="mm-step-sent-save">' +
+            (sent ? 'Record another' : 'Save') + '</button>' +
+        '</div>';
+    }
+
+    return '<div class="' + cls + '">' +
+      '<div class="mm-step-mark" aria-hidden="true">' +
+        (sent ? '&#10003;' : num) + '</div>' +
+      '<div class="mm-step-body">' +
+        '<div class="mm-step-label">Proposal sent</div>' +
+        body +
+        '<div class="mm-step-note">' +
+          (sent ? waitingNote(list[0].date, won) : '') + notes +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
   function wonStep(num, sent, won, notes) {
     var cls = 'mm-step mm-step-' + (won ? 'done' : (sent ? 'active' : 'waiting'));
 
@@ -496,7 +590,11 @@ window.MM = window.MM || {};
     var needDesign = dateVal(o, 'needDesign');
     var design = dateVal(o, 'design');
     var pricing = dateVal(o, 'pricing');
-    var sent = dateVal(o, 'proposalSent');
+    // The most recent proposal, whether it came from the log or from the
+    // single date field jobs used before the log existed. Everything after
+    // this step keys off it, so it has to see both.
+    var sentList = proposals(o);
+    var sent = sentList.length ? sentList[0].date : '';
     var cabinets = dateVal(o, 'cabinets');
     var completed = dateVal(o, 'completed');
     // Cabinets are ordered only once the customer has actually signed, so
@@ -564,14 +662,7 @@ window.MM = window.MM || {};
       // three meetings are not three steps forward. meetings.js owns
       // everything inside -- this only gives it somewhere to draw.
       '<div class="mm-step mm-step-meetings" id="mm-job-meetings"></div>' +
-      stepHtml({
-        num: 6, label: 'Proposal sent',
-        state: sent ? 'done' : (pricing ? 'active' : 'waiting'),
-        valueText: fmtLong(sent), value: toInputDate(sent) || todayInput(),
-        inputId: 'mm-step-sent', btnId: 'mm-step-sent-save',
-        waitingText: 'Finish the pricing first',
-        note: (sent ? waitingNote(sent, won) : '') + notesHtml(o, 'sent'),
-      }) +
+      sentStep(o, 6, pricing, won, notesHtml(o, 'sent')) +
       wonStep(7, sent, won, notesHtml(o, 'won')) +
       stepHtml({
         num: 8, label: 'Material ordering',
@@ -724,9 +815,7 @@ window.MM = window.MM || {};
       return saveDateThenStage(o, 'pricing', val, api.STAGE.pricing);
     });
 
-    if (st.pricing && !st.sent) wire('mm-step-sent-save', 'mm-step-sent', function (val) {
-      return saveDateThenStage(o, 'proposalSent', val, api.STAGE_PROPOSAL_SENT);
-    });
+    wireProposals(o);
 
     // Answering the design question. Writes the answer and nothing else: no
     // stage moves, because the job is already where the measurement put it and
@@ -991,6 +1080,148 @@ window.MM = window.MM || {};
           btn.disabled = false; btn.textContent = 'Save';
           showError('Could not save: ' + e.message);
         });
+    });
+  }
+
+  // ---- Recording, changing and removing proposals --------------------------
+  //
+  // All three write the whole log back, then write it into the job already
+  // held rather than re-reading: GoHighLevel's read runs a moment behind its
+  // write, and a re-fetch here returned the list as it was before the save.
+
+  function writeLog(o, dates, stage) {
+    var stored = dates.slice().sort().reverse().join(String.fromCharCode(10));
+    var id = api.DATE_FIELD_IDS.proposalLog;
+
+    return api.setOpportunityField(o.id, id, stored)
+      .then(function () {
+        if (!stage || o.pipelineStageId === stage) return null;
+        return api.setOpportunityStage(o.id, stage);
+      })
+      .then(function () {
+        if (stage) o.pipelineStageId = stage;
+
+        var fields = o.customFields || [];
+        var found = false;
+        for (var i = 0; i < fields.length; i++) {
+          if (fields[i].id === id) {
+            fields[i].fieldValue = stored;
+            fields[i].fieldValueString = stored;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          fields.push({ id: id, fieldValue: stored, fieldValueString: stored });
+        }
+        o.customFields = fields;
+      });
+  }
+
+  // The dates the log itself owns. The date carried over from the old single
+  // field is not among them: it stays in that field and is never rewritten.
+  function loggedDates(o) {
+    return parseDates(api.oppField(o, api.DATE_FIELD_IDS.proposalLog));
+  }
+
+  function redraw(o) {
+    render(o);
+    if (onJobChanged) onJobChanged(o);
+  }
+
+  function wireProposals(o) {
+    var btn = document.getElementById('mm-step-sent-save');
+    var input = document.getElementById('mm-step-sent');
+
+    if (btn && input) {
+      btn.addEventListener('click', function () {
+        var val = input.value;
+        if (!val) { showError('Pick a date first.'); return; }
+
+        var dates = loggedDates(o);
+        if (dates.indexOf(val) > -1) {
+          showError('That proposal is already recorded.');
+          return;
+        }
+        dates.push(val);
+
+        var was = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Saving...';
+        showError('');
+
+        writeLog(o, dates, api.STAGE_PROPOSAL_SENT)
+          .then(function () {
+            window.MM.activity.log('date', STEP_LABELS.proposalSent, {
+              jobId: o.id,
+              jobName: (o.contact && o.contact.name) || o.name,
+              detail: val,
+            });
+            redraw(o);
+          })
+          .catch(function (e) {
+            btn.disabled = false; btn.textContent = was;
+            showError('Could not save: ' + e.message);
+          });
+      });
+    }
+
+    // Changing a recorded date: the old one is replaced by the new one, so a
+    // wrong day is corrected rather than added alongside.
+    document.querySelectorAll('[data-pedit]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var old = b.getAttribute('data-pedit');
+        var next = window.prompt('Change this proposal date:', old);
+        if (next === null) return;
+        next = String(next).trim();
+        if (!next || next === old) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(next)) {
+          showError('Use the form 2026-09-25.');
+          return;
+        }
+
+        var dates = loggedDates(o).filter(function (d) { return d !== old; });
+        if (dates.indexOf(next) < 0) dates.push(next);
+
+        b.disabled = true;
+        showError('');
+        writeLog(o, dates, null)
+          .then(function () {
+            window.MM.activity.log('date', 'Changed a proposal date', {
+              jobId: o.id,
+              jobName: (o.contact && o.contact.name) || o.name,
+              detail: old + ' to ' + next,
+            });
+            redraw(o);
+          })
+          .catch(function (e) {
+            b.disabled = false;
+            showError('Could not save: ' + e.message);
+          });
+      });
+    });
+
+    document.querySelectorAll('[data-pdel]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var d = b.getAttribute('data-pdel');
+        if (!window.confirm('Remove the proposal recorded on ' +
+                            fmtLong(d) + '?')) return;
+
+        b.disabled = true;
+        showError('');
+        writeLog(o, loggedDates(o).filter(function (x) { return x !== d; }), null)
+          .then(function () {
+            window.MM.activity.log('date', 'Removed a proposal date', {
+              jobId: o.id,
+              jobName: (o.contact && o.contact.name) || o.name,
+              detail: d,
+            });
+            redraw(o);
+          })
+          .catch(function (e) {
+            b.disabled = false;
+            showError('Could not save: ' + e.message);
+          });
+      });
     });
   }
 

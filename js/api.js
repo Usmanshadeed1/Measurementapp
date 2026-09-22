@@ -77,6 +77,12 @@ window.MM = window.MM || {};
     emailLog: 'trbgoJmInsECI6FdNTVi',      // every email sent, one per line
     pricing: 'ZwMwQt4rCYOvxzYfTdPu',       // when pricing was finished
     proposalSent: 'wwLRthpRhQLmMcSOLnaH',  // when the proposal went to the customer
+    // A proposal is rarely sent once: a price is revised, a second version
+    // goes out. The single date above can only hold the last one, so the
+    // history lives here, one date per line, and that field is left alone --
+    // jobs that recorded a proposal before this existed keep their date, and
+    // it is read back as the first entry.
+    proposalLog: 'PlKKjaMiOEqRVWYT6mx9',   // every proposal sent, one per line
     cabinets: 'IPuLmeNR8jrtQ41gO3RF',      // after the sale: cabinets ordered
     completed: 'rrzfNKhLCYfDVq5v0ZLq',     // the job is finished and archived
   };

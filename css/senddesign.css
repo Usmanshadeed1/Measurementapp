@@ -75,3 +75,25 @@
   /* Three across is too tight on a phone. */
   .mm-sd-kinds{flex-direction:column}
 }
+
+/* ---- Proposals recorded on a job ----
+   The same log rows as the email list above, plus per-row controls: a
+   proposal date is typed by hand, so a wrong one has to be correctable. The
+   buttons sit at the end of the row and stay quiet until the row is hovered,
+   so a list of dates reads as a list of dates. */
+.mm-step-propacts{margin-left:auto;display:flex;gap:2px;flex:0 0 auto}
+.mm-step-propedit,.mm-step-propdel{
+  width:32px;height:32px;padding:0;border:none;border-radius:6px;
+  background:none;color:var(--text2);font-family:inherit;font-size:1em;
+  line-height:1;cursor:pointer;opacity:.55}
+.mm-step-logrow:hover .mm-step-propedit,
+.mm-step-logrow:hover .mm-step-propdel{opacity:1}
+.mm-step-propedit:hover{background:var(--card);color:var(--accent)}
+.mm-step-propdel:hover{background:var(--danger-bg);color:var(--danger-text)}
+.mm-step-propedit:focus-visible,.mm-step-propdel:focus-visible{
+  opacity:1;outline:3px solid var(--accent);outline-offset:2px}
+
+/* On a touch screen there is no hover, so the controls are always visible. */
+@media (hover: none){
+  .mm-step-propedit,.mm-step-propdel{opacity:1}
+}
