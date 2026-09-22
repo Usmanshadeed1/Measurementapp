@@ -109,6 +109,11 @@ window.MM = window.MM || {};
         who: (p[3] || '').trim(),
         status: (p[4] || 'todo').trim(),
         notes: (p[5] || '').trim(),
+        // Waiting on another task. Absent from every line written before this
+        // existed, which is why they are read positionally and defaulted:
+        // an old task simply comes back waiting on nothing.
+        after: (p[6] || '').trim(),
+        afterDays: (p[7] || '').trim(),
         items: [],
       });
     });
@@ -117,7 +122,11 @@ window.MM = window.MM || {};
 
   function serialise(rows) {
     return rows.map(function (t) {
-      var line = [t.title, t.start, t.end, t.who, t.status, t.notes].join(SEP);
+      // The two waiting fields are written only when one is set, so a job
+      // that never uses them keeps the shorter lines it has always had.
+      var f = [t.title, t.start, t.end, t.who, t.status, t.notes];
+      if (t.after || t.afterDays) f.push(t.after || '', t.afterDays || '');
+      var line = f.join(SEP);
       (t.items || []).forEach(function (it) {
         line += '\n  -' + it.title + SEP + (it.done ? 'done' : 'todo');
       });
@@ -277,6 +286,12 @@ window.MM = window.MM || {};
     return fmtDate(t.end || t.start);
   }
 
+  function waitLabel(t) {
+    var n = parseInt(t.afterDays, 10);
+    if (!isFinite(n) || n === 0) return 'when "' + t.after + '" is done';
+    return n + (n === 1 ? ' day' : ' days') + ' after "' + t.after + '"';
+  }
+
   function taskRow(t, i) {
     var done = t.status === 'done';
     var late = isLate(t);
@@ -293,6 +308,11 @@ window.MM = window.MM || {};
         '<div class="mm-gt-meta">' +
           (when ? '<span class="mm-gt-when' + (late ? ' is-late' : '') + '">' +
             U.esc(when) + (late ? ' · overdue' : '') + '</span>' : '') +
+          // Why this task has no date yet. Shown until it gets one, so a
+          // blank date reads as "waiting" rather than "forgotten".
+          (!when && t.after
+            ? '<span class="mm-gt-after">' + U.esc(waitLabel(t)) + '</span>'
+            : '') +
           (t.who ? '<span class="mm-gt-who">' + U.esc(t.who) + '</span>' : '') +
           '<span class="mm-gt-status mm-gt-status-' + U.esc(t.status || 'todo') + '">' +
             U.esc(statusLabel(t.status)) + '</span>' +
@@ -360,6 +380,38 @@ window.MM = window.MM || {};
       .filter(Boolean);
   }
 
+  // "Start after another task": a reference and a number of days. Offered
+  // only when there is another task on the job to wait on, so a job's first
+  // task does not show a control with an empty dropdown.
+  //
+  // A task cannot wait on itself, and a task that something else already
+  // waits on is still offered -- two tasks may follow the same one.
+  function waitRow(t, i) {
+    var others = tasks.filter(function (x, j) { return j !== i && x.title; });
+    if (!others.length) return '';
+
+    var cur = (t.after || '').trim().toLowerCase();
+
+    return '<div class="mm-field-group">' +
+      '<span class="mm-label">Start after <span class="mm-opt">(optional)</span></span>' +
+      '<div class="mm-gt-row">' +
+        '<select class="mm-select" id="mm-gt-after">' +
+          '<option value="">— no, use the dates above —</option>' +
+          others.map(function (x) {
+            return '<option value="' + U.esc(x.title) + '"' +
+              (x.title.trim().toLowerCase() === cur ? ' selected' : '') + '>' +
+              U.esc(x.title) + '</option>';
+          }).join('') +
+        '</select>' +
+        '<input class="mm-input" type="number" min="0" step="1" ' +
+          'id="mm-gt-afterdays" placeholder="days" ' +
+          'value="' + U.esc(t.afterDays || '') + '">' +
+      '</div>' +
+      '<p class="mm-gt-hint">This task gets its start date when that task is ' +
+        'ticked done — counted from the day it was finished.</p>' +
+    '</div>';
+  }
+
   function form(i) {
     // A new task starts assigned to whoever is adding it. Most tasks someone
     // writes down are their own, and it can be unticked or shared with others
@@ -374,7 +426,7 @@ window.MM = window.MM || {};
     var t = i === null
       ? { title: '', start: '', end: '',
           who: known ? myName : '',
-          status: 'todo', notes: '', items: [] }
+          status: 'todo', notes: '', after: '', afterDays: '', items: [] }
       : tasks[i];
 
     return '<div class="mm-gt-form">' +
@@ -402,6 +454,8 @@ window.MM = window.MM || {};
           '<input class="mm-input" type="date" id="mm-gt-end" value="' + U.esc(t.end) + '">' +
         '</div>' +
       '</div>' +
+
+      waitRow(t, i) +
 
       // The tick list needs the full width; a half-row would put the names in
       // a column two words wide.
@@ -447,7 +501,22 @@ window.MM = window.MM || {};
     var itemText = document.getElementById('mm-gt-items').value || '';
     var oldItems = (existing && existing.items) || [];
 
+    // The waiting row is not rendered when a job has no other task, so these
+    // two are read only if they are actually on the page. An existing rule is
+    // kept in that case rather than wiped by an absent control.
+    var afterEl = document.getElementById('mm-gt-after');
+    var daysEl = document.getElementById('mm-gt-afterdays');
+    var after = afterEl ? afterEl.value : ((existing && existing.after) || '');
+    var days = daysEl ? (daysEl.value || '').trim()
+                      : ((existing && existing.afterDays) || '');
+    // Days without a reference means nothing, and a reference without days
+    // is read as "the day it is finished".
+    if (!after) days = '';
+    else if (!days) days = '0';
+
     return {
+      after: after,
+      afterDays: days,
       title: (document.getElementById('mm-gt-title').value || '').trim(),
       start: document.getElementById('mm-gt-start').value || '',
       end: document.getElementById('mm-gt-end').value || '',
@@ -659,6 +728,7 @@ window.MM = window.MM || {};
         var nowDone = t.status !== 'done';
         t.status = nowDone ? 'done' : 'todo';
         stampFinish(t, t.status);
+        applyWaiting(tasks, t);
         save(nowDone ? 'task_done' : 'task_undone',
              (nowDone ? 'Finished "' : 'Reopened "') + t.title + '"');
       });
@@ -739,12 +809,59 @@ window.MM = window.MM || {};
     if (!t.start) t.start = t.end;
   }
 
+  // ---- Tasks that wait on another task -------------------------------------
+  //
+  // A task can be set to start a number of days after another one is
+  // finished. The reference is stored as the other task's TITLE rather than
+  // its position: tasks get deleted and reordered, and a position would
+  // quietly come to mean a different task. A renamed reference breaks the
+  // link, which shows as a task with no date -- visible, rather than wrong.
+  //
+  // One level only: a task waiting on a task that is itself waiting is not
+  // followed. Chains were never asked for and would need a second pass here.
+
+  function addDays(ymd, n) {
+    var p = String(ymd || '').split('-');
+    if (p.length !== 3) return '';
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    if (isNaN(d.getTime())) return '';
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  // Called after a task has been marked done and stamped. Any task waiting on
+  // it gets its start date, counted from the day it was actually finished.
+  //
+  // Only ever fills a date in, never clears one: unticking a task leaves the
+  // dates it produced alone, because by then they may have been adjusted by
+  // hand and silently losing that would be worse than a stale date.
+  function applyWaiting(rows, finished) {
+    if (!finished || finished.status !== 'done') return;
+    var from = finished.end || finished.start;
+    if (!from) return;
+
+    var title = (finished.title || '').trim().toLowerCase();
+    if (!title) return;
+
+    rows.forEach(function (t) {
+      if (t === finished) return;
+      if ((t.after || '').trim().toLowerCase() !== title) return;
+      var n = parseInt(t.afterDays, 10);
+      if (!isFinite(n)) return;
+      var d = addDays(from, n);
+      if (d) t.start = d;
+    });
+  }
+
   function setStatusOnJob(jobId, index, status) {
     return api.getOpportunity(jobId).then(function (opp) {
       var rows = parse(api.oppField(opp, FIELD_ID));
       if (!rows[index]) throw new Error('That task is no longer there.');
       rows[index].status = status;
       stampFinish(rows[index], status);
+      applyWaiting(rows, rows[index]);
       return api.setOpportunityField(jobId, FIELD_ID, serialise(rows));
     });
   }

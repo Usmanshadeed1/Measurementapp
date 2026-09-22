@@ -142,3 +142,23 @@
 .mm-gt-titlerow{display:flex;gap:8px;align-items:stretch}
 .mm-gt-titlerow .mm-input{flex:1 1 auto;min-width:0;margin-bottom:0}
 .mm-gt-quicksave{flex:0 0 auto;min-height:48px;padding:0 18px;white-space:nowrap}
+
+/* ---- Waiting on another task ----
+   A task with no date because it is waiting: the reason sits where the date
+   would be, dashed rather than solid so it does not read as a date already
+   set. */
+.mm-gt-after{padding:2px 8px;border-radius:999px;background:var(--card);
+  border:1px dashed var(--border);font-style:italic}
+
+/* Under the "Start after" row in the form. */
+.mm-gt-hint{margin:6px 0 0;font-size:0.8em;color:var(--text2);line-height:1.45}
+
+/* The "Start after" pair is a select and an input directly in the row, not
+   the two wrapped field groups the row was built for, so they need their own
+   sizing: the task name takes the space, the day count needs very little.
+   On a phone the row stacks and both go full width, as the dates do. */
+.mm-gt-row > #mm-gt-after{flex:1 1 auto;min-width:0}
+.mm-gt-row > #mm-gt-afterdays{flex:0 0 96px;min-width:0}
+@media (max-width: 620px){
+  .mm-gt-row > #mm-gt-afterdays{flex:1 1 auto}
+}
