@@ -48,11 +48,15 @@ window.MM = window.MM || {};
 
   // Under the boxes: the same numbers in feet and inches, so a mistyped digit
   // shows up as an implausible shape rather than hiding in the total.
-  function subLine(r) {
+  function subText(r) {
     var fi = RS()._feetInches;
-    var parts = [fi(r.l), fi(r.h)].filter(Boolean);
-    if (!parts.length) return '';
-    return '<div class="mm-rs-sub">' + U.esc(parts.join(' × ')) + '</div>';
+    return [fi(r.l), fi(r.h)].filter(Boolean).join(' × ');
+  }
+
+  // Always rendered, even when empty, so typing has somewhere to write the
+  // feet and inches without re-rendering the row out from under the cursor.
+  function subLine(r) {
+    return '<div class="mm-rs-sub mm-wp-sub">' + U.esc(subText(r)) + '</div>';
   }
 
   function rowHtml(r, i) {
@@ -97,14 +101,8 @@ window.MM = window.MM || {};
     var rows = RS()._parseRows(U.pv(wr, FIELD), KEYS);
 
     function render() {
-      var html =
-        '<div class="mm-wp-head">' +
-          '<span class="mm-wp-title">Pieces</span>' +
-          '<span class="mm-rs-badge mm-wp-badge">' +
-            U.esc(totalText(rows)) + '</span>' +
-        '</div>';
-
-      html += rows.length
+      // No heading: the accordion this sits in is already titled "Pieces".
+      var html = rows.length
         ? '<div class="mm-rs-list">' + rows.map(rowHtml).join('') + '</div>'
         : '<p class="mm-rs-empty">No pieces yet. Add one for each piece of ' +
           'this wall that gets measured separately.</p>';
@@ -141,11 +139,12 @@ window.MM = window.MM || {};
       // on the wall rather than only after a save.
       el.querySelectorAll('.mm-wp-in').forEach(function (inp) {
         inp.addEventListener('input', function () {
-          var r = rows[+inp.getAttribute('data-i')];
+          var i = +inp.getAttribute('data-i'), r = rows[i];
           if (r) r[inp.getAttribute('data-k')] = inp.value;
-          var t = totalText(rows);
-          var b = el.querySelector('.mm-wp-badge'); if (b) b.textContent = t;
-          var v = el.querySelector('.mm-rs-totalval'); if (v) v.textContent = t;
+          var subs = el.querySelectorAll('.mm-wp-sub');
+          if (r && subs[i]) subs[i].textContent = subText(r);
+          var v = el.querySelector('.mm-rs-totalval');
+          if (v) v.textContent = totalText(rows);
         });
       });
 
