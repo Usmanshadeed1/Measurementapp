@@ -158,7 +158,7 @@ window.MM = window.MM || {};
         (answered ? '&#10003;' : '2') + '</div>' +
       '<div class="mm-step-body">' +
         '<div class="mm-step-label">Need design</div>' +
-        body +
+        body + notesHtml(o, 'needdesign') +
       '</div>' +
     '</div>';
   }
@@ -173,7 +173,7 @@ window.MM = window.MM || {};
   // sent, which read as part of sending the proposal rather than as the thing
   // that happens next -- the customer saying yes is its own event in the job,
   // and the chain should say so.
-  function wonStep(num, sent, won) {
+  function wonStep(num, sent, won, notes) {
     var cls = 'mm-step mm-step-' + (won ? 'done' : (sent ? 'active' : 'waiting'));
 
     var body;
@@ -194,7 +194,7 @@ window.MM = window.MM || {};
         (won ? '&#10003;' : num) + '</div>' +
       '<div class="mm-step-body">' +
         '<div class="mm-step-label">Hired Maximus</div>' +
-        body +
+        body + (notes || '') +
       '</div>' +
     '</div>';
   }
@@ -209,7 +209,7 @@ window.MM = window.MM || {};
   // Each row keeps its own Save, because the two are filled in days apart.
   // Clear is offered beside them: a visit gets cancelled, and a date typed by
   // mistake had no way back before this.
-  function measurementStep(appt, apptTime, measured, apptNote) {
+  function measurementStep(appt, apptTime, measured, apptNote, notes) {
     var done = !!measured;
     var cls = 'mm-step mm-step-' + (done ? 'done' : 'active');
 
@@ -254,7 +254,7 @@ window.MM = window.MM || {};
       '<div class="mm-step-mark" aria-hidden="true">' + (done ? '&#10003;' : '1') + '</div>' +
       '<div class="mm-step-body">' +
         '<div class="mm-step-label">Measurement</div>' +
-        visitRow + doneRow +
+        visitRow + doneRow + (notes || '') +
       '</div>' +
     '</div>';
   }
@@ -292,7 +292,7 @@ window.MM = window.MM || {};
         (sent ? '&#10003;' : '4') + '</div>' +
       '<div class="mm-step-body">' +
         '<div class="mm-step-label">Email the customer</div>' +
-        body +
+        body + notesHtml(o, 'email') +
       '</div>' +
     '</div>';
   }
@@ -328,8 +328,14 @@ window.MM = window.MM || {};
   // still shows the day it was completed, because it was, and the note beside
   // it says what happened afterwards.
 
-  // Which step a note belongs to. These are stored, so they must not change
-  // once notes exist against them.
+  // Which step a note belongs to, and which stage that step is. The keys are
+  // stored in the notes field, so they must not change once notes exist
+  // against them.
+  //
+  // Every step carries a stage, because a job can be sent back to any of them:
+  // a customer who wants the kitchen redesigned after seeing a price sends the
+  // job to Design, and one who wants a second measurement sends it further
+  // back still. Which one is the person's decision, not this file's.
   var STEP_KEYS = {
     measurement: 'Measurement',
     needdesign: 'Need design',
@@ -341,6 +347,21 @@ window.MM = window.MM || {};
     materials: 'Material ordering',
     completed: 'Job completed',
   };
+
+  function stageForStep(key) {
+    var map = {
+      measurement: api.STAGE.apptBooked,
+      needdesign: api.STAGE.needDesign,
+      design: api.STAGE.design,
+      email: api.STAGE.emailCustomer,
+      pricing: api.STAGE.pricing,
+      sent: api.STAGE.proposalSent,
+      won: api.STAGE.won,
+      materials: api.STAGE.materials,
+      completed: api.STAGE.completed,
+    };
+    return map[key] || '';
+  }
 
   // Built rather than written as literals: a newline typed straight into
   // the source is one bad paste away from breaking the file.
@@ -406,8 +427,17 @@ window.MM = window.MM || {};
               '<textarea class="mm-input mm-stepnote-box" ' +
                 'id="mm-stepnote-text-' + U.esc(stepKey) + '" rows="2" ' +
                 'placeholder="Why did this change?"></textarea>' +
-              '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
-                'data-notesave="' + U.esc(stepKey) + '">Add note</button>' +
+              '<div class="mm-stepnote-btns">' +
+                '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
+                  'data-notesave="' + U.esc(stepKey) + '">Add note</button>' +
+                // Moving the job back and saying why are one action: a job
+                // that jumped backwards with no reason recorded is the thing
+                // the notes exist to prevent.
+                (o.pipelineStageId !== stageForStep(stepKey)
+                  ? '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+                    'data-stepback="' + U.esc(stepKey) + '">Move job here</button>'
+                  : '<span class="mm-stepnote-hereis">Job is at this step</span>') +
+              '</div>' +
             '</div>' +
           '</div>'
         : '') +
@@ -493,7 +523,8 @@ window.MM = window.MM || {};
     var skipDesign = requires === 'No';
 
     var html =
-      measurementStep(appt, apptWhen.time, measured, apptNote) +
+      measurementStep(appt, apptWhen.time, measured, apptNote,
+                      notesHtml(o, 'measurement')) +
       needDesignStep(o, needDesign, measured, requires) +
       // Skipped outright when the job needs no design. Shown greyed rather
       // than removed, so the chain keeps its shape and it is obvious the step
@@ -504,6 +535,9 @@ window.MM = window.MM || {};
             '<div class="mm-step-body">' +
               '<div class="mm-step-label">Design complete</div>' +
               '<div class="mm-step-waiting">Not needed for this job</div>' +
+              // Notes even on a skipped step: a job sent back here is exactly
+              // the case where somebody needs to say why.
+              notesHtml(o, 'design') +
             '</div>' +
           '</div>'
         : stepHtml({
@@ -538,7 +572,7 @@ window.MM = window.MM || {};
         waitingText: 'Finish the pricing first',
         note: (sent ? waitingNote(sent, won) : '') + notesHtml(o, 'sent'),
       }) +
-      wonStep(7, sent, won) +
+      wonStep(7, sent, won, notesHtml(o, 'won')) +
       stepHtml({
         num: 8, label: 'Material ordering',
         state: cabinets ? 'done' : (won ? 'active' : 'waiting'),
@@ -772,70 +806,99 @@ window.MM = window.MM || {};
       });
     });
 
+    // Writing a note, and optionally moving the job to that step at the same
+    // time. Both buttons end up here: the only difference is whether a stage
+    // goes with the note.
+    function saveNote(key, btn, label, moveStage) {
+      var box = document.getElementById('mm-stepnote-text-' + key);
+      if (!box) return;
+
+      // A pipe or a line break would break the one-note-per-line format, so
+      // both become a space rather than being refused: someone writing a
+      // note should not have to think about how it is stored.
+      var text = String(box.value || '')
+        .replace(/[|\r\n]+/g, ' ')
+        .trim();
+
+      // Moving a job back without saying why is the thing the notes exist to
+      // prevent, so the reason is required for a move and optional otherwise.
+      if (!text) {
+        showError(moveStage
+          ? 'Say why the job is going back to this step.'
+          : 'Write the note first.');
+        box.focus();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      showError('');
+
+      var rows = parseNotes(api.oppField(o, api.STEP_NOTES_FIELD_ID));
+      var stage = moveStage ? stageForStep(key) : '';
+      rows.push({
+        date: todayInput(),
+        step: key,
+        text: moveStage ? 'Moved back here — ' + text : text,
+      });
+      var stored = serialiseNotes(rows);
+
+      api.setOpportunityField(o.id, api.STEP_NOTES_FIELD_ID, stored)
+        .then(function () {
+          if (!stage || o.pipelineStageId === stage) return null;
+          return api.setOpportunityStage(o.id, stage);
+        })
+        .then(function () {
+          if (stage) o.pipelineStageId = stage;
+
+          // Written into the job already held rather than read back:
+          // GoHighLevel's read runs a moment behind its write, and
+          // re-fetching returned the note list as it was before the save.
+          var fields = o.customFields || [];
+          var found = false;
+          for (var i = 0; i < fields.length; i++) {
+            if (fields[i].id === api.STEP_NOTES_FIELD_ID) {
+              fields[i].fieldValue = stored;
+              fields[i].fieldValueString = stored;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            fields.push({
+              id: api.STEP_NOTES_FIELD_ID,
+              fieldValue: stored,
+              fieldValueString: stored,
+            });
+          }
+          o.customFields = fields;
+
+          window.MM.activity.log(moveStage ? 'stage' : 'note',
+            (moveStage ? 'Moved back to ' : 'Note on ') +
+            (STEP_KEYS[key] || key) + ': ' + text, {
+              jobId: o.id,
+              jobName: (o.contact && o.contact.name) || o.name,
+            });
+
+          render(o);
+          if (onJobChanged) onJobChanged(o);
+        })
+        .catch(function (e) {
+          btn.disabled = false;
+          btn.textContent = label;
+          showError('Could not save: ' + e.message);
+        });
+    }
+
     document.querySelectorAll('[data-notesave]').forEach(function (b) {
       b.addEventListener('click', function () {
-        var key = b.getAttribute('data-notesave');
-        var box = document.getElementById('mm-stepnote-text-' + key);
-        if (!box) return;
+        saveNote(b.getAttribute('data-notesave'), b, 'Add note', false);
+      });
+    });
 
-        // A pipe or a line break would break the one-note-per-line format, so
-        // both become a space rather than being refused: someone writing a
-        // note should not have to think about how it is stored.
-        var text = String(box.value || '')
-          .replace(/[|\r\n]+/g, ' ')
-          .trim();
-
-        if (!text) {
-          showError('Write the note first.');
-          box.focus();
-          return;
-        }
-
-        b.disabled = true;
-        b.textContent = 'Saving...';
-        showError('');
-
-        var rows = parseNotes(api.oppField(o, api.STEP_NOTES_FIELD_ID));
-        rows.push({ date: todayInput(), step: key, text: text });
-
-        api.setOpportunityField(o.id, api.STEP_NOTES_FIELD_ID, serialiseNotes(rows))
-          .then(function () {
-            // Written into the job already held rather than read back:
-            // GoHighLevel's read runs a moment behind its write, and
-            // re-fetching returned the note list as it was before the save.
-            var fields = o.customFields || [];
-            var found = false;
-            for (var i = 0; i < fields.length; i++) {
-              if (fields[i].id === api.STEP_NOTES_FIELD_ID) {
-                fields[i].fieldValue = serialiseNotes(rows);
-                fields[i].fieldValueString = serialiseNotes(rows);
-                found = true;
-                break;
-              }
-            }
-            if (!found) {
-              fields.push({
-                id: api.STEP_NOTES_FIELD_ID,
-                fieldValue: serialiseNotes(rows),
-                fieldValueString: serialiseNotes(rows),
-              });
-            }
-            o.customFields = fields;
-
-            window.MM.activity.log('note',
-              'Note on ' + (STEP_KEYS[key] || key) + ': ' + text, {
-                jobId: o.id,
-                jobName: (o.contact && o.contact.name) || o.name,
-              });
-
-            render(o);
-            if (onJobChanged) onJobChanged(o);
-          })
-          .catch(function (e) {
-            b.disabled = false;
-            b.textContent = 'Add note';
-            showError('Could not save the note: ' + e.message);
-          });
+    document.querySelectorAll('[data-stepback]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        saveNote(b.getAttribute('data-stepback'), b, 'Move job here', true);
       });
     });
 

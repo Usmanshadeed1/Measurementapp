@@ -603,3 +603,15 @@
   .mm-stepnote-box{flex:1 1 100%}
   .mm-stepnote-add .mm-btn-sm{flex:1 1 100%}
 }
+
+/* The two buttons under a note box: add the note, or move the job here and
+   record why in one action. */
+.mm-stepnote-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  flex:0 0 auto}
+.mm-stepnote-hereis{font-size:0.78em;font-weight:700;color:var(--success);
+  white-space:nowrap}
+
+@media (max-width: 620px){
+  .mm-stepnote-btns{flex:1 1 100%}
+  .mm-stepnote-btns .mm-btn-sm{flex:1 1 auto}
+}
