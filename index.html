@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="css/addressauto.css">
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/deletething.css">
+<link rel="stylesheet" href="css/chat.css">
 </head>
 <body>
 
@@ -845,6 +846,7 @@
     <button class="mm-jobtab active" data-jobtab="overview" role="tab" aria-selected="true">Overview</button>
     <button class="mm-jobtab" data-jobtab="measure" role="tab" aria-selected="false">Measure</button>
     <button class="mm-jobtab" data-jobtab="tasks" role="tab" aria-selected="false">Tasks</button>
+    <button class="mm-jobtab" data-jobtab="chat" role="tab" aria-selected="false">Chat</button>
   </div>
 
   <div class="mm-content">
@@ -877,6 +879,12 @@
     <div class="mm-jobpane" data-pane="tasks">
       <div class="card mm-steps-card" id="mm-job-ghltasks"></div>
       <div class="card mm-steps-card" id="mm-job-crew"></div>
+    </div>
+
+    <!-- The customer's messages, read only. Replying happens in GoHighLevel,
+         where the whole thread across every channel already lives. -->
+    <div class="mm-jobpane" data-pane="chat">
+      <div class="card" id="mm-job-chat"></div>
     </div>
   </div>
 </div>
@@ -960,6 +968,7 @@
 <script src="js/import.js"></script>
 <script src="js/addressauto.js"></script>
 <script src="js/drive.js"></script>
+<script src="js/chat.js"></script>
 <script src="js/deletething.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/app.js"></script>

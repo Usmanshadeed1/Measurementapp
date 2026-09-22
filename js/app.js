@@ -373,6 +373,10 @@
 
     STEPS.render(o);
     MEET.showForJob(o);
+    // Read only, and everyone can see it: the conversation is the customer's
+    // history with the business, and a worker on site benefits from knowing
+    // what was last said as much as anyone.
+    window.MM.chat.showForJob(o);
     DRIVE.showForJob(o);
     NOTES.showForJob(o);
     DOCS.showForJob(o);
