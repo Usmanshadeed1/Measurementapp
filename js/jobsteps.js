@@ -463,6 +463,14 @@ window.MM = window.MM || {};
   var SPLIT_RE = new RegExp(String.fromCharCode(13) + '?' +
                             String.fromCharCode(10));
 
+  // The prefix a "Move job here" note carries. Written once here and reused
+  // for both writing and reading, so the two can never drift apart -- and
+  // built from a character code for the same reason as the newline above:
+  // the em dash is easy to mangle in a paste.
+  var MOVED_MARK = 'Moved back here ' + String.fromCharCode(8212) + ' ';
+  var MOVED_RE = new RegExp('^Moved back here\\s*' +
+                            String.fromCharCode(8212) + '\\s*');
+
   function parseNotes(text) {
     var out = [];
     String(text || '').split(SPLIT_RE).forEach(function (raw) {
@@ -512,9 +520,33 @@ window.MM = window.MM || {};
       (open
         ? '<div class="mm-stepnotes-body">' +
             rows.map(function (n) {
+              // A note records why something happened, and a typo in that
+              // reason should be fixable. The date is left alone: it says
+              // when the thing happened, not when the wording was last
+              // touched. Editing is offered, deleting is not -- a note that
+              // can vanish is not much of a record.
+              var moved = MOVED_RE.test(n.text);
+              // The note's own text is carried in an attribute so the edit
+              // knows which note it is. U.esc leaves quotes alone, which is
+              // fine between tags and not fine inside one, so they are
+              // escaped here as well.
+              var attr = U.esc(n.text).replace(/"/g, '&quot;');
               return '<div class="mm-stepnote">' +
-                '<div class="mm-stepnote-when">' + U.esc(fmtLong(n.date)) + '</div>' +
-                '<div class="mm-stepnote-text">' + U.esc(n.text) + '</div>' +
+                '<div class="mm-stepnote-when">' + U.esc(fmtLong(n.date)) +
+                  '<button type="button" class="mm-stepnote-edit" ' +
+                    'data-noteedit="' + U.esc(stepKey) + '" ' +
+                    'data-notedate="' + U.esc(n.date) + '" ' +
+                    'data-notetext="' + attr + '" ' +
+                    'aria-label="Edit this note">&#9998;</button>' +
+                '</div>' +
+                '<div class="mm-stepnote-text">' +
+                  // The "moved back" part is the record of a stage move, so
+                  // it is shown apart from the reason and is not editable.
+                  (moved
+                    ? '<span class="mm-stepnote-moved">Moved back here</span> '
+                    : '') +
+                  U.esc(n.text.replace(MOVED_RE, '')) +
+                '</div>' +
               '</div>';
             }).join('') +
             '<div class="mm-stepnote-add">' +
@@ -928,7 +960,7 @@ window.MM = window.MM || {};
       rows.push({
         date: todayInput(),
         step: key,
-        text: moveStage ? 'Moved back here — ' + text : text,
+        text: moveStage ? MOVED_MARK + text : text,
       });
       var stored = serialiseNotes(rows);
 
@@ -988,6 +1020,83 @@ window.MM = window.MM || {};
     document.querySelectorAll('[data-stepback]').forEach(function (b) {
       b.addEventListener('click', function () {
         saveNote(b.getAttribute('data-stepback'), b, 'Move job here', true);
+      });
+    });
+
+    // Correcting the wording of a note already written.
+    //
+    // The note is found by its date, step and exact text rather than by its
+    // position in the list: the list shown is filtered to one step and
+    // reversed, so a position here means nothing to the stored field.
+    //
+    // A "Moved back here" note keeps that prefix whatever is typed, so the
+    // record that the job was moved cannot be edited away -- only the reason
+    // given for it changes.
+    document.querySelectorAll('[data-noteedit]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var key = b.getAttribute('data-noteedit');
+        var date = b.getAttribute('data-notedate');
+        var was = b.getAttribute('data-notetext');
+        var moved = MOVED_RE.test(was);
+
+        var shown = was.replace(MOVED_RE, '');
+        var next = window.prompt('Edit this note:', shown);
+        if (next === null) return;
+
+        next = String(next).replace(/[|\r\n]+/g, ' ').trim();
+        if (!next) { showError('A note cannot be empty.'); return; }
+        if (next === shown) return;
+
+        var rows = parseNotes(api.oppField(o, api.STEP_NOTES_FIELD_ID));
+        var hit = null;
+        for (var i = 0; i < rows.length; i++) {
+          if (rows[i].step === key && rows[i].date === date &&
+              rows[i].text === was) { hit = rows[i]; break; }
+        }
+        if (!hit) { showError('That note is no longer there.'); return; }
+
+        hit.text = moved ? MOVED_MARK + next : next;
+        var stored = serialiseNotes(rows);
+
+        b.disabled = true;
+        showError('');
+
+        api.setOpportunityField(o.id, api.STEP_NOTES_FIELD_ID, stored)
+          .then(function () {
+            // Written into the job already held rather than read back, for
+            // the same reason as saving a new note does.
+            var fields = o.customFields || [];
+            var found = false;
+            for (var j = 0; j < fields.length; j++) {
+              if (fields[j].id === api.STEP_NOTES_FIELD_ID) {
+                fields[j].fieldValue = stored;
+                fields[j].fieldValueString = stored;
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              fields.push({
+                id: api.STEP_NOTES_FIELD_ID,
+                fieldValue: stored,
+                fieldValueString: stored,
+              });
+            }
+            o.customFields = fields;
+
+            window.MM.activity.log('note',
+              'Edited note on ' + (STEP_KEYS[key] || key) + ': ' + next, {
+                jobId: o.id,
+                jobName: (o.contact && o.contact.name) || o.name,
+              });
+
+            render(o);
+            if (onJobChanged) onJobChanged(o);
+          })
+          .catch(function (e) {
+            b.disabled = false;
+            showError('Could not save: ' + e.message);
+          });
       });
     });
 
