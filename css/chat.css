@@ -128,3 +128,11 @@
 .mm-msg-activity-text{font-size:0.78em;color:var(--text2);text-align:center}
 .mm-msg-activity-when{font-size:0.7em;color:var(--empty);
   font-variant-numeric:tabular-nums}
+
+/* An email's subject, above its text. Emails arrive from the message list
+   with a subject and no body -- the body is a separate request -- so the
+   subject is what the bubble has to stand on until the words arrive. */
+.mm-msg-subject{font-size:0.88em;font-weight:700;color:var(--text);
+  margin-bottom:4px;overflow-wrap:anywhere}
+.mm-msg-subject + .mm-msg-body{padding-top:4px;
+  border-top:1px solid color-mix(in srgb,var(--text2) 22%,transparent)}

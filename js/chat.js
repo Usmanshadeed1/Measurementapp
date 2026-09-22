@@ -115,9 +115,45 @@ window.MM = window.MM || {};
   // activity record its own again -- so every one is tried rather than
   // trusting `body` and showing "no text" when it happens to be empty.
   function bodyOf(m) {
-    return m.body || m.text || m.message ||
-           m.htmlBody || m.html || m.emailBody ||
-           (m.meta && (m.meta.body || m.meta.text)) || '';
+    // mmBody is the email text fetched separately -- see fillEmailBodies.
+    return m.mmBody || m.body || m.text || m.message || '';
+  }
+
+  // The subject line, which an email carries even when its body does not
+  // arrive with it.
+  function subjectOf(m) {
+    return (m.meta && m.meta.email && m.meta.email.subject) || '';
+  }
+
+  // The id the body has to be fetched with, for emails that have one.
+  function emailIdOf(m) {
+    var ids = m.meta && m.meta.email && m.meta.email.messageIds;
+    return (ids && ids.length) ? ids[0] : '';
+  }
+
+  // Emails come back from the message list with a subject and no body at all.
+  // Each one's text is a separate request, so they are fetched together after
+  // the thread is already on screen: the conversation appears at once, and
+  // the words fill in a moment later rather than everything waiting for the
+  // slowest email.
+  function fillEmailBodies() {
+    var pending = messages.filter(function (m) {
+      return !m.mmBody && !m.body && emailIdOf(m) && !m.mmTried;
+    });
+    if (!pending.length) return;
+
+    // A cap, so a thread with two hundred emails does not fire two hundred
+    // requests the moment it opens. The rest fill in as they are paged to.
+    pending = pending.slice(-30);
+    pending.forEach(function (m) { m.mmTried = true; });
+
+    Promise.all(pending.map(function (m) {
+      return api.emailBody(emailIdOf(m))
+        .then(function (full) {
+          if (full && full.body) m.mmBody = full.body;
+        })
+        .catch(function () { /* the subject still stands on its own */ });
+    })).then(function () { render(); });
   }
 
   function plain(raw) {
@@ -256,16 +292,27 @@ window.MM = window.MM || {};
 
     var out = isOutbound(m);
     var text = plain(bodyOf(m));
+    var subject = subjectOf(m);
     var files = (m.attachments || []).length;
     var kind = showKind ? kindOf(m) : '';
+
+    // An email with no body yet still says what it was about.
+    var waiting = !text && !!emailIdOf(m);
 
     return '<div class="mm-msg' + (out ? ' is-out' : ' is-in') +
       (m.mmNew ? ' is-new' : '') + '">' +
       '<div class="mm-msg-bubble">' +
         (kind ? '<div class="mm-msg-kind">' + U.esc(kind) + '</div>' : '') +
+        (subject
+          ? '<div class="mm-msg-subject">' + U.esc(subject) + '</div>'
+          : '') +
         (text
           ? '<div class="mm-msg-body">' + U.esc(text) + '</div>'
-          : '<div class="mm-msg-body mm-msg-empty">No text in this message</div>') +
+          : waiting
+            ? '<div class="mm-msg-body mm-msg-empty">Loading the message…</div>'
+            : (subject
+                ? ''
+                : '<div class="mm-msg-body mm-msg-empty">No text in this message</div>')) +
         // Named rather than shown: the files live in GoHighLevel, and a
         // broken image would say less than a line of text does.
         (files
@@ -412,6 +459,7 @@ window.MM = window.MM || {};
         sortMessages();
         loading = false;
         render();
+        fillEmailBodies();
       })
       .catch(function (e) {
         loading = false;
@@ -472,6 +520,7 @@ window.MM = window.MM || {};
         });
         sortMessages();
         render();
+        fillEmailBodies();
         startPolling();
       })
       .catch(function (e) {

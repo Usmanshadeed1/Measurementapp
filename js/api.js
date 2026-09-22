@@ -570,6 +570,15 @@ window.MM = window.MM || {};
       });
   }
 
+  // An email's actual text. The message list returns emails with no body at
+  // all -- only a subject and an id under meta.email.messageIds -- so the
+  // words have to be fetched one at a time from here.
+  function emailBody(emailId) {
+    if (!emailId) return Promise.resolve(null);
+    return apiFetch('GET', '/conversations/messages/email/' + emailId)
+      .then(function (d) { return (d && (d.emailMessage || d)) || null; });
+  }
+
   function getTags() {
     return apiFetch('GET', '/locations/' + LOC + '/tags').then(function (d) { return d.tags || []; });
   }
@@ -612,6 +621,7 @@ window.MM = window.MM || {};
     deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact, updateContact: updateContact,
     deleteOpportunity: deleteOpportunity, deleteContact: deleteContact,
     conversationsForContact: conversationsForContact, messagesIn: messagesIn,
+    emailBody: emailBody,
     getTags: getTags, findDuplicateContact: findDuplicateContact, enrollContactInWorkflow: enrollContactInWorkflow, getWorkflows: getWorkflows,
   };
 })();
