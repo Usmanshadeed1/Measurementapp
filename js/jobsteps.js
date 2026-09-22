@@ -531,22 +531,51 @@ window.MM = window.MM || {};
               // fine between tags and not fine inside one, so they are
               // escaped here as well.
               var attr = U.esc(n.text).replace(/"/g, '&quot;');
-              return '<div class="mm-stepnote">' +
+              var shown = n.text.replace(MOVED_RE, '');
+              // Which note is open for editing, if any. Held outside the
+              // markup so a redraw does not close the box mid-sentence.
+              var isEditing = editingNote &&
+                editingNote.step === stepKey &&
+                editingNote.date === n.date &&
+                editingNote.text === n.text;
+
+              return '<div class="mm-stepnote' +
+                  (isEditing ? ' is-editing' : '') + '">' +
                 '<div class="mm-stepnote-when">' + U.esc(fmtLong(n.date)) +
-                  '<button type="button" class="mm-stepnote-edit" ' +
-                    'data-noteedit="' + U.esc(stepKey) + '" ' +
-                    'data-notedate="' + U.esc(n.date) + '" ' +
-                    'data-notetext="' + attr + '" ' +
-                    'aria-label="Edit this note">&#9998;</button>' +
+                  (isEditing ? '' :
+                    '<button type="button" class="mm-stepnote-edit" ' +
+                      'data-noteedit="' + U.esc(stepKey) + '" ' +
+                      'data-notedate="' + U.esc(n.date) + '" ' +
+                      'data-notetext="' + attr + '" ' +
+                      'aria-label="Edit this note">&#9998;</button>') +
                 '</div>' +
-                '<div class="mm-stepnote-text">' +
-                  // The "moved back" part is the record of a stage move, so
-                  // it is shown apart from the reason and is not editable.
-                  (moved
-                    ? '<span class="mm-stepnote-moved">Moved back here</span> '
-                    : '') +
-                  U.esc(n.text.replace(MOVED_RE, '')) +
-                '</div>' +
+
+                (isEditing
+                  // Edited where it sits, rather than in a browser dialog:
+                  // the note keeps its place in the list so it is clear
+                  // which one is being changed.
+                  ? '<div class="mm-stepnote-editbox">' +
+                      (moved
+                        ? '<span class="mm-stepnote-moved">Moved back here</span> '
+                        : '') +
+                      '<textarea class="mm-input mm-stepnote-editin" rows="2" ' +
+                        'aria-label="Edit note">' + U.esc(shown) + '</textarea>' +
+                      '<div class="mm-stepnote-editbtns">' +
+                        '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
+                          'data-notesaveedit="1">Save</button>' +
+                        '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+                          'data-notecancel="1">Cancel</button>' +
+                      '</div>' +
+                    '</div>'
+                  : '<div class="mm-stepnote-text">' +
+                      // The "moved back" part is the record of a stage move,
+                      // so it is shown apart from the reason and is not
+                      // editable.
+                      (moved
+                        ? '<span class="mm-stepnote-moved">Moved back here</span> '
+                        : '') +
+                      U.esc(shown) +
+                    '</div>') +
               '</div>';
             }).join('') +
             '<div class="mm-stepnote-add">' +
@@ -573,6 +602,10 @@ window.MM = window.MM || {};
   // Which step's notes are expanded. Kept outside render so a redraw does not
   // close a box somebody is typing into.
   var openNotes = {};
+
+  // The note currently open for editing: { step, date, text }, or null.
+  // Kept here rather than in the markup so a redraw keeps the box open.
+  var editingNote = null;
 
   function stepHtml(opts) {
     var cls = 'mm-step mm-step-' + opts.state;
@@ -613,6 +646,9 @@ window.MM = window.MM || {};
   }
 
   function render(o) {
+    // A note left open for editing belongs to the job it was opened on:
+    // moving to another job drops it rather than carrying it across.
+    if (currentJob && o && currentJob.id !== o.id) editingNote = null;
     currentJob = o;
     var el = document.getElementById('mm-job-steps');
     if (!el) return;
@@ -1034,18 +1070,42 @@ window.MM = window.MM || {};
     // given for it changes.
     document.querySelectorAll('[data-noteedit]').forEach(function (b) {
       b.addEventListener('click', function () {
-        var key = b.getAttribute('data-noteedit');
-        var date = b.getAttribute('data-notedate');
-        var was = b.getAttribute('data-notetext');
+        editingNote = {
+          step: b.getAttribute('data-noteedit'),
+          date: b.getAttribute('data-notedate'),
+          text: b.getAttribute('data-notetext'),
+        };
+        showError('');
+        render(o);
+        // Into the box with the cursor at the end, ready to type.
+        var box = document.querySelector('.mm-stepnote-editin');
+        if (box) { box.focus(); box.selectionStart = box.value.length; }
+      });
+    });
+
+    document.querySelectorAll('[data-notecancel]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        editingNote = null;
+        showError('');
+        render(o);
+      });
+    });
+
+    document.querySelectorAll('[data-notesaveedit]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!editingNote) return;
+        var key = editingNote.step;
+        var date = editingNote.date;
+        var was = editingNote.text;
         var moved = MOVED_RE.test(was);
-
         var shown = was.replace(MOVED_RE, '');
-        var next = window.prompt('Edit this note:', shown);
-        if (next === null) return;
 
-        next = String(next).replace(/[|\r\n]+/g, ' ').trim();
-        if (!next) { showError('A note cannot be empty.'); return; }
-        if (next === shown) return;
+        var box = document.querySelector('.mm-stepnote-editin');
+        if (!box) return;
+
+        var next = String(box.value || '').replace(/[|\r\n]+/g, ' ').trim();
+        if (!next) { showError('A note cannot be empty.'); box.focus(); return; }
+        if (next === shown) { editingNote = null; render(o); return; }
 
         var rows = parseNotes(api.oppField(o, api.STEP_NOTES_FIELD_ID));
         var hit = null;
@@ -1059,10 +1119,12 @@ window.MM = window.MM || {};
         var stored = serialiseNotes(rows);
 
         b.disabled = true;
+        b.textContent = 'Saving...';
         showError('');
 
         api.setOpportunityField(o.id, api.STEP_NOTES_FIELD_ID, stored)
           .then(function () {
+            editingNote = null;
             // Written into the job already held rather than read back, for
             // the same reason as saving a new note does.
             var fields = o.customFields || [];
@@ -1095,6 +1157,7 @@ window.MM = window.MM || {};
           })
           .catch(function (e) {
             b.disabled = false;
+            b.textContent = 'Save';
             showError('Could not save: ' + e.message);
           });
       });
