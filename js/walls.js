@@ -58,6 +58,18 @@ window.MM = window.MM || {};
     var mainBody = document.createElement('div'); mainBody.className = 'mm-acc-body';
     mainBody.appendChild(infoAcc);
 
+    // Pieces sit directly under Wall Info: they are the same measurement in
+    // more detail, and belong beside the single length rather than after the
+    // openings and appliances. Its own accordion, collapsed, so a wall that
+    // needs no pieces costs nothing on screen.
+    var pc = makeSub('Pieces', 'f-pc-list');
+    pc.btn.style.display = 'none';        // the panel has its own Add button
+    pc.acc.querySelector('.mm-acc-badge').style.display = 'none';
+    var pcBody = pc.acc.querySelector('.mm-acc-body');
+    pcBody.innerHTML = '';
+    pcBody.appendChild(window.MM.wallpieces.build(wr));
+    mainBody.appendChild(pc.acc);
+
     var op = makeSub('Wall Openings', 'f-op-list'); op.btn.textContent = '+ Add'; op.list.innerHTML = isNew ? ph : ''; mainBody.appendChild(op.acc);
     var oL = op.list;
     var ap = makeSub('Appliances', 'f-ap-list'); ap.btn.textContent = '+ Add'; ap.list.innerHTML = isNew ? ph : ''; mainBody.appendChild(ap.acc);

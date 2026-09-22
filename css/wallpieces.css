@@ -1,0 +1,15 @@
+/* ==========================================================================
+   Pieces, inside a wall.
+
+   The rows, boxes, totals and buttons are the room's (css/roomsize.css) so
+   the two read as the same control in two places. Only the heading is new:
+   this panel sits inside an accordion that already has a header, so it needs
+   a quieter one of its own than the room's.
+   ========================================================================== */
+
+.mm-wp{margin-top:4px}
+
+.mm-wp-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  margin-bottom:10px}
+.mm-wp-title{font-size:0.9em;font-weight:700;color:var(--text)}
+.mm-wp-badge:empty{display:none}
