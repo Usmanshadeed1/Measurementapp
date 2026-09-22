@@ -318,6 +318,106 @@ window.MM = window.MM || {};
       : 'Design';
   }
 
+  // ---- Notes on a step -----------------------------------------------------
+  //
+  // A job does not always go forward. Pricing goes out, the customer asks for
+  // a redesign, and the panel had no way to say so -- the dates alone made it
+  // look as though design had simply been done once and finished.
+  //
+  // A note records why. Dates are left exactly as they are: Design Complete
+  // still shows the day it was completed, because it was, and the note beside
+  // it says what happened afterwards.
+
+  // Which step a note belongs to. These are stored, so they must not change
+  // once notes exist against them.
+  var STEP_KEYS = {
+    measurement: 'Measurement',
+    needdesign: 'Need design',
+    design: 'Design complete',
+    email: 'Email the customer',
+    pricing: 'Pricing complete',
+    sent: 'Proposal sent',
+    won: 'Hired Maximus',
+    materials: 'Material ordering',
+    completed: 'Job completed',
+  };
+
+  // Built rather than written as literals: a newline typed straight into
+  // the source is one bad paste away from breaking the file.
+  var NEWLINE = String.fromCharCode(10);
+  var SPLIT_RE = new RegExp(String.fromCharCode(13) + '?' +
+                            String.fromCharCode(10));
+
+  function parseNotes(text) {
+    var out = [];
+    String(text || '').split(SPLIT_RE).forEach(function (raw) {
+      if (!raw.trim()) return;
+      var p = raw.split('|');
+      out.push({
+        date: (p[0] || '').trim(),
+        step: (p[1] || '').trim(),
+        // Anything after the second pipe is the note, so a note containing a
+        // pipe survives instead of being cut in half.
+        text: p.slice(2).join('|').trim(),
+      });
+    });
+    return out;
+  }
+
+  function serialiseNotes(rows) {
+    return rows.map(function (n) {
+      return [n.date, n.step, n.text].join('|');
+    }).join(NEWLINE);
+  }
+
+  function notesFor(o, stepKey) {
+    return parseNotes(api.oppField(o, api.STEP_NOTES_FIELD_ID))
+      .filter(function (n) { return n.step === stepKey; })
+      // Newest first: the reason a job is where it is matters more than how
+      // it got there the first time.
+      .reverse();
+  }
+
+  // The notes already written on a step, plus a way to add one. Collapsed
+  // behind a count until asked for: a panel of nine steps each showing three
+  // notes would bury the dates the panel exists for.
+  function notesHtml(o, stepKey) {
+    var rows = notesFor(o, stepKey);
+    var open = openNotes[stepKey];
+
+    return '<div class="mm-stepnotes">' +
+      '<button type="button" class="mm-stepnotes-toggle" ' +
+        'data-notes="' + U.esc(stepKey) + '" aria-expanded="' +
+        (open ? 'true' : 'false') + '">' +
+        (rows.length
+          ? rows.length + (rows.length === 1 ? ' note' : ' notes')
+          : 'Add a note') +
+        '<span class="mm-stepnotes-caret" aria-hidden="true">&#9662;</span>' +
+      '</button>' +
+      (open
+        ? '<div class="mm-stepnotes-body">' +
+            rows.map(function (n) {
+              return '<div class="mm-stepnote">' +
+                '<div class="mm-stepnote-when">' + U.esc(fmtLong(n.date)) + '</div>' +
+                '<div class="mm-stepnote-text">' + U.esc(n.text) + '</div>' +
+              '</div>';
+            }).join('') +
+            '<div class="mm-stepnote-add">' +
+              '<textarea class="mm-input mm-stepnote-box" ' +
+                'id="mm-stepnote-text-' + U.esc(stepKey) + '" rows="2" ' +
+                'placeholder="Why did this change?"></textarea>' +
+              '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
+                'data-notesave="' + U.esc(stepKey) + '">Add note</button>' +
+            '</div>' +
+          '</div>'
+        : '') +
+    '</div>';
+  }
+
+  // Which step's notes are expanded. Kept outside render so a redraw does not
+  // close a box somebody is typing into.
+  var openNotes = {};
+
   function stepHtml(opts) {
     var cls = 'mm-step mm-step-' + opts.state;
     var mark = opts.state === 'done' ? '&#10003;' : opts.num;
@@ -412,6 +512,7 @@ window.MM = window.MM || {};
             valueText: fmtLong(design), value: toInputDate(design) || todayInput(),
             inputId: 'mm-step-design', btnId: 'mm-step-design-save',
             waitingText: 'Measure the property first',
+            note: notesHtml(o, 'design'),
           })) +
       // With no design to wait for, emailing becomes the next thing to do.
       emailStep(o, skipDesign ? !!measured : design) +
@@ -421,7 +522,8 @@ window.MM = window.MM || {};
         valueText: fmtLong(pricing), value: toInputDate(pricing) || todayInput(),
         inputId: 'mm-step-pricing', btnId: 'mm-step-pricing-save',
         waitingText: 'Finish the design first',
-        note: pricing ? '' : (design ? 'Saving this moves the job to Pricing Complete.' : ''),
+        note: (pricing ? '' : (design ? 'Saving this moves the job to Pricing Complete.' : '')) +
+              notesHtml(o, 'pricing'),
       }) +
       // Design meetings sit here, after pricing. Not a numbered step: a job
       // does not pass through them once the way it passes through a date, and
@@ -434,7 +536,7 @@ window.MM = window.MM || {};
         valueText: fmtLong(sent), value: toInputDate(sent) || todayInput(),
         inputId: 'mm-step-sent', btnId: 'mm-step-sent-save',
         waitingText: 'Finish the pricing first',
-        note: sent ? waitingNote(sent, won) : '',
+        note: (sent ? waitingNote(sent, won) : '') + notesHtml(o, 'sent'),
       }) +
       wonStep(7, sent, won) +
       stepHtml({
@@ -443,7 +545,8 @@ window.MM = window.MM || {};
         valueText: fmtLong(cabinets), value: toInputDate(cabinets) || todayInput(),
         inputId: 'mm-step-cab', btnId: 'mm-step-cab-save',
         waitingText: 'Mark Hired Maximus first',
-        note: cabinets ? '' : (won ? 'Saving this moves the job to Material Ordering.' : ''),
+        note: (cabinets ? '' : (won ? 'Saving this moves the job to Material Ordering.' : '')) +
+              notesHtml(o, 'materials'),
       }) +
       stepHtml({
         num: 9, label: 'Job completed',
@@ -451,7 +554,8 @@ window.MM = window.MM || {};
         valueText: fmtLong(completed), value: toInputDate(completed) || todayInput(),
         inputId: 'mm-step-done', btnId: 'mm-step-done-save',
         waitingText: 'Order the cabinets first',
-        note: completed ? '' : (cabinets ? 'Saving this moves the job to Job Completed.' : ''),
+        note: (completed ? '' : (cabinets ? 'Saving this moves the job to Job Completed.' : '')) +
+              notesHtml(o, 'completed'),
       });
 
     el.innerHTML =
@@ -652,6 +756,88 @@ window.MM = window.MM || {};
     }
     answerDesign(document.getElementById('mm-rd-yes'), 'Yes');
     answerDesign(document.getElementById('mm-rd-no'), 'No');
+
+    // ---- Step notes --------------------------------------------------------
+
+    // Opening one is a redraw, so the box has to be focused afterwards rather
+    // than before: the element someone would be typing into does not exist
+    // until render has run.
+    document.querySelectorAll('[data-notes]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var key = b.getAttribute('data-notes');
+        openNotes[key] = !openNotes[key];
+        render(o);
+        var box = document.getElementById('mm-stepnote-text-' + key);
+        if (box) box.focus();
+      });
+    });
+
+    document.querySelectorAll('[data-notesave]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var key = b.getAttribute('data-notesave');
+        var box = document.getElementById('mm-stepnote-text-' + key);
+        if (!box) return;
+
+        // A pipe or a line break would break the one-note-per-line format, so
+        // both become a space rather than being refused: someone writing a
+        // note should not have to think about how it is stored.
+        var text = String(box.value || '')
+          .replace(/[|\r\n]+/g, ' ')
+          .trim();
+
+        if (!text) {
+          showError('Write the note first.');
+          box.focus();
+          return;
+        }
+
+        b.disabled = true;
+        b.textContent = 'Saving...';
+        showError('');
+
+        var rows = parseNotes(api.oppField(o, api.STEP_NOTES_FIELD_ID));
+        rows.push({ date: todayInput(), step: key, text: text });
+
+        api.setOpportunityField(o.id, api.STEP_NOTES_FIELD_ID, serialiseNotes(rows))
+          .then(function () {
+            // Written into the job already held rather than read back:
+            // GoHighLevel's read runs a moment behind its write, and
+            // re-fetching returned the note list as it was before the save.
+            var fields = o.customFields || [];
+            var found = false;
+            for (var i = 0; i < fields.length; i++) {
+              if (fields[i].id === api.STEP_NOTES_FIELD_ID) {
+                fields[i].fieldValue = serialiseNotes(rows);
+                fields[i].fieldValueString = serialiseNotes(rows);
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              fields.push({
+                id: api.STEP_NOTES_FIELD_ID,
+                fieldValue: serialiseNotes(rows),
+                fieldValueString: serialiseNotes(rows),
+              });
+            }
+            o.customFields = fields;
+
+            window.MM.activity.log('note',
+              'Note on ' + (STEP_KEYS[key] || key) + ': ' + text, {
+                jobId: o.id,
+                jobName: (o.contact && o.contact.name) || o.name,
+              });
+
+            render(o);
+            if (onJobChanged) onJobChanged(o);
+          })
+          .catch(function (e) {
+            b.disabled = false;
+            b.textContent = 'Add note';
+            showError('Could not save the note: ' + e.message);
+          });
+      });
+    });
 
     // Moves the stage and nothing else: no date is written, so there is no
     // field to go stale and nothing to undo but the stage itself.

@@ -44,6 +44,14 @@ window.MM = window.MM || {};
   // this: six live jobs already carry that date.
   var REQUIRES_DESIGN_FIELD_ID = 'b0ZMvawdYLts1j4EOoCp';
 
+  // Why a job went back a step. One line per note:
+  //
+  //   2026-09-22|design|Customer wants the island moved
+  //
+  // Same shape as the email log and the design meetings: legible in
+  // GoHighLevel without this app, and readable back without a parser.
+  var STEP_NOTES_FIELD_ID = 'CtutyFPkk51lKl30aNYL';
+
   var STATUS_FIELD_IDS = {
     design: 'qoDcsKKATQVI4zKpdFC3',
     pricing: 'Ixc1x6jfSn9FbzxgrOyr',
@@ -612,6 +620,7 @@ window.MM = window.MM || {};
     STAGE_MATERIAL_ORDERING: STAGE_MATERIAL_ORDERING, STAGE_WON: STAGE_WON, STAGE_DEAD: STAGE_DEAD,
     STAGE_COMPLETED: STAGE_COMPLETED, STAGE: STAGE,
     REQUIRES_DESIGN_FIELD_ID: REQUIRES_DESIGN_FIELD_ID,
+    STEP_NOTES_FIELD_ID: STEP_NOTES_FIELD_ID,
     requiresDesign: requiresDesign, setRequiresDesign: setRequiresDesign,
     oppField: oppField, fetchAllOpportunities: fetchAllOpportunities, getPipelines: getPipelines, getUsers: getUsers, assignOpportunity: assignOpportunity, setOpportunityStage: setOpportunityStage, createOpportunity: createOpportunity, opportunitiesForContact: opportunitiesForContact,
     setOpportunityField: setOpportunityField, renameOpportunity: renameOpportunity, sendEmailToContact: sendEmailToContact,
