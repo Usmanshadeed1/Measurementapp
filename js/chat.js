@@ -131,6 +131,22 @@ window.MM = window.MM || {};
     return s.replace(/\n{3,}/g, '\n\n').trim();
   }
 
+  // What an activity actually says. GoHighLevel's body is the same handful of
+  // words every time -- "Opportunity updated" -- while the detail underneath
+  // it names the stage that moved. A run of identical lines tells you nothing;
+  // the stages tell you the story of the job.
+  function activityText(m) {
+    var a = m.activity || {};
+    var d = a.data || {};
+    var st = d.stage || {};
+
+    if (st.oldStageName && st.newStageName) {
+      return st.oldStageName + ' → ' + st.newStageName;
+    }
+    if (st.newStageName) return 'Moved to ' + st.newStageName;
+    return a.title || plain(bodyOf(m)) || 'Activity';
+  }
+
   function typeOf(m) {
     return String(m.messageType || m.type || '').toUpperCase();
   }
@@ -233,7 +249,7 @@ window.MM = window.MM || {};
     // it about the job. Centred, quiet, and never in a speech bubble.
     if (isActivity(m)) {
       return '<div class="mm-msg-activity">' +
-        '<span class="mm-msg-activity-text">' + U.esc(plain(bodyOf(m)) || 'Activity') + '</span>' +
+        '<span class="mm-msg-activity-text">' + U.esc(activityText(m)) + '</span>' +
         '<span class="mm-msg-activity-when">' + U.esc(fmtWhen(m.dateAdded)) + '</span>' +
       '</div>';
     }
@@ -345,6 +361,33 @@ window.MM = window.MM || {};
     });
   }
 
+  // Keeps reading back until there is something somebody actually said.
+  //
+  // A busy day of stage changes writes dozens of activity records, and they
+  // arrive newest first -- so a first page of fifty can be nothing but
+  // "Opportunity updated", leaving the thread looking empty of conversation
+  // while every real message sits one page further back.
+  function firstRealPage(th, depth) {
+    depth = depth || 0;
+    return api.messagesIn(th.id, th.oldestId, PAGE)
+      .then(function (page) {
+        var rows = page.messages || [];
+        var said = rows.filter(function (m) { return !isActivity(m); });
+
+        // Three pages is enough to get past any plausible run of activity;
+        // past that the cost of looking outweighs what is found.
+        if (!said.length && page.nextPage && depth < 3) {
+          // Kept rather than discarded -- the activity still belongs in the
+          // thread -- and absorb moves the paging marker on, so the next
+          // round reads the page before this one.
+          absorb(page, th);
+          return firstRealPage(th, depth + 1);
+        }
+        return { th: th, page: page };
+      })
+      .catch(function () { return null; });
+  }
+
   function loadMore() {
     if (loading || !hasMore) return;
     loading = true;
@@ -418,9 +461,7 @@ window.MM = window.MM || {};
         // thread has one history, and reading them one after another would
         // show the second only once the first ran out.
         return Promise.all(threads.map(function (th) {
-          return api.messagesIn(th.id, '', PAGE)
-            .then(function (page) { return { th: th, page: page }; })
-            .catch(function () { return null; });
+          return firstRealPage(th);
         }));
       })
       .then(function (results) {
