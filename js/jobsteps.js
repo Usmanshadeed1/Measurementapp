@@ -169,22 +169,33 @@ window.MM = window.MM || {};
   //
   // No date: the client asked for a button that moves the stage and nothing
   // else, and a date would mean another GoHighLevel field to keep in step.
-  function wonButton(sent, won) {
-    // Once the job is won the button is replaced by the fact, rather than by
-    // nothing: an empty space under the step left no way to tell whether the
-    // customer had said yes or whether the button had simply gone missing.
+  // Winning the job, as a step of its own. It was a button inside Proposal
+  // sent, which read as part of sending the proposal rather than as the thing
+  // that happens next -- the customer saying yes is its own event in the job,
+  // and the chain should say so.
+  function wonStep(num, sent, won) {
+    var cls = 'mm-step mm-step-' + (won ? 'done' : (sent ? 'active' : 'waiting'));
+
+    var body;
     if (won) {
-      return '<div class="mm-step-wonrow mm-step-value">' +
-        '&#10003; Hired Maximus</div>';
+      body = '<div class="mm-step-value">Customer signed</div>';
+    } else {
+      // Offered whether or not a proposal date is recorded: a customer can say
+      // yes on the phone before anyone gets round to filling that in, and
+      // making this wait for paperwork left the stage wrong in the meantime.
+      body = '<div class="mm-step-action">' +
+        '<button type="button" class="mm-btn-sm mm-btn-primary" id="mm-step-won">' +
+          'Customer said yes</button>' +
+      '</div>';
     }
 
-    // Shown whether or not a proposal date is recorded: a customer can say yes
-    // on the phone before anyone gets round to filling the step in, and making
-    // the button wait for paperwork meant the stage stayed wrong in the
-    // meantime.
-    return '<div class="mm-step-action mm-step-wonrow">' +
-      '<button type="button" class="mm-btn-sm mm-btn-primary" id="mm-step-won">' +
-        'Hired Maximus</button>' +
+    return '<div class="' + cls + '">' +
+      '<div class="mm-step-mark" aria-hidden="true">' +
+        (won ? '&#10003;' : num) + '</div>' +
+      '<div class="mm-step-body">' +
+        '<div class="mm-step-label">Hired Maximus</div>' +
+        body +
+      '</div>' +
     '</div>';
   }
 
@@ -423,18 +434,19 @@ window.MM = window.MM || {};
         valueText: fmtLong(sent), value: toInputDate(sent) || todayInput(),
         inputId: 'mm-step-sent', btnId: 'mm-step-sent-save',
         waitingText: 'Finish the pricing first',
-        note: (sent ? waitingNote(sent, won) : '') + wonButton(sent, won),
+        note: sent ? waitingNote(sent, won) : '',
       }) +
+      wonStep(7, sent, won) +
       stepHtml({
-        num: 7, label: 'Material ordering',
+        num: 8, label: 'Material ordering',
         state: cabinets ? 'done' : (won ? 'active' : 'waiting'),
         valueText: fmtLong(cabinets), value: toInputDate(cabinets) || todayInput(),
         inputId: 'mm-step-cab', btnId: 'mm-step-cab-save',
-        waitingText: 'Move the job to Hired Maximus once the customer signs',
+        waitingText: 'Mark Hired Maximus first',
         note: cabinets ? '' : (won ? 'Saving this moves the job to Material Ordering.' : ''),
       }) +
       stepHtml({
-        num: 8, label: 'Job completed',
+        num: 9, label: 'Job completed',
         state: completed ? 'done' : (cabinets ? 'active' : 'waiting'),
         valueText: fmtLong(completed), value: toInputDate(completed) || todayInput(),
         inputId: 'mm-step-done', btnId: 'mm-step-done-save',
