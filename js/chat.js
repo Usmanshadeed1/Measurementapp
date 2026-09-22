@@ -23,6 +23,71 @@ window.MM = window.MM || {};
 
   var PAGE = 50;
 
+  // How often to look for new messages while the Chat tab is open. Reading
+  // only -- nothing is written, so a check that finds nothing costs one small
+  // request and changes nothing.
+  var POLL_MS = 60000;
+  var pollTimer = null;
+
+  // Only while the tab is actually being looked at. A timer left running
+  // would go on asking all day for every job anyone had opened, and a phone
+  // in a pocket would keep asking from inside a locked screen.
+  function chatIsVisible() {
+    var pane = document.querySelector('#screen-job .mm-jobpane[data-pane="chat"]');
+    var screen = document.getElementById('screen-job');
+    return !!(pane && pane.classList.contains('active') &&
+              screen && screen.classList.contains('active') &&
+              !document.hidden);
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function startPolling() {
+    stopPolling();
+    pollTimer = setInterval(function () {
+      if (!conversationId || loading) return;
+      if (!chatIsVisible()) return;
+      checkNew();
+    }, POLL_MS);
+  }
+
+  // The newest page only. Anything already held is left alone, so a thread
+  // somebody has scrolled back through is not thrown away to add one message
+  // at the bottom.
+  function checkNew() {
+    loading = true;
+    api.messagesIn(conversationId, '', PAGE)
+      .then(function (page) {
+        loading = false;
+        var have = {};
+        messages.forEach(function (m) { have[m.id] = true; });
+
+        var fresh = (page.messages || []).slice().reverse()
+          .filter(function (m) { return m.id && !have[m.id]; });
+
+        if (!fresh.length) return;
+
+        // Marked so the new ones are findable: a message arriving at the
+        // bottom of a long thread lands below the fold, and a conversation
+        // that quietly grew is worse than one that says what changed.
+        fresh.forEach(function (m) { m.mmNew = true; });
+        messages = messages.concat(fresh);
+        render();
+
+        var last = document.querySelector('#mm-job-chat .mm-msg.is-new:last-of-type');
+        if (last && last.scrollIntoView) {
+          last.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      })
+      .catch(function () {
+        // A failed check is not worth an error on screen: the next one is a
+        // minute away, and the thread already shown is still correct.
+        loading = false;
+      });
+  }
+
   function contactOf(job) {
     return (job && job.contact) || {};
   }
@@ -146,7 +211,8 @@ window.MM = window.MM || {};
     var files = (m.attachments || []).length;
     var kind = showKind ? kindOf(m) : '';
 
-    return '<div class="mm-msg' + (out ? ' is-out' : ' is-in') + '">' +
+    return '<div class="mm-msg' + (out ? ' is-out' : ' is-in') +
+      (m.mmNew ? ' is-new' : '') + '">' +
       '<div class="mm-msg-bubble">' +
         (kind ? '<div class="mm-msg-kind">' + U.esc(kind) + '</div>' : '') +
         (text
@@ -254,6 +320,7 @@ window.MM = window.MM || {};
   }
 
   function showForJob(job) {
+    stopPolling();
     currentJob = job;
     conversationId = '';
     messages = [];
@@ -289,6 +356,7 @@ window.MM = window.MM || {};
         if (!page) return;
         absorb(page);
         render();
+        startPolling();
       })
       .catch(function (e) {
         el.innerHTML = head(0) +

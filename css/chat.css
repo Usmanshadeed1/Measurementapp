@@ -97,3 +97,21 @@
   .mm-chat-actions{width:100%}
   .mm-chat-reply{flex:1 1 auto;justify-content:center}
 }
+
+/* A message that arrived while the tab was open. The mark fades on its own:
+   it is there to catch the eye once, not to label the message forever. */
+.mm-msg.is-new .mm-msg-bubble{animation:mm-msg-in .4s ease}
+@keyframes mm-msg-in{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:none}
+}
+.mm-msg.is-new .mm-msg-bubble::after{content:'';position:absolute;
+  inset:-2px;border-radius:inherit;pointer-events:none;
+  border:2px solid var(--accent);opacity:.9;
+  animation:mm-msg-mark 4s ease forwards}
+@keyframes mm-msg-mark{0%{opacity:.9}70%{opacity:.9}100%{opacity:0}}
+
+@media (prefers-reduced-motion: reduce){
+  .mm-msg.is-new .mm-msg-bubble{animation:none}
+  .mm-msg.is-new .mm-msg-bubble::after{animation:none;opacity:0}
+}
