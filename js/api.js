@@ -533,16 +533,17 @@ window.MM = window.MM || {};
   // through GoHighLevel, where the whole thread and every channel already
   // live, and a half-built inbox would be worse than a link to the real one.
 
-  // The customer's conversation, if they have one. A contact with no messages
-  // has none, which is not an error.
-  function conversationForContact(contactId) {
-    if (!contactId) return Promise.resolve(null);
+  // Every conversation this customer has. GoHighLevel can keep more than one
+  // per contact -- a thread per channel, or threads made at different times --
+  // so taking only the first showed part of the history and hid the rest.
+  function conversationsForContact(contactId) {
+    if (!contactId) return Promise.resolve([]);
     var qs = 'locationId=' + encodeURIComponent(LOC) +
-             '&contactId=' + encodeURIComponent(contactId) + '&limit=1';
+             '&contactId=' + encodeURIComponent(contactId) + '&limit=20';
     return apiFetch('GET', '/conversations/search?' + qs)
       .then(function (d) {
         var rows = d.conversations || d.conversation || [];
-        return (Array.isArray(rows) ? rows[0] : rows) || null;
+        return Array.isArray(rows) ? rows : (rows ? [rows] : []);
       });
   }
 
@@ -553,6 +554,11 @@ window.MM = window.MM || {};
     if (!conversationId) return Promise.resolve({ messages: [], nextPage: false });
     var qs = 'limit=' + (limit || 50);
     if (lastMessageId) qs += '&lastMessageId=' + encodeURIComponent(lastMessageId);
+    // Every channel, named rather than left to the default: a thread that
+    // showed only texts was hiding the emails sitting beside them.
+    qs += '&type=' + encodeURIComponent(
+      'TYPE_SMS,TYPE_EMAIL,TYPE_CALL,TYPE_VOICEMAIL,TYPE_FACEBOOK,' +
+      'TYPE_INSTAGRAM,TYPE_WHATSAPP,TYPE_GMB,TYPE_LIVE_CHAT,TYPE_REVIEW');
     return apiFetch('GET', '/conversations/' + conversationId + '/messages?' + qs)
       .then(function (d) {
         // The shape has moved around between versions, so both are accepted
@@ -607,7 +613,7 @@ window.MM = window.MM || {};
     uploadMediaFile: uploadMediaFile, createPhotoOrVideo: createPhotoOrVideo, queryMediaByField: queryMediaByField,
     deleteMedia: deleteMedia, searchContacts: searchContacts, getContact: getContact, createContact: createContact, updateContact: updateContact,
     deleteOpportunity: deleteOpportunity, deleteContact: deleteContact,
-    conversationForContact: conversationForContact, messagesIn: messagesIn,
+    conversationsForContact: conversationsForContact, messagesIn: messagesIn,
     getTags: getTags, findDuplicateContact: findDuplicateContact, enrollContactInWorkflow: enrollContactInWorkflow, getWorkflows: getWorkflows,
   };
 })();

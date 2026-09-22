@@ -15,9 +15,12 @@ window.MM = window.MM || {};
   var U = window.MM.utils, api = window.MM.api;
 
   var currentJob = null;
-  var conversationId = '';
+  // Every thread this customer has, and the page marker for each. A contact
+  // can hold more than one conversation in GoHighLevel -- often one per
+  // channel -- and all of them are the same history to the person reading it.
+  var threads = [];         // [{ id, oldestId, hasMore }]
+  var conversationId = '';  // the first thread, for the refresh check
   var messages = [];        // oldest first, which is how a thread reads
-  var oldestId = '';        // the page marker for "load earlier"
   var hasMore = false;
   var loading = false;
 
@@ -57,15 +60,24 @@ window.MM = window.MM || {};
   // somebody has scrolled back through is not thrown away to add one message
   // at the bottom.
   function checkNew() {
+    if (!threads.length) return;
     loading = true;
-    api.messagesIn(conversationId, '', PAGE)
-      .then(function (page) {
+
+    Promise.all(threads.map(function (th) {
+      return api.messagesIn(th.id, '', PAGE).catch(function () { return null; });
+    }))
+      .then(function (pages) {
         loading = false;
         var have = {};
         messages.forEach(function (m) { have[m.id] = true; });
 
-        var fresh = (page.messages || []).slice().reverse()
-          .filter(function (m) { return m.id && !have[m.id]; });
+        var fresh = [];
+        pages.forEach(function (page) {
+          if (!page) return;
+          (page.messages || []).slice().reverse().forEach(function (m) {
+            if (m.id && !have[m.id]) { have[m.id] = true; fresh.push(m); }
+          });
+        });
 
         if (!fresh.length) return;
 
@@ -74,6 +86,7 @@ window.MM = window.MM || {};
         // that quietly grew is worse than one that says what changed.
         fresh.forEach(function (m) { m.mmNew = true; });
         messages = messages.concat(fresh);
+        sortMessages();
         render();
 
         var last = document.querySelector('#mm-job-chat .mm-msg.is-new:last-of-type');
@@ -291,12 +304,25 @@ window.MM = window.MM || {};
 
   // GoHighLevel returns newest first; a thread reads oldest first, so each
   // page is flipped and put in front of what is already there.
-  function absorb(page) {
+  function absorb(page, thread) {
     var rows = (page.messages || []).slice().reverse();
     messages = rows.concat(messages);
-    hasMore = !!page.nextPage;
-    oldestId = page.lastMessageId ||
-      (rows.length ? rows[0].id : oldestId);
+
+    if (thread) {
+      thread.hasMore = !!page.nextPage;
+      thread.oldestId = page.lastMessageId ||
+        (rows.length ? rows[0].id : thread.oldestId);
+    }
+    // Earlier messages exist while ANY thread still has some.
+    hasMore = threads.some(function (t) { return t.hasMore; });
+  }
+
+  // Threads are read separately but read as one conversation, so everything
+  // is ordered by when it was actually said.
+  function sortMessages() {
+    messages.sort(function (a, b) {
+      return new Date(a.dateAdded) - new Date(b.dateAdded);
+    });
   }
 
   function loadMore() {
@@ -306,9 +332,21 @@ window.MM = window.MM || {};
     var btn = document.getElementById('mm-chat-more');
     if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
 
-    api.messagesIn(conversationId, oldestId, PAGE)
-      .then(function (page) {
-        absorb(page);
+    // A page from every thread that still has one, so the history goes back
+    // evenly rather than exhausting one thread before starting the next.
+    var more = threads.filter(function (t) { return t.hasMore; });
+
+    Promise.all(more.map(function (th) {
+      return api.messagesIn(th.id, th.oldestId, PAGE)
+        .then(function (page) { return { th: th, page: page }; })
+        .catch(function () { return null; });
+    }))
+      .then(function (results) {
+        results.forEach(function (r) {
+          if (!r) return;
+          absorb(r.page, r.th);
+        });
+        sortMessages();
         loading = false;
         render();
       })
@@ -322,9 +360,9 @@ window.MM = window.MM || {};
   function showForJob(job) {
     stopPolling();
     currentJob = job;
+    threads = [];
     conversationId = '';
     messages = [];
-    oldestId = '';
     hasMore = false;
     loading = false;
 
@@ -342,19 +380,36 @@ window.MM = window.MM || {};
       '<span class="mm-spinner" aria-hidden="true"></span>' +
       '<span>Loading the conversation&hellip;</span></div>';
 
-    return api.conversationForContact(c.id)
-      .then(function (conv) {
-        if (!conv || !conv.id) {
+    return api.conversationsForContact(c.id)
+      .then(function (convs) {
+        var rows = (convs || []).filter(function (x) { return x && x.id; });
+        if (!rows.length) {
           el.innerHTML = head(0) +
             '<p class="mm-task-empty">No messages with this customer yet.</p>';
           return null;
         }
-        conversationId = conv.id;
-        return api.messagesIn(conversationId, '', PAGE);
+
+        threads = rows.map(function (x) {
+          return { id: x.id, oldestId: '', hasMore: false };
+        });
+        conversationId = threads[0].id;
+
+        // All of them at once: a customer with a text thread and an email
+        // thread has one history, and reading them one after another would
+        // show the second only once the first ran out.
+        return Promise.all(threads.map(function (th) {
+          return api.messagesIn(th.id, '', PAGE)
+            .then(function (page) { return { th: th, page: page }; })
+            .catch(function () { return null; });
+        }));
       })
-      .then(function (page) {
-        if (!page) return;
-        absorb(page);
+      .then(function (results) {
+        if (!results) return;
+        results.forEach(function (r) {
+          if (!r) return;
+          absorb(r.page, r.th);
+        });
+        sortMessages();
         render();
         startPolling();
       })
