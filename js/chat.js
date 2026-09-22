@@ -43,14 +43,36 @@ window.MM = window.MM || {};
     return s.replace(/\n{3,}/g, '\n\n').trim();
   }
 
-  // Outbound is anything the business sent; everything else came from the
-  // customer. GoHighLevel spells it a couple of ways depending on channel.
-  function isOutbound(m) {
-    return String(m.direction || '').toLowerCase() === 'outbound';
+  function typeOf(m) {
+    return String(m.messageType || m.type || '').toUpperCase();
   }
 
+  // GoHighLevel returns its own activity records in the same list as real
+  // messages -- "Opportunity created", "Opportunity updated". Nobody said
+  // them to anybody, and in a conversation they read as noise between the
+  // things that were actually said.
+  function isActivity(m) {
+    return typeOf(m).indexOf('ACTIVITY') > -1;
+  }
+
+  // Outbound is anything the business sent. GoHighLevel spells the direction
+  // a few ways depending on channel and how the message was created, so the
+  // inbound spellings are what is tested -- anything else is treated as ours,
+  // which is the safer way round: a business message shown as the customer's
+  // is a worse mistake than the reverse.
+  function isOutbound(m) {
+    var d = String(m.direction || '').toLowerCase();
+    if (d === 'inbound' || d === 'in' || d === 'received') return false;
+    if (d === 'outbound' || d === 'out' || d === 'sent') return true;
+    // No direction at all: a message with a userId was written by a person on
+    // this side of the conversation.
+    return !!(m.userId || m.user_id);
+  }
+
+  // The channel, for the label. Only shown when a thread mixes channels --
+  // "SMS" on every bubble of an all-SMS thread says nothing.
   function kindOf(m) {
-    var t = String(m.messageType || m.type || '').toUpperCase();
+    var t = typeOf(m);
     if (t.indexOf('EMAIL') > -1) return 'Email';
     if (t.indexOf('SMS') > -1) return 'SMS';
     if (t.indexOf('CALL') > -1) return 'Call';
@@ -59,15 +81,17 @@ window.MM = window.MM || {};
     if (t.indexOf('INSTAGRAM') > -1) return 'Instagram';
     if (t.indexOf('WHATSAPP') > -1) return 'WhatsApp';
     if (t.indexOf('GMB') > -1) return 'Google';
-    return t ? U.titleCase(t.replace(/_/g, ' ').toLowerCase()) : 'Message';
+    if (t.indexOf('REVIEW') > -1) return 'Review';
+    if (t.indexOf('LIVE_CHAT') > -1 || t.indexOf('WEBCHAT') > -1) return 'Web chat';
+    return t ? U.titleCase(t.replace(/^TYPE_/, '').replace(/_/g, ' ').toLowerCase()) : '';
   }
 
+  // The time only. The date is already the separator above the message, and
+  // repeating it on every bubble crowded out what was actually said.
   function fmtWhen(iso) {
     var d = new Date(iso);
     if (isNaN(d.getTime())) return '';
-    return d.toLocaleDateString(undefined,
-      { month: 'short', day: 'numeric', year: 'numeric' }) +
-      ' at ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   }
 
   function dayKey(iso) {
@@ -101,24 +125,30 @@ window.MM = window.MM || {};
             ' message' + (count === 1 ? '' : 's') + '</span>'
           : '') +
       '</div>' +
-      (url
-        ? '<a class="mm-btn-sm mm-btn-primary mm-chat-reply" href="' + U.esc(url) + '" ' +
-          'target="_blank" rel="noopener">Reply in GoHighLevel</a>'
-        : '') +
+      '<div class="mm-chat-actions">' +
+        // The thread is read once when the tab opens. Checking for new
+        // messages on a timer would mean a request every half minute for
+        // every open job, so it is offered as a button instead.
+        '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+          'id="mm-chat-refresh" aria-label="Check for new messages">' +
+          '&#8635;</button>' +
+        (url
+          ? '<a class="mm-btn-sm mm-btn-primary mm-chat-reply" href="' + U.esc(url) + '" ' +
+            'target="_blank" rel="noopener">Reply in GoHighLevel</a>'
+          : '') +
+      '</div>' +
     '</div>';
   }
 
-  function bubble(m) {
+  function bubble(m, showKind) {
     var out = isOutbound(m);
     var text = plain(m.body);
     var files = (m.attachments || []).length;
+    var kind = showKind ? kindOf(m) : '';
 
     return '<div class="mm-msg' + (out ? ' is-out' : ' is-in') + '">' +
       '<div class="mm-msg-bubble">' +
-        '<div class="mm-msg-meta">' +
-          '<span class="mm-msg-kind">' + U.esc(kindOf(m)) + '</span>' +
-          '<span class="mm-msg-when">' + U.esc(fmtWhen(m.dateAdded)) + '</span>' +
-        '</div>' +
+        (kind ? '<div class="mm-msg-kind">' + U.esc(kind) + '</div>' : '') +
         (text
           ? '<div class="mm-msg-body">' + U.esc(text) + '</div>'
           : '<div class="mm-msg-body mm-msg-empty">No text in this message</div>') +
@@ -128,6 +158,7 @@ window.MM = window.MM || {};
           ? '<div class="mm-msg-files">' + files +
             (files === 1 ? ' attachment' : ' attachments') + '</div>'
           : '') +
+        '<div class="mm-msg-when">' + U.esc(fmtWhen(m.dateAdded)) + '</div>' +
       '</div>' +
     '</div>';
   }
@@ -136,26 +167,37 @@ window.MM = window.MM || {};
     var el = document.getElementById('mm-job-chat');
     if (!el) return;
 
-    if (!messages.length) {
+    // Activity records are dropped here rather than when they arrive, so the
+    // paging marker still follows GoHighLevel's own list.
+    var said = messages.filter(function (m) { return !isActivity(m); });
+
+    if (!said.length) {
       el.innerHTML = head(0) +
         '<p class="mm-task-empty">No messages with this customer yet.</p>';
       return;
     }
 
+    // The channel is worth labelling only when the thread has more than one.
+    // On an all-SMS thread "SMS" above every bubble is a word repeated for no
+    // reason.
+    var kinds = {};
+    said.forEach(function (m) { kinds[kindOf(m)] = true; });
+    var mixed = Object.keys(kinds).length > 1;
+
     // A date between messages, the way a phone shows one. Without it a long
     // thread is a wall of times with no sense of when anything happened.
     var out = '', lastDay = '';
-    messages.forEach(function (m) {
+    said.forEach(function (m) {
       var k = dayKey(m.dateAdded);
       if (k && k !== lastDay) {
         lastDay = k;
         out += '<div class="mm-chat-day">' +
           U.esc(dayLabel(m.dateAdded)) + '</div>';
       }
-      out += bubble(m);
+      out += bubble(m, mixed);
     });
 
-    el.innerHTML = head(messages.length) +
+    el.innerHTML = head(said.length) +
       (hasMore
         ? '<button type="button" class="mm-chat-more" id="mm-chat-more">' +
           'Load earlier messages</button>'
@@ -165,6 +207,11 @@ window.MM = window.MM || {};
 
     var more = document.getElementById('mm-chat-more');
     if (more) more.addEventListener('click', loadMore);
+
+    var refresh = document.getElementById('mm-chat-refresh');
+    if (refresh) refresh.addEventListener('click', function () {
+      showForJob(currentJob);
+    });
   }
 
   function showError(msg) {
