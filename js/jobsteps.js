@@ -1146,8 +1146,12 @@ window.MM = window.MM || {};
             }
             o.customFields = fields;
 
+            // Both versions, because a note is a record: the step keeps only
+            // the current wording, so if the old one is not written down
+            // here it is gone for good.
             window.MM.activity.log('note',
-              'Edited note on ' + (STEP_KEYS[key] || key) + ': ' + next, {
+              'Edited note on ' + (STEP_KEYS[key] || key) + ': "' +
+              shown + '" ' + String.fromCharCode(8594) + ' "' + next + '"', {
                 jobId: o.id,
                 jobName: (o.contact && o.contact.name) || o.name,
               });
