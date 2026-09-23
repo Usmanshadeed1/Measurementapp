@@ -102,9 +102,19 @@ window.MM = window.MM || {};
                       'class="mm-btn-sm mm-btn-primary" id="mm-dr-add">Fix the link</button></div>'
                     : '')
                 : '<p class="mm-task-empty">No folder linked yet.</p>' +
+                  // Both ways offered at once. Choosing from Drive is the
+                  // easy one so it leads, but pasting a link was hidden a
+                  // click deeper than it should have been: someone who
+                  // already has the link had to open the wrong thing first.
                   (auth.isAdmin()
-                    ? '<div class="mm-dr-row"><button type="button" ' +
-                      'class="mm-btn-sm mm-btn-primary" id="mm-dr-add">Add folder link</button></div>'
+                    ? '<div class="mm-dr-row">' +
+                        '<button type="button" class="mm-btn-sm mm-btn-primary ' +
+                          'mm-dr-browsebtn" id="mm-dr-browse">' +
+                          '<span class="mm-dr-browseicon" aria-hidden="true">' +
+                          '&#128193;</span>Choose from my Drive</button>' +
+                        '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+                          'id="mm-dr-add">Paste a link</button>' +
+                      '</div>'
                     : '')))) +
       '<p class="mm-task-error" id="mm-dr-error" role="alert"></p>';
 
@@ -172,20 +182,23 @@ window.MM = window.MM || {};
 
     if (picker.state === 'failed') return '';   // the paste box covers it
 
-    // Picking a folder is the easy way and pasting a link is the fallback,
-    // so this leads: full width, primary, and named for what it does. The
-    // line under it marks the paste box below as the other option rather
-    // than leaving two controls competing.
+    // Offered here too, for the form reached by "Paste a link" or by
+    // "Change" on a folder already set -- both arrive without having passed
+    // the panel's own Choose button.
     return '<div class="mm-field-group mm-dr-choose">' +
-      '<button type="button" class="mm-btn-sm mm-btn-primary mm-dr-browsebtn" ' +
+      '<button type="button" class="mm-btn-sm mm-btn-secondary mm-dr-browsebtn" ' +
         'id="mm-dr-browse">' +
         '<span class="mm-dr-browseicon" aria-hidden="true">&#128193;</span>' +
-        'Choose a folder from my Drive</button>' +
+        'Choose from my Drive</button>' +
       '<p class="mm-dr-or">or paste the link below</p>' +
     '</div>';
   }
 
   function loadFolders() {
+    // The list and the link box live in the same form, and Choose can now be
+    // pressed from the panel before that form is open -- so opening it is
+    // part of choosing.
+    editing = true;
     if (!window.MM.drive) { picker.state = 'failed'; render(); return; }
     picker.state = 'loading';
     render();
