@@ -177,7 +177,7 @@ window.MM = window.MM || {};
     // line under it marks the paste box below as the other option rather
     // than leaving two controls competing.
     return '<div class="mm-field-group mm-dr-choose">' +
-      '<button type="button" class="mm-btn mm-btn-primary mm-dr-browsebtn" ' +
+      '<button type="button" class="mm-btn-sm mm-btn-primary mm-dr-browsebtn" ' +
         'id="mm-dr-browse">' +
         '<span class="mm-dr-browseicon" aria-hidden="true">&#128193;</span>' +
         'Choose a folder from my Drive</button>' +
