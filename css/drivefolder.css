@@ -37,3 +37,19 @@
   .mm-dr-row{flex-direction:column;align-items:stretch}
   .mm-dr-open{justify-content:center}
 }
+
+/* ---- Choosing a folder ----
+   Picking from Drive is the easy path and pasting a link is the fallback, so
+   the button leads rather than sitting small beside the box it replaces. */
+.mm-dr-choose{margin-bottom:14px}
+.mm-dr-browsebtn{width:100%;margin-bottom:0;min-height:48px;
+  display:flex;align-items:center;justify-content:center;gap:9px}
+.mm-dr-browseicon{font-size:1.1em;line-height:1}
+
+/* Marks the paste box below as the other option, rather than leaving two
+   controls looking like two required steps. */
+.mm-dr-or{display:flex;align-items:center;gap:10px;
+  margin:12px 0 0;font-size:0.78em;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.05em}
+.mm-dr-or::before,.mm-dr-or::after{content:'';flex:1 1 auto;
+  height:1px;background:var(--divider)}

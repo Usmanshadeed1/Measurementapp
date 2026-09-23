@@ -172,9 +172,17 @@ window.MM = window.MM || {};
 
     if (picker.state === 'failed') return '';   // the paste box covers it
 
-    return '<div class="mm-field-group">' +
-      '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
-        'id="mm-dr-browse">Choose from my Drive</button></div>';
+    // Picking a folder is the easy way and pasting a link is the fallback,
+    // so this leads: full width, primary, and named for what it does. The
+    // line under it marks the paste box below as the other option rather
+    // than leaving two controls competing.
+    return '<div class="mm-field-group mm-dr-choose">' +
+      '<button type="button" class="mm-btn mm-btn-primary mm-dr-browsebtn" ' +
+        'id="mm-dr-browse">' +
+        '<span class="mm-dr-browseicon" aria-hidden="true">&#128193;</span>' +
+        'Choose a folder from my Drive</button>' +
+      '<p class="mm-dr-or">or paste the link below</p>' +
+    '</div>';
   }
 
   function loadFolders() {
