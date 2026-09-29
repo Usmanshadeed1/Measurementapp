@@ -18,8 +18,20 @@
 
 .mm-ml-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   margin-bottom:12px}
-.mm-ml-filter{flex:1 1 170px;min-width:0;margin-bottom:0;min-height:42px}
-.mm-ml-baracts{display:flex;gap:8px;flex:0 0 auto}
+.mm-ml-baracts{display:flex;gap:8px;flex:1 1 auto;flex-wrap:wrap}
+
+/* What is left to do, stated rather than hidden in a dropdown of view
+   names. Tapping one narrows the list to those items. */
+.mm-ml-counts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.mm-ml-chip{padding:5px 11px;min-height:34px;border-radius:999px;
+  border:1px solid var(--border);background:var(--card2);color:var(--text2);
+  font-family:inherit;font-size:0.8em;cursor:pointer}
+.mm-ml-chip:hover{border-color:var(--accent);color:var(--text)}
+.mm-ml-chip.is-on{border-color:var(--accent);color:var(--text);
+  background:color-mix(in srgb,var(--accent) 16%,var(--card2))}
+.mm-ml-chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-ml-chipn{font-weight:800;color:var(--accent);
+  font-variant-numeric:tabular-nums}
 
 /* ---- One item ---- */
 
@@ -101,7 +113,6 @@
 
 @media (max-width: 620px){
   .mm-ml-bar{gap:6px}
-  .mm-ml-filter{flex:1 1 100%}
   .mm-ml-baracts{width:100%}
   .mm-ml-baracts .mm-btn-sm{flex:1 1 0;min-width:0}
   .mm-ml-side{flex-direction:row}

@@ -221,27 +221,50 @@ window.MM = window.MM || {};
     if (window.MM.wireJobPanels) window.MM.wireJobPanels();
   }
 
+  // Only the buttons that have something to act on. An empty panel offering
+  // Export and a filter is four controls and nothing to use them on.
   function toolbar() {
     return '<div class="mm-ml-bar">' +
-      '<select class="mm-select mm-ml-filter" id="mm-ml-filter" ' +
-        'aria-label="Which materials to show">' +
-        '<option value="all"' + (showFilter === 'all' ? ' selected' : '') +
-          '>All materials</option>' +
-        '<option value="todo"' + (showFilter === 'todo' ? ' selected' : '') +
-          '>Still to order</option>' +
-        '<option value="ordered"' + (showFilter === 'ordered' ? ' selected' : '') +
-          '>Ordered</option>' +
-        '<option value="received"' + (showFilter === 'received' ? ' selected' : '') +
-          '>Received</option>' +
-      '</select>' +
       '<div class="mm-ml-baracts">' +
         '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
-          'id="mm-ml-load">Load a list</button>' +
-        '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
-          'id="mm-ml-export"' + (items.length ? '' : ' disabled') + '>Export</button>' +
+          'id="mm-ml-load">Use a saved list</button>' +
+        (items.length
+          ? '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+            'id="mm-ml-export">Export</button>'
+          : '') +
         '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
           'id="mm-ml-add">+ Item</button>' +
       '</div>' +
+    '</div>' + counts();
+  }
+
+  // What is left to do, as three numbers that can be tapped to show just
+  // those items. This is the question the panel exists to answer -- "what do
+  // I still need to order" -- so it is stated rather than hidden behind a
+  // dropdown of view names.
+  //
+  // Not shown on a short list: with six items on screen there is nothing to
+  // filter, and the row would be decoration.
+  function counts() {
+    if (items.length < 6) return '';
+
+    var n = { todo: 0, ordered: 0, received: 0 };
+    items.forEach(function (r) { n[r.state]++; });
+
+    function chip(key, label) {
+      return '<button type="button" class="mm-ml-chip' +
+          (showFilter === key ? ' is-on' : '') + '" data-filter="' + key + '">' +
+        '<span class="mm-ml-chipn">' + (key === 'all' ? items.length : n[key]) +
+        '</span> ' + label +
+      '</button>';
+    }
+
+    return '<div class="mm-ml-counts" role="group" ' +
+        'aria-label="Show which materials">' +
+      chip('all', 'All') +
+      chip('todo', 'To order') +
+      chip('ordered', 'Ordered') +
+      chip('received', 'Received') +
     '</div>';
   }
 
@@ -564,14 +587,16 @@ window.MM = window.MM || {};
   }
 
   function bind(el) {
-    var f = el.querySelector('#mm-ml-filter');
-    if (f) f.addEventListener('change', function () {
-      showFilter = this.value; render();
+    el.querySelectorAll('[data-filter]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        showFilter = b.getAttribute('data-filter');
+        render();
+      });
     });
 
     var add = el.querySelector('#mm-ml-add');
     if (add) add.addEventListener('click', function () {
-      adding = true; editing = null; render();
+      adding = true; editing = null; picking = null; render();
       var box = document.getElementById('mm-ml-item');
       if (box) box.focus();
     });
