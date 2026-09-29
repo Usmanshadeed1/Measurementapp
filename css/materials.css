@@ -26,12 +26,30 @@
 .mm-ml-chip{padding:5px 11px;min-height:34px;border-radius:999px;
   border:1px solid var(--border);background:var(--card2);color:var(--text2);
   font-family:inherit;font-size:0.8em;cursor:pointer}
-.mm-ml-chip:hover{border-color:var(--accent);color:var(--text)}
-.mm-ml-chip.is-on{border-color:var(--accent);color:var(--text);
-  background:color-mix(in srgb,var(--accent) 16%,var(--card2))}
+.mm-ml-chip:hover{color:var(--text)}
 .mm-ml-chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.mm-ml-chipn{font-weight:800;color:var(--accent);
-  font-variant-numeric:tabular-nums}
+.mm-ml-chipn{font-weight:800;font-variant-numeric:tabular-nums}
+
+/* Each pill wears its own state colour, and fills in when it is the one
+   being shown -- so the row doubles as the key to the list below it. */
+.mm-ml-chip-all .mm-ml-chipn{color:var(--text)}
+.mm-ml-chip-all.is-on{border-color:var(--text2);color:var(--text);
+  background:var(--card)}
+
+.mm-ml-chip-todo .mm-ml-chipn{color:#f0a02a}
+.mm-ml-chip-todo:hover{border-color:color-mix(in srgb,#f0a02a 50%,transparent)}
+.mm-ml-chip-todo.is-on{border-color:#f0a02a;color:var(--text);
+  background:color-mix(in srgb,#f0a02a 18%,var(--card2))}
+
+.mm-ml-chip-ordered .mm-ml-chipn{color:var(--accent)}
+.mm-ml-chip-ordered:hover{border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.mm-ml-chip-ordered.is-on{border-color:var(--accent);color:var(--text);
+  background:color-mix(in srgb,var(--accent) 18%,var(--card2))}
+
+.mm-ml-chip-received .mm-ml-chipn{color:var(--success)}
+.mm-ml-chip-received:hover{border-color:color-mix(in srgb,var(--success) 50%,transparent)}
+.mm-ml-chip-received.is-on{border-color:var(--success);color:var(--text);
+  background:color-mix(in srgb,var(--success) 18%,var(--card2))}
 
 /* ---- One item ---- */
 
@@ -39,7 +57,7 @@
 
 .mm-ml{display:flex;align-items:flex-start;gap:10px;padding:10px;
   border:1px solid var(--border);border-radius:10px;background:var(--card2);
-  border-left:3px solid var(--border);min-width:0}
+  border-left:3px solid #f0a02a;min-width:0}
 .mm-ml.is-ordered{border-left-color:var(--accent)}
 .mm-ml.is-done{border-left-color:var(--success);opacity:.72}
 .mm-ml.is-done .mm-ml-name{text-decoration:line-through}
@@ -51,7 +69,10 @@
   background:none;color:var(--text2);
   font-size:1em;line-height:1;cursor:pointer;
   display:flex;align-items:center;justify-content:center}
-.mm-ml.is-ordered .mm-ml-state{border-color:var(--accent);color:var(--accent)}
+/* Both acted-on states are FILLED, not outlined: an outline reads as an
+   empty box at a glance, which is exactly what the untouched state is. */
+.mm-ml.is-ordered .mm-ml-state{border-color:var(--accent);
+  background:var(--accent);color:#fff;font-size:0.9em}
 .mm-ml.is-done .mm-ml-state{border-color:var(--success);
   background:var(--success);color:#fff}
 .mm-ml-state:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -72,8 +93,8 @@
    and for anyone who cannot separate these hues. */
 .mm-ml-tag{padding:1px 8px;border-radius:999px;font-weight:700;
   font-size:0.92em}
-.mm-ml-tag-todo{color:var(--text2);background:var(--card);
-  border:1px solid var(--border)}
+.mm-ml-tag-todo{color:#f0a02a;
+  background:color-mix(in srgb,#f0a02a 16%,transparent)}
 .mm-ml-tag-ordered{color:var(--accent);
   background:color-mix(in srgb,var(--accent) 16%,transparent)}
 .mm-ml-tag-received{color:var(--success);

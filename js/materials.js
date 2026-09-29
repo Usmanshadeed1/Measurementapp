@@ -252,16 +252,18 @@ window.MM = window.MM || {};
   // I still need to order" -- so it is stated rather than hidden behind a
   // dropdown of view names.
   //
-  // Not shown on a short list: with six items on screen there is nothing to
-  // filter, and the row would be decoration.
+  // Shown whenever there is anything at all. Hiding it on a short list meant
+  // nobody ever discovered it existed.
   function counts() {
-    if (items.length < 6) return '';
+    if (!items.length) return '';
 
     var n = { todo: 0, ordered: 0, received: 0 };
     items.forEach(function (r) { n[r.state]++; });
 
+    // Each pill carries its own state's colour, so the row reads as the
+    // states themselves rather than as four identical buttons.
     function chip(key, label) {
-      return '<button type="button" class="mm-ml-chip' +
+      return '<button type="button" class="mm-ml-chip mm-ml-chip-' + key +
           (showFilter === key ? ' is-on' : '') + '" data-filter="' + key + '">' +
         '<span class="mm-ml-chipn">' + (key === 'all' ? items.length : n[key]) +
         '</span> ' + label +
@@ -288,7 +290,10 @@ window.MM = window.MM || {};
       '<button type="button" class="mm-ml-state" data-state="' + i + '" ' +
         'aria-label="' + U.esc(r.item + ' — ' + STATE_LABEL[r.state] +
           '. Tap to move on.') + '">' +
-        (r.state === 'received' ? '&#10003;' : (r.state === 'ordered' ? '&#8230;' : '')) +
+        // Received is a tick, ordered is a cart: two different marks, so the
+        // two states are told apart by shape as well as by colour.
+        (r.state === 'received' ? '&#10003;'
+          : (r.state === 'ordered' ? '&#128722;' : '')) +
       '</button>' +
 
       '<div class="mm-ml-main">' +
