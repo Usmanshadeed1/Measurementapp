@@ -401,14 +401,16 @@ window.MM = window.MM || {};
   // list that includes cabinet hinges wastes their time and invites the wrong
   // order.
 
-  function asText(rows, title) {
+  function asText(rows, title, pick) {
     var lines = [title, ''];
     rows.forEach(function (r) {
-      var bits = [];
-      if (r.qty) bits.push(r.qty + ' ' + r.unit);
-      bits.push(r.item);
-      var line = '- ' + bits.join('  ');
-      if (r.notes) line += '  (' + r.notes + ')';
+      var line = '- ';
+      if (r.qty) line += r.qty + ' ' + r.unit + '  ';
+      line += r.item;
+      if (r.notes) line += ' (' + r.notes + ')';
+      // The supplier only where the list is mixed: a list already addressed
+      // to one supplier does not need their name on every line.
+      if (!pick && r.supplier) line += '  [' + r.supplier + ']';
       lines.push(line);
     });
     var sum = total(rows);
@@ -433,7 +435,7 @@ window.MM = window.MM || {};
     var rows = pick
       ? items.filter(function (r) { return r.supplier === pick; })
       : items;
-    return asText(rows, 'Materials — ' + job + (pick ? ' — ' + pick : ''));
+    return asText(rows, 'Materials — ' + job + (pick ? ' — ' + pick : ''), pick);
   }
 
   // Shown in a box rather than copied straight to the clipboard: on a phone a
@@ -504,14 +506,94 @@ window.MM = window.MM || {};
     });
 
     wrap.querySelector('#mm-ml-exprint').addEventListener('click', function () {
-      var w = window.open('', '_blank');
-      if (!w) return;
-      w.document.write('<pre style="font:14px/1.6 system-ui,sans-serif;' +
-        'white-space:pre-wrap">' + U.esc(current()) + '</pre>');
-      w.document.close();
-      w.focus();
-      w.print();
+      printList(job, who ? who.value : '');
     });
+  }
+
+  // A printed list goes to a supplier, so it is laid out as a document
+  // rather than dumped as text: a title, the job it is for, a real table,
+  // and the date it was printed.
+  //
+  // The window is given a TITLE, because a browser prints its own header
+  // from that -- without one every page is stamped "about:blank", which is
+  // not what anybody wants to hand over a trade counter.
+  function printList(job, pick) {
+    var rows = pick
+      ? items.filter(function (r) { return r.supplier === pick; })
+      : items;
+    if (!rows.length) return;
+
+    var title = 'Materials - ' + job + (pick ? ' - ' + pick : '');
+    var sum = total(rows);
+    var anyCost = rows.some(function (r) { return num(r.cost); });
+    var anySup = !pick && rows.some(function (r) { return r.supplier; });
+
+    var html =
+      '<!doctype html><html><head><meta charset="utf-8">' +
+      '<title>' + U.esc(title) + '</title>' +
+      '<style>' +
+        'body{font:13px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;' +
+          'color:#111;margin:32px;max-width:720px}' +
+        'h1{font-size:19px;margin:0 0 2px}' +
+        '.sub{color:#555;font-size:12px;margin-bottom:20px}' +
+        'table{width:100%;border-collapse:collapse}' +
+        'th{text-align:left;font-size:11px;text-transform:uppercase;' +
+          'letter-spacing:.05em;color:#555;border-bottom:1.5px solid #111;' +
+          'padding:0 8px 6px 0}' +
+        'td{padding:7px 8px 7px 0;border-bottom:1px solid #ddd;' +
+          'vertical-align:top}' +
+        '.q{white-space:nowrap;font-weight:600}' +
+        '.n{text-align:right;white-space:nowrap}' +
+        '.note{color:#555;font-size:11.5px}' +
+        'tfoot td{border-bottom:none;border-top:1.5px solid #111;' +
+          'font-weight:700;padding-top:9px}' +
+        // A tick box against each line: the list is worked through at a
+        // trade counter, on paper, with a pen.
+        '.box{width:13px;height:13px;border:1.2px solid #111;' +
+          'display:inline-block;border-radius:2px}' +
+      '</style></head><body>' +
+
+      '<h1>' + U.esc('Materials' + (pick ? ' — ' + pick : '')) + '</h1>' +
+      '<div class="sub">' + U.esc(job) + ' &middot; ' +
+        U.esc(new Date().toLocaleDateString(undefined,
+          { year: 'numeric', month: 'long', day: 'numeric' })) + '</div>' +
+
+      '<table><thead><tr>' +
+        '<th style="width:20px"></th>' +
+        '<th style="width:70px">Qty</th>' +
+        '<th>Item</th>' +
+        (anySup ? '<th style="width:120px">Supplier</th>' : '') +
+        (anyCost ? '<th class="n" style="width:80px">Cost</th>' : '') +
+      '</tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr>' +
+          '<td><span class="box"></span></td>' +
+          '<td class="q">' + U.esc([r.qty, r.qty ? r.unit : ''].filter(Boolean).join(' ')) + '</td>' +
+          '<td>' + U.esc(r.item) +
+            (r.notes ? '<div class="note">' + U.esc(r.notes) + '</div>' : '') +
+          '</td>' +
+          (anySup ? '<td>' + U.esc(r.supplier || '') + '</td>' : '') +
+          (anyCost ? '<td class="n">' +
+            (num(r.cost) ? U.esc(money(lineCost(r))) : '') + '</td>' : '') +
+        '</tr>';
+      }).join('') +
+      '</tbody>' +
+      (sum
+        ? '<tfoot><tr>' +
+            '<td colspan="' + (2 + (anySup ? 1 : 0)) + '"></td>' +
+            '<td>Total</td>' +
+            '<td class="n">' + U.esc(money(sum)) + '</td>' +
+          '</tr></tfoot>'
+        : '') +
+      '</table></body></html>';
+
+    var w = window.open('', '_blank');
+    if (!w) { showError('Allow pop-ups to print this list.'); return; }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    // A moment for the page to lay out before the print dialog reads it.
+    setTimeout(function () { w.print(); }, 150);
   }
 
   // ---- Loading a template --------------------------------------------------
