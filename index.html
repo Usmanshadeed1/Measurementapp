@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="css/workers.css">
 <link rel="stylesheet" href="css/checklist.css">
 <link rel="stylesheet" href="css/templates.css">
+<link rel="stylesheet" href="css/materialtpl.css">
 <link rel="stylesheet" href="css/emailtpl.css">
 <link rel="stylesheet" href="css/meetings.css">
 <link rel="stylesheet" href="css/drivefolder.css">
@@ -91,6 +92,7 @@
          The screen and its code are left in place: nothing is lost if it has
          to come back, and subtasks are still only visible there. -->
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
+      <a href="#" class="mm-nav-link mm-admin-only" data-tab="materialtpl">Material Lists</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="emailtpl">Email Templates</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
@@ -123,6 +125,7 @@
          The screen and its code are left in place: nothing is lost if it has
          to come back, and subtasks are still only visible there. -->
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
+    <a href="#" class="mm-nav-link mm-admin-only" data-tab="materialtpl">Material Lists</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="emailtpl">Email Templates</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
@@ -434,6 +437,19 @@
       design or quote. You can still change any email before sending it &mdash;
       editing it there never changes the template.</p>
     <div id="mm-et-body"><div class="mm-empty">Loading...</div></div>
+  </div>
+</div>
+
+<div class="screen" id="screen-materialtpl">
+  <div class="mm-content">
+    <div class="section-header">
+      <span class="section-title">Material Lists</span>
+      <button class="mm-btn-sm mm-btn-primary" id="mm-mt-add">+ New List</button>
+    </div>
+    <p class="mm-view-note">Write out what a kitchen needs once, then load it
+      onto any job and adjust the quantities. Changes made inside a job never
+      affect the list here.</p>
+    <div id="mm-mt-body"><div class="mm-empty">Loading...</div></div>
   </div>
 </div>
 
@@ -966,6 +982,7 @@
 <script src="js/schedule.js"></script>
 <script src="js/checklist.js"></script>
 <script src="js/templates.js"></script>
+<script src="js/materialtpl.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/import.js"></script>
 <script src="js/addressauto.js"></script>

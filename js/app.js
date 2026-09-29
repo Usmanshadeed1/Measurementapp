@@ -32,6 +32,7 @@
     else if (tab === 'schedule') { showScreen('schedule'); SCHED.load(); }
     else if (tab === 'checklist') { showScreen('checklist'); CHECK.load(); }
     else if (tab === 'templates') { showScreen('templates'); TPL.load(); }
+    else if (tab === 'materialtpl') { showScreen('materialtpl'); window.MM.materialtpl.load(); }
     else if (tab === 'emailtpl') { showScreen('emailtpl'); window.MM.emailtpl.show(); }
     else if (tab === 'settings') { showScreen('settings'); window.MM.settings.show(); }
     else if (tab === 'workers') { showScreen('workers'); WORKERS.load(); }
@@ -891,6 +892,7 @@
   WORKERS.init();
   CHECK.init(function (o) { pickJob(o, 'tasks', 'checklist'); });
   TPL.init();
+  window.MM.materialtpl.init();
   window.MM.jobedit.init();
   MY.init();
   window.MM.senddesign.init();
