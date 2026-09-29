@@ -46,8 +46,7 @@ window.MM = window.MM || {};
 
   function load() {
     var el = document.getElementById('mm-mt-body');
-    if (!el) return Promise.resolve();
-    el.innerHTML = '<div class="mm-empty">Loading...</div>';
+    if (el) el.innerHTML = '<div class="mm-empty">Loading...</div>';
 
     return db('GET', '/material_templates?select=*&active=eq.true&order=position,name')
       .then(function (r) {
@@ -55,8 +54,17 @@ window.MM = window.MM || {};
         render();
       })
       .catch(function (e) {
-        el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
+        if (el) el.innerHTML = '<div class="mm-empty">' + U.esc(e.message) + '</div>';
+        throw e;
       });
+  }
+
+  // The lists, fetched if they have not been read yet. Called from the job
+  // screen, which needs them without showing this page -- and must not be
+  // left with an empty list just because nobody has opened it this session.
+  function ensure() {
+    return rows.length ? Promise.resolve(rows.slice())
+                       : load().then(function () { return rows.slice(); });
   }
 
   // Read once and handed to the job screen, which does the copying.
@@ -461,6 +469,7 @@ window.MM = window.MM || {};
   window.MM.materialtpl = {
     init: init,
     load: load,
+    ensure: ensure,
     all: all,
     suppliers: suppliers,
     startAdd: startAdd,

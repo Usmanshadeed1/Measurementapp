@@ -381,6 +381,7 @@
     DRIVE.showForJob(o);
     NOTES.showForJob(o);
     DOCS.showForJob(o);
+    window.MM.materials.showForJob(o);
     GHLTASKS.showForJob(o);
     ACCESS.showForJob(o);
     ACT.showForJob(o);
