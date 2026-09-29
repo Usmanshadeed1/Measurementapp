@@ -21,7 +21,7 @@
 // admin rather than listed here: model names change every few months and a
 // hardcoded one turns into a bug report.
 
-const SUPABASE_URL = 'https://ksmlkcyolyfmwvhbfkwv.supabase.co';
+const SUPABASE_URL = 'https://ozmpcygzbooddrbplxcz.supabase.co';
 const SETTING_KEY = 'ai_config';
 
 const PROVIDERS = {
