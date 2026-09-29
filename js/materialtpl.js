@@ -207,33 +207,49 @@ window.MM = window.MM || {};
       '<span class="mm-mt-n">' + (i + 1) + '</span>' +
 
       '<div class="mm-mt-fields">' +
-        '<input class="mm-input mm-mt-in mm-mt-item-in" data-i="' + i + '" ' +
-          'data-k="item" placeholder="Item" aria-label="Item" ' +
-          'value="' + U.esc(r.item) + '">' +
+        '<label class="mm-mt-f">' +
+          '<span class="mm-mt-flab">Item</span>' +
+          '<input class="mm-input mm-mt-in mm-mt-item-in" data-i="' + i + '" ' +
+            'data-k="item" placeholder="e.g. Cabinet hinges" ' +
+            'value="' + U.esc(r.item) + '">' +
+        '</label>' +
 
+        // Each box labelled above it. A placeholder vanishes the moment
+        // something is typed, which leaves four filled boxes and no way to
+        // tell which number was the cost and which was the quantity.
         '<div class="mm-mt-sub">' +
-          '<input class="mm-input mm-mt-in mm-mt-qty-in" type="number" min="0" ' +
-            'step="any" inputmode="decimal" data-i="' + i + '" data-k="qty" ' +
-            'placeholder="Qty" aria-label="Quantity" ' +
-            'value="' + U.esc(r.qty) + '">' +
+          '<label class="mm-mt-f mm-mt-f-qty">' +
+            '<span class="mm-mt-flab">Qty</span>' +
+            '<input class="mm-input mm-mt-in" type="number" min="0" ' +
+              'step="any" inputmode="decimal" data-i="' + i + '" data-k="qty" ' +
+              'value="' + U.esc(r.qty) + '">' +
+          '</label>' +
 
-          '<select class="mm-select mm-mt-in mm-mt-unit-in" data-i="' + i + '" ' +
-            'data-k="unit" aria-label="Unit">' +
-            UNITS.map(function (u) {
-              return '<option value="' + U.esc(u) + '"' +
-                (u === (r.unit || 'each') ? ' selected' : '') + '>' +
-                U.esc(u) + '</option>';
-            }).join('') +
-          '</select>' +
+          '<label class="mm-mt-f mm-mt-f-unit">' +
+            '<span class="mm-mt-flab">Unit</span>' +
+            '<select class="mm-select mm-mt-in" data-i="' + i + '" ' +
+              'data-k="unit">' +
+              UNITS.map(function (u) {
+                return '<option value="' + U.esc(u) + '"' +
+                  (u === (r.unit || 'each') ? ' selected' : '') + '>' +
+                  U.esc(u) + '</option>';
+              }).join('') +
+            '</select>' +
+          '</label>' +
 
-          '<input class="mm-input mm-mt-in mm-mt-cost-in" type="number" min="0" ' +
-            'step="0.01" inputmode="decimal" data-i="' + i + '" data-k="cost" ' +
-            'placeholder="Cost each" aria-label="Cost each" ' +
-            'value="' + U.esc(r.cost) + '">' +
+          '<label class="mm-mt-f mm-mt-f-cost">' +
+            '<span class="mm-mt-flab">Cost each <span class="mm-opt">(optional)</span></span>' +
+            '<input class="mm-input mm-mt-in" type="number" min="0" ' +
+              'step="0.01" inputmode="decimal" data-i="' + i + '" data-k="cost" ' +
+              'placeholder="0.00" value="' + U.esc(r.cost) + '">' +
+          '</label>' +
 
-          '<input class="mm-input mm-mt-in mm-mt-sup-in" list="mm-mt-sups" ' +
-            'data-i="' + i + '" data-k="supplier" placeholder="Supplier" ' +
-            'aria-label="Supplier" value="' + U.esc(r.supplier) + '">' +
+          '<label class="mm-mt-f mm-mt-f-sup">' +
+            '<span class="mm-mt-flab">Supplier <span class="mm-opt">(optional)</span></span>' +
+            '<input class="mm-input mm-mt-in" list="mm-mt-sups" ' +
+              'data-i="' + i + '" data-k="supplier" ' +
+              'value="' + U.esc(r.supplier) + '">' +
+          '</label>' +
         '</div>' +
       '</div>' +
 

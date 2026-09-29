@@ -47,18 +47,26 @@
 .mm-mt-fields{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;
   gap:8px}
 
+/* Every box carries its own label. A placeholder disappears as soon as
+   something is typed, which leaves four filled boxes and no way to tell
+   which number was the cost and which was the quantity. */
+.mm-mt-f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.mm-mt-flab{font-size:0.72em;font-weight:700;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.04em}
+.mm-mt-f .mm-mt-in{margin-bottom:0;width:100%}
+
 /* The item name gets the full width. It is the one field that is always
    filled in, and the one that is long. */
-.mm-mt-item-in{margin-bottom:0;min-height:44px;width:100%}
+.mm-mt-item-in{min-height:44px}
 
 /* Quantity, unit, cost and supplier share the line under it. They wrap
    rather than shrink: a cost box four characters wide helps nobody. */
-.mm-mt-sub{display:flex;gap:8px;flex-wrap:wrap;min-width:0}
-.mm-mt-sub .mm-mt-in{margin-bottom:0;min-height:42px;font-size:0.9em}
-.mm-mt-qty-in{flex:1 1 80px;min-width:0}
-.mm-mt-unit-in{flex:1 1 92px;min-width:0}
-.mm-mt-cost-in{flex:1 1 110px;min-width:0}
-.mm-mt-sup-in{flex:2 1 150px;min-width:0}
+.mm-mt-sub{display:flex;gap:8px;flex-wrap:wrap;min-width:0;align-items:end}
+.mm-mt-sub .mm-mt-in{min-height:42px;font-size:0.9em}
+.mm-mt-f-qty{flex:1 1 80px}
+.mm-mt-f-unit{flex:1 1 100px}
+.mm-mt-f-cost{flex:1 1 120px}
+.mm-mt-f-sup{flex:2 1 160px}
 
 .mm-mt-del{flex:0 0 auto;width:44px;height:44px;border:none;border-radius:8px;
   background:none;color:var(--text2);font-size:1.3em;line-height:1;
@@ -79,8 +87,8 @@
   .mm-mt-row{padding:10px 8px;gap:6px}
   .mm-mt-n{display:none}        /* the row is obvious without a number */
   .mm-mt-sub{gap:6px}
-  .mm-mt-qty-in{flex:1 1 70px}
-  .mm-mt-unit-in{flex:1 1 80px}
-  .mm-mt-cost-in,.mm-mt-sup-in{flex:1 1 100%}
+  .mm-mt-f-qty{flex:1 1 70px}
+  .mm-mt-f-unit{flex:1 1 80px}
+  .mm-mt-f-cost,.mm-mt-f-sup{flex:1 1 100%}
   .mm-mt-item{padding:8px 10px}
 }
