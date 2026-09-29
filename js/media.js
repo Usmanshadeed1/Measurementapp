@@ -22,6 +22,139 @@ window.MM = window.MM || {};
     return grid;
   }
 
+  // ---- Looking at a photo --------------------------------------------------
+  //
+  // Opened from a thumbnail, and able to move to the ones beside it: someone
+  // reviewing a room wants the next picture, not to close this one and hunt
+  // for the next thumbnail.
+  //
+  // The neighbours are found by walking the GRID the thumbnail sits in, so a
+  // photo opened inside a wall moves through that wall's photos and one
+  // opened on the job moves through the job's. Nothing is loaded or stored
+  // to do it -- the thumbnails are already on the page.
+  //
+  // Written directly rather than with a slider library: this is two touch
+  // events and a key handler, and the app carries no libraries at all.
+
+  function openViewer(fromThumb) {
+    var grid = fromThumb.parentElement;
+    var shots = grid
+      ? Array.prototype.filter.call(grid.children, function (c) { return c.mmMedia; })
+      : [fromThumb];
+    var at = shots.indexOf(fromThumb);
+    if (at < 0) { shots = [fromThumb]; at = 0; }
+
+    var modal = document.createElement('div');
+    modal.className = 'mm-lightbox';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+
+    var close = document.createElement('button');
+    close.className = 'mm-lightbox-close';
+    close.textContent = '✕';
+    close.setAttribute('aria-label', 'Close');
+    close.addEventListener('click', shut);
+    modal.appendChild(close);
+
+    var stage = document.createElement('div');
+    stage.className = 'mm-lightbox-stage';
+    modal.appendChild(stage);
+
+    var cap = document.createElement('div');
+    cap.className = 'mm-lightbox-caption';
+    modal.appendChild(cap);
+
+    var prev = null, next = null;
+    if (shots.length > 1) {
+      prev = arrow('‹', 'Previous', 'mm-lightbox-prev', function () { go(-1); });
+      next = arrow('›', 'Next', 'mm-lightbox-next', function () { go(1); });
+      modal.appendChild(prev);
+      modal.appendChild(next);
+    }
+
+    function arrow(glyph, label, cls, fn) {
+      var b = document.createElement('button');
+      b.className = 'mm-lightbox-arrow ' + cls;
+      b.textContent = glyph;
+      b.setAttribute('aria-label', label);
+      b.addEventListener('click', function (e) { e.stopPropagation(); fn(); });
+      return b;
+    }
+
+    function show() {
+      var d = shots[at].mmMedia;
+      stage.innerHTML = '';
+
+      var big = d.isVid ? document.createElement('video')
+                        : document.createElement('img');
+      big.src = d.url;
+      if (d.isVid) big.controls = true;
+      else big.alt = d.label ? ('Photo — ' + d.label) : 'Job photo';
+      stage.appendChild(big);
+
+      // The position is worth knowing -- "3 of 9" tells someone whether it
+      // is worth carrying on swiping.
+      var bits = [];
+      if (d.label) bits.push(d.label);
+      if (shots.length > 1) bits.push((at + 1) + ' of ' + shots.length);
+      cap.textContent = bits.join('  ·  ');
+
+      if (prev) prev.disabled = at === 0;
+      if (next) next.disabled = at === shots.length - 1;
+    }
+
+    // Stops at both ends rather than wrapping round: on a phone, silently
+    // looping back to the first picture reads as the swipe having failed.
+    function go(by) {
+      var to = at + by;
+      if (to < 0 || to >= shots.length) return;
+      at = to;
+      show();
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') { shut(); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+    }
+
+    function shut() {
+      document.removeEventListener('keydown', onKey);
+      modal.remove();
+    }
+
+    // Tapping the backdrop closes; tapping the picture itself does not, so a
+    // mis-tap while reaching for an arrow does not shut the viewer.
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal || e.target === stage) shut();
+    });
+
+    // Swiping. Only a clearly horizontal drag counts, so scrolling a tall
+    // photo up and down does not skip to the next one.
+    var x0 = 0, y0 = 0, tracking = false;
+    modal.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) { tracking = false; return; }
+      x0 = e.touches[0].clientX;
+      y0 = e.touches[0].clientY;
+      tracking = true;
+    }, { passive: true });
+
+    modal.addEventListener('touchend', function (e) {
+      if (!tracking) return;
+      tracking = false;
+      var t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      var dx = t.clientX - x0, dy = t.clientY - y0;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+      go(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(modal);
+    show();
+    close.focus();
+  }
+
   function buildMediaThumb(m, isVid, grid, el, wallLabel, onRemovedExtra) {
     var type = isVid ? api.VIDEO : api.PHOTO;
     var thumb = document.createElement('div');
@@ -69,27 +202,12 @@ window.MM = window.MM || {};
     thumb.setAttribute('role', 'button');
     thumb.setAttribute('tabindex', '0');
     thumb.setAttribute('aria-label', 'View ' + (isVid ? 'video' : 'photo') + (wallLabel ? ' — ' + wallLabel : ''));
-    function openLightbox() {
-      var modal = document.createElement('div');
-      modal.className = 'mm-lightbox';
-      var close = document.createElement('button');
-      close.className = 'mm-lightbox-close';
-      close.textContent = '✕';
-      close.setAttribute('aria-label', 'Close');
-      close.addEventListener('click', function () { modal.remove(); });
-      modal.appendChild(close);
-      var big = isVid ? document.createElement('video') : document.createElement('img');
-      big.src = U.pv(m, 'file_url');
-      if (isVid) big.controls = true;
-      modal.appendChild(big);
-      if (wallLabel) {
-        var cap = document.createElement('div');
-        cap.className = 'mm-lightbox-caption';
-        cap.textContent = wallLabel;
-        modal.appendChild(cap);
-      }
-      document.body.appendChild(modal);
-    }
+
+    // Hung on the thumbnail so the viewer can read it back when moving to
+    // the next picture. The viewer walks the grid it was opened from, and
+    // the grid holds thumbnails -- not the records they were built from.
+    thumb.mmMedia = { url: U.pv(m, 'file_url'), isVid: isVid, label: wallLabel || '' };
+    function openLightbox() { openViewer(thumb); }
     thumb.addEventListener('click', openLightbox);
     thumb.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(); } });
 
