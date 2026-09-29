@@ -105,3 +105,8 @@
 @media (max-width: 620px){
   .mm-mt-airow .mm-input,.mm-mt-airow .mm-btn-sm{flex:1 1 100%}
 }
+
+/* What the AI had to say, beside the button that asked it. */
+.mm-mt-aimsg{margin:8px 0 0;font-size:0.84em;font-weight:700;
+  color:var(--accent);line-height:1.45}
+.mm-mt-aimsg.is-bad{color:var(--danger-text)}

@@ -282,6 +282,7 @@ window.MM = window.MM || {};
   var aiOn = null;       // null = not asked yet
   var aiBusy = false;
   var aiMsg = '';
+  var aiErr = false;
 
   function checkAi() {
     if (aiOn !== null) return Promise.resolve(aiOn);
@@ -294,18 +295,27 @@ window.MM = window.MM || {};
   function suggestBox() {
     if (!aiOn) return '';
     return '<div class="mm-field-group mm-mt-ai">' +
+      // "Optional" belongs on the whole box, not on the words inside it:
+      // reading it the other way made the text look skippable, and pressing
+      // Suggest with nothing typed then looked broken.
       '<span class="mm-label">Start from a suggestion ' +
-        '<span class="mm-opt">(optional)</span></span>' +
+        '<span class="mm-opt">(you can skip this)</span></span>' +
       '<div class="mm-mt-airow">' +
         '<input class="mm-input" id="mm-mt-aiwhat" ' +
-          'placeholder="e.g. kitchen remodel with island" ' +
+          'placeholder="What is the job? e.g. kitchen remodel with island" ' +
           (aiBusy ? 'disabled ' : '') + '>' +
         '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
           'id="mm-mt-aigo"' + (aiBusy ? ' disabled' : '') + '>' +
           (aiBusy ? 'Thinking...' : 'Suggest items') + '</button>' +
       '</div>' +
+      // Anything to say about the suggestion is said HERE, beside the button
+      // that caused it. The page's own error line sits below the saved
+      // lists, far off the bottom of the screen from this form.
+      (aiMsg
+        ? '<p class="mm-mt-aimsg' + (aiErr ? ' is-bad' : '') + '" role="alert">' +
+          U.esc(aiMsg) + '</p>'
+        : '') +
       '<p class="mm-tt-hint">' +
-        (aiMsg ? U.esc(aiMsg) + ' ' : '') +
         'Suggestions are added to the list below for you to change or ' +
         'delete. Nothing is saved until you press Save.' +
       '</p>' +
@@ -315,15 +325,27 @@ window.MM = window.MM || {};
   function suggest() {
     var box = document.getElementById('mm-mt-aiwhat');
     var what = (box && box.value || '').trim();
+
+    // The AI has to be told what the job is -- there is nothing to answer
+    // otherwise. The list's own name is usually exactly that, so it is used
+    // rather than refusing: someone who called the list "Kitchen" has
+    // already said what they meant.
     if (!what) {
-      aiMsg = 'Say what the job is first.';
+      var nameBox = document.getElementById('mm-mt-name');
+      what = (nameBox && nameBox.value || '').trim();
+      if (what && box) box.value = what;
+    }
+
+    if (!what) {
+      aiMsg = 'Type what the job is first, such as "kitchen remodel".';
+      aiErr = true;
       render();
       var b2 = document.getElementById('mm-mt-aiwhat');
       if (b2) b2.focus();
       return;
     }
 
-    aiBusy = true; aiMsg = ''; render();
+    aiBusy = true; aiMsg = ''; aiErr = false; render();
 
     fetch('/api/ai?action=suggest', {
       method: 'POST',
@@ -361,6 +383,7 @@ window.MM = window.MM || {};
         });
 
         aiBusy = false;
+        aiErr = false;
         aiMsg = added
           ? 'Added ' + added + (added === 1 ? ' item.' : ' items.')
           : 'Nothing new to add.';
@@ -368,9 +391,9 @@ window.MM = window.MM || {};
       })
       .catch(function (e) {
         aiBusy = false;
-        aiMsg = '';
+        aiMsg = e.message;
+        aiErr = true;
         render();
-        showError(e.message);
       });
   }
 
@@ -574,7 +597,7 @@ window.MM = window.MM || {};
   function startAdd() {
     adding = true; editing = null;
     draft = [blank()];
-    aiMsg = '';
+    aiMsg = ''; aiErr = false;
     render();
     checkAi().then(function (on) { if (on) render(); });
     var el = document.getElementById('mm-mt-name');
