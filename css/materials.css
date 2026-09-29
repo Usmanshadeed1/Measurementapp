@@ -137,3 +137,9 @@
 .mm-ml-pickdesc{flex:1 1 100%;font-size:0.82em;color:var(--text2)}
 .mm-ml-pickhint{margin:0 0 10px;font-size:0.8em;color:var(--text2);
   line-height:1.45}
+
+/* Still to order: the one state that needs acting on, so it carries the
+   warning colour rather than the neutral one. */
+.mm-ml-badge-todo{color:var(--warn-text,#f0a02a);
+  background:color-mix(in srgb,#f0a02a 16%,transparent);
+  border:1px solid color-mix(in srgb,#f0a02a 40%,transparent)}

@@ -168,17 +168,26 @@ window.MM = window.MM || {};
       });
   }
 
+  // The badge says what is outstanding, not what is finished: someone
+  // glancing at a closed panel wants to know whether anything still has to
+  // be bought, and "8 to order" answers that where "2 of 10" does not.
   function head() {
-    var done = items.filter(function (r) { return r.state === 'received'; }).length;
+    var todo = items.filter(function (r) { return r.state === 'todo'; }).length;
     var sum = total(items);
+
+    var badge;
+    if (!items.length) {
+      badge = '<span class="mm-steps-badge mm-steps-badge-todo">None yet</span>';
+    } else if (todo) {
+      badge = '<span class="mm-steps-badge mm-ml-badge-todo">' +
+        todo + ' to order' + (sum ? ' &middot; ' + money(sum) : '') + '</span>';
+    } else {
+      badge = '<span class="mm-steps-badge mm-steps-badge-done">All ordered' +
+        (sum ? ' &middot; ' + money(sum) : '') + '</span>';
+    }
+
     return '<div class="mm-steps-head">' +
-      '<span class="mm-steps-title">Materials</span>' +
-      (items.length
-        ? '<span class="mm-steps-badge' +
-            (done === items.length ? ' mm-steps-badge-done' : '') + '">' +
-            done + ' of ' + items.length + (sum ? ' &middot; ' + money(sum) : '') +
-          '</span>'
-        : '<span class="mm-steps-badge mm-steps-badge-todo">None yet</span>') +
+      '<span class="mm-steps-title">Materials</span>' + badge +
     '</div>';
   }
 
