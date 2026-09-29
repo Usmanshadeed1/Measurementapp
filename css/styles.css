@@ -357,11 +357,13 @@ textarea.mm-input{min-height:90px;resize:vertical}
    these colours are fixed rather than themed -- as the close button is. */
 .mm-lightbox-arrow{
   position:absolute;top:50%;transform:translateY(-50%);
-  width:52px;height:52px;border:none;border-radius:50%;
-  background:rgba(42,42,42,.85);color:#fff;
-  font-size:2em;line-height:1;cursor:pointer;
-  display:flex;align-items:center;justify-content:center}
-.mm-lightbox-arrow:hover{background:#2a2a2a}
+  width:52px;height:52px;padding:0;border:none;border-radius:50%;
+  background:rgba(20,20,20,.55);color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(6px);
+  transition:background .15s ease}
+.mm-lightbox-arrow svg{width:26px;height:26px;display:block}
+.mm-lightbox-arrow:hover{background:rgba(20,20,20,.85)}
 .mm-lightbox-arrow:disabled{opacity:.25;cursor:default}
 .mm-lightbox-arrow:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .mm-lightbox-prev{left:12px}
@@ -370,8 +372,8 @@ textarea.mm-input{min-height:90px;resize:vertical}
 @media (max-width: 620px){
   /* Swiping is the way through on a phone, so the arrows step back rather
      than sitting over the picture. */
-  .mm-lightbox-arrow{width:44px;height:44px;font-size:1.6em;
-    background:rgba(42,42,42,.6)}
+  .mm-lightbox-arrow{width:44px;height:44px}
+  .mm-lightbox-arrow svg{width:22px;height:22px}
   .mm-lightbox-prev{left:4px}
   .mm-lightbox-next{right:4px}
   .mm-lightbox-caption{font-size:0.95em;padding:0 56px}

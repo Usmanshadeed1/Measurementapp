@@ -66,17 +66,27 @@ window.MM = window.MM || {};
 
     var prev = null, next = null;
     if (shots.length > 1) {
-      prev = arrow('‹', 'Previous', 'mm-lightbox-prev', function () { go(-1); });
-      next = arrow('›', 'Next', 'mm-lightbox-next', function () { go(1); });
+      prev = arrow('Previous', 'mm-lightbox-prev', function () { go(-1); });
+      next = arrow('Next', 'mm-lightbox-next', function () { go(1); });
       modal.appendChild(prev);
       modal.appendChild(next);
     }
 
-    function arrow(glyph, label, cls, fn) {
+    // The chevron is DRAWN rather than typed. The characters < and > carry
+    // their own side bearings, so they never sit centred in a round button
+    // however the padding is nudged.
+    function arrow(label, cls, fn) {
       var b = document.createElement('button');
       b.className = 'mm-lightbox-arrow ' + cls;
-      b.textContent = glyph;
       b.setAttribute('aria-label', label);
+      b.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+          '<path d="' + (cls === 'mm-lightbox-prev'
+            ? 'M15 5 L8 12 L15 19'
+            : 'M9 5 L16 12 L9 19') + '" ' +
+            'fill="none" stroke="currentColor" stroke-width="2.4" ' +
+            'stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
       b.addEventListener('click', function (e) { e.stopPropagation(); fn(); });
       return b;
     }
