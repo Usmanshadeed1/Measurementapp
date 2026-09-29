@@ -106,3 +106,23 @@
   .mm-ml-baracts .mm-btn-sm{flex:1 1 0;min-width:0}
   .mm-ml-side{flex-direction:row}
 }
+
+/* ---- Choosing a list to load ----
+   Shown in the panel, as a row of real choices with their names and sizes.
+   Picking a thing that has a name should never mean typing its number. */
+.mm-ml-picker{margin-bottom:14px;padding:12px;border-radius:10px;
+  background:var(--card2);border:1px solid var(--border)}
+.mm-ml-pickhead{font-weight:700;margin-bottom:10px}
+.mm-ml-picklist{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+
+.mm-ml-pick{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;
+  width:100%;min-height:48px;padding:10px 12px;text-align:left;
+  border:1px solid var(--border);border-radius:10px;background:var(--card);
+  color:var(--text);font-family:inherit;font-size:1em;cursor:pointer}
+.mm-ml-pick:hover{border-color:var(--accent);background:var(--card2)}
+.mm-ml-pick:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-ml-pickname{font-weight:700}
+.mm-ml-pickcount{font-size:0.82em;color:var(--accent);font-weight:700}
+.mm-ml-pickdesc{flex:1 1 100%;font-size:0.82em;color:var(--text2)}
+.mm-ml-pickhint{margin:0 0 10px;font-size:0.8em;color:var(--text2);
+  line-height:1.45}

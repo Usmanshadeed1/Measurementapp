@@ -43,6 +43,7 @@ window.MM = window.MM || {};
   var saving = false;
   var adding = false;
   var showFilter = 'all';      // all | todo | ordered | received
+  var picking = null;          // the lists being chosen from, or null
 
   // ---- Reading and writing -------------------------------------------------
 
@@ -148,6 +149,7 @@ window.MM = window.MM || {};
     currentJob = job;
     items = [];
     adding = false;
+    picking = null;
     showFilter = 'all';
 
     var el = document.getElementById('mm-job-materials');
@@ -195,6 +197,7 @@ window.MM = window.MM || {};
     el.innerHTML = head() +
       '<div class="mm-ml-body">' +
         toolbar() +
+        (picking ? pickerHtml() : '') +
         (adding ? addForm() : '') +
         (items.length
           ? (shown.length
@@ -384,32 +387,22 @@ window.MM = window.MM || {};
       if (sups.indexOf(s) < 0) sups.push(s);
     });
 
-    var pick = '';
-    if (sups.length > 1) {
-      var named = sups.filter(Boolean);
-      var msg = 'Export which items?' + NEWLINE + NEWLINE +
-        '0 = everything' + NEWLINE +
-        named.map(function (s, i) { return (i + 1) + ' = ' + s; }).join(NEWLINE) +
-        NEWLINE + NEWLINE + 'Type a number:';
-      var ans = window.prompt(msg, '0');
-      if (ans === null) return;
-      var n = parseInt(ans, 10);
-      if (isFinite(n) && n > 0 && named[n - 1]) pick = named[n - 1];
-    }
+    // Chosen in the export box itself rather than up front: one dropdown
+    // there beats a question before anything has been seen.
+    openExport(job, sups.filter(Boolean));
+  }
 
+  function textFor(job, pick) {
     var rows = pick
       ? items.filter(function (r) { return r.supplier === pick; })
       : items;
-    if (!rows.length) { showError('Nothing to export.'); return; }
-
-    var text = asText(rows, 'Materials — ' + job + (pick ? ' — ' + pick : ''));
-    openExport(text);
+    return asText(rows, 'Materials — ' + job + (pick ? ' — ' + pick : ''));
   }
 
   // Shown in a box rather than copied straight to the clipboard: on a phone a
   // silent copy gives no sign it worked, and the text is often wanted in a
   // message rather than a paste.
-  function openExport(text) {
+  function openExport(job, sups) {
     var wrap = document.getElementById('mm-ml-exportbox');
     if (!wrap) {
       wrap = document.createElement('div');
@@ -417,10 +410,27 @@ window.MM = window.MM || {};
       wrap.className = 'mm-modal-overlay';
       document.body.appendChild(wrap);
     }
+
+    var text = textFor(job, '');
+
     wrap.innerHTML =
       '<div class="mm-modal" role="dialog" aria-modal="true" ' +
           'aria-labelledby="mm-ml-extitle">' +
         '<div class="mm-modal-title" id="mm-ml-extitle">Material list</div>' +
+        // Offered only when there is a choice to make: one supplier, or
+        // none named at all, means the whole list is the only answer.
+        (sups.length > 1
+          ? '<div class="mm-mt-f" style="margin-bottom:12px">' +
+              '<span class="mm-mt-flab">Which items</span>' +
+              '<select class="mm-select" id="mm-ml-exwho">' +
+                '<option value="">Everything</option>' +
+                sups.map(function (s) {
+                  return '<option value="' + U.esc(s) + '">' + U.esc(s) +
+                    ' only</option>';
+                }).join('') +
+              '</select>' +
+            '</div>'
+          : '') +
         '<textarea class="mm-input mm-ml-exarea" rows="14" readonly>' +
           U.esc(text) + '</textarea>' +
         '<div class="mm-btn-row">' +
@@ -431,17 +441,24 @@ window.MM = window.MM || {};
       '</div>';
     wrap.classList.add('open');
 
+    var area = wrap.querySelector('.mm-ml-exarea');
+    function current() { return area.value; }
+
+    var who = wrap.querySelector('#mm-ml-exwho');
+    if (who) who.addEventListener('change', function () {
+      area.value = textFor(job, this.value);
+    });
+
     function close() { wrap.classList.remove('open'); wrap.innerHTML = ''; }
     wrap.querySelector('#mm-ml-exclose').addEventListener('click', close);
     wrap.addEventListener('click', function (e) { if (e.target === wrap) close(); });
 
     wrap.querySelector('#mm-ml-excopy').addEventListener('click', function () {
-      var area = wrap.querySelector('.mm-ml-exarea');
       area.select();
       var btn = this;
       function done() { U.fbk(btn, 'Copy'); }
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done, function () {
+        navigator.clipboard.writeText(current()).then(done, function () {
           try { document.execCommand('copy'); done(); } catch (e) {}
         });
       } else {
@@ -453,7 +470,7 @@ window.MM = window.MM || {};
       var w = window.open('', '_blank');
       if (!w) return;
       w.document.write('<pre style="font:14px/1.6 system-ui,sans-serif;' +
-        'white-space:pre-wrap">' + U.esc(text) + '</pre>');
+        'white-space:pre-wrap">' + U.esc(current()) + '</pre>');
       w.document.close();
       w.focus();
       w.print();
@@ -480,17 +497,11 @@ window.MM = window.MM || {};
   }
 
   function pickTemplate(tpls) {
-    var msg = 'Load which list?' + NEWLINE + NEWLINE +
-      tpls.map(function (t, i) {
-        return (i + 1) + ' = ' + t.name + ' (' + (t.items || []).length + ' items)';
-      }).join(NEWLINE) +
-      NEWLINE + NEWLINE + 'Type a number:';
-    var ans = window.prompt(msg, '1');
-    if (ans === null) return;
-    var n = parseInt(ans, 10);
-    var t = isFinite(n) && n > 0 ? tpls[n - 1] : null;
-    if (!t) { showError('No list with that number.'); return; }
+    picking = tpls;
+    render();
+  }
 
+  function applyTemplate(t) {
     // Added to what is already there rather than replacing it: a job can take
     // a kitchen list and a bathroom list, and someone who has already started
     // adding items should not lose them.
@@ -507,7 +518,36 @@ window.MM = window.MM || {};
     if (!added) { showError('That list has no items.'); return; }
 
     showError('');
+    picking = null;
     save('Loaded material list ' + t.name + ' (' + added + ' items)');
+  }
+
+  // The lists on offer, shown in the panel rather than in a browser dialog:
+  // a prompt asking someone to type a number is not a way to choose a thing
+  // that has a name.
+  function pickerHtml() {
+    return '<div class="mm-ml-picker">' +
+      '<div class="mm-ml-pickhead">Which list?</div>' +
+      '<div class="mm-ml-picklist">' +
+        picking.map(function (t, i) {
+          var n = (t.items || []).length;
+          return '<button type="button" class="mm-ml-pick" data-pick="' + i + '">' +
+            '<span class="mm-ml-pickname">' + U.esc(t.name) + '</span>' +
+            '<span class="mm-ml-pickcount">' + n +
+              (n === 1 ? ' item' : ' items') + '</span>' +
+            (t.description
+              ? '<span class="mm-ml-pickdesc">' + U.esc(t.description) + '</span>'
+              : '') +
+          '</button>';
+        }).join('') +
+      '</div>' +
+      '<p class="mm-ml-pickhint">The items are copied onto this job. ' +
+        'Changing them here never affects the saved list.</p>' +
+      '<div class="mm-btn-row">' +
+        '<button class="mm-btn-sm mm-btn-secondary" id="mm-ml-pickcancel">' +
+          'Cancel</button>' +
+      '</div>' +
+    '</div>';
   }
 
   // ---- Actions -------------------------------------------------------------
@@ -566,6 +606,18 @@ window.MM = window.MM || {};
 
     var loadBtn = el.querySelector('#mm-ml-load');
     if (loadBtn) loadBtn.addEventListener('click', loadTemplate);
+
+    el.querySelectorAll('[data-pick]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var t = picking && picking[+b.getAttribute('data-pick')];
+        if (t) applyTemplate(t);
+      });
+    });
+
+    var pc = el.querySelector('#mm-ml-pickcancel');
+    if (pc) pc.addEventListener('click', function () {
+      picking = null; showError(''); render();
+    });
 
     var exp = el.querySelector('#mm-ml-export');
     if (exp) exp.addEventListener('click', exportList);
