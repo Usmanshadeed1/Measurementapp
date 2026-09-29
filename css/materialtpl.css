@@ -92,3 +92,16 @@
   .mm-mt-f-cost,.mm-mt-f-sup{flex:1 1 100%}
   .mm-mt-item{padding:8px 10px}
 }
+
+/* ---- Asking the AI for a starting list ----
+   A first draft, offered above the items it will fill in. Present only when
+   a key has been set up in Settings. */
+.mm-mt-ai{padding:12px;border-radius:10px;background:var(--card2);
+  border:1px dashed var(--border)}
+.mm-mt-airow{display:flex;gap:8px;flex-wrap:wrap}
+.mm-mt-airow .mm-input{flex:1 1 200px;min-width:0;margin-bottom:0;
+  min-height:44px}
+.mm-mt-airow .mm-btn-sm{flex:0 0 auto;min-height:44px}
+@media (max-width: 620px){
+  .mm-mt-airow .mm-input,.mm-mt-airow .mm-btn-sm{flex:1 1 100%}
+}

@@ -83,9 +83,168 @@ window.MM = window.MM || {};
         body +
         '<p class="mm-task-error' + (isError ? '' : ' mm-set-ok') + '" ' +
           'id="mm-set-msg" role="alert">' + U.esc(msg || '') + '</p>' +
-      '</div>';
+      '</div>' +
+      aiCard();
 
     bind(el);
+    bindAi(el);
+  }
+
+  // ---- The AI key ----------------------------------------------------------
+  //
+  // Used in exactly one place: suggesting what goes on a material list. The
+  // key is written to the server and never read back -- this page can say
+  // whether one exists and replace it, and that is all.
+  //
+  // The model NAME is typed rather than chosen from a list. Model names
+  // change every few months, and a list baked into the app would be wrong by
+  // the time anyone needed it.
+
+  var ai = null;        // the last answer from /api/ai?action=status
+  var aiBusy = false;
+  var aiMsg = '';
+  var aiErr = false;
+
+  function aiFetch(action, body) {
+    return fetch('/api/ai?action=' + action, {
+      method: body ? 'POST' : 'GET',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        var d;
+        try { d = t ? JSON.parse(t) : {}; } catch (e) { d = {}; }
+        if (!r.ok) throw new Error(d.error || 'Request failed.');
+        return d;
+      });
+    });
+  }
+
+  function aiCard() {
+    var s = ai || {};
+    var on = !!s.configured;
+    var provs = s.providers || [
+      { id: 'gemini', label: 'Google Gemini' },
+      { id: 'groq', label: 'Groq' },
+      { id: 'openrouter', label: 'OpenRouter' },
+    ];
+
+    return '<div class="mm-set">' +
+      '<div class="mm-set-head">AI suggestions</div>' +
+      '<p class="mm-set-note">' +
+        'Used in one place: the <strong>Suggest items</strong> button when ' +
+        'building a material list. It is sent a few words such as ' +
+        '&ldquo;kitchen remodel with island&rdquo; and sends back a list to ' +
+        'edit. No job, customer or measurement is ever sent to it.' +
+      '</p>' +
+
+      '<div class="mm-set-state' + (on ? ' is-on' : '') + '">' +
+        (on
+          ? 'Set up' + (s.model ? ' &mdash; ' + U.esc(s.model) : '') + '.'
+          : 'Not set up. The Suggest button stays hidden until it is.') +
+      '</div>' +
+
+      '<div class="mm-mt-f" style="margin-bottom:10px">' +
+        '<span class="mm-mt-flab">Platform</span>' +
+        '<select class="mm-select" id="mm-ai-prov">' +
+          provs.map(function (p) {
+            return '<option value="' + U.esc(p.id) + '"' +
+              (p.id === s.provider ? ' selected' : '') + '>' +
+              U.esc(p.label) + '</option>';
+          }).join('') +
+        '</select>' +
+      '</div>' +
+
+      '<div class="mm-mt-f" style="margin-bottom:10px">' +
+        '<span class="mm-mt-flab">Model name</span>' +
+        '<input class="mm-input" id="mm-ai-model" ' +
+          'placeholder="e.g. gemini-2.5-flash" ' +
+          'value="' + U.esc(s.model || '') + '">' +
+        '<p class="mm-set-hint">Copy the model name from the platform you ' +
+          'chose. Any model it offers will do &mdash; this is a simple job.</p>' +
+      '</div>' +
+
+      '<div class="mm-mt-f" style="margin-bottom:10px">' +
+        '<span class="mm-mt-flab">API key</span>' +
+        '<input class="mm-input" id="mm-ai-key" type="password" ' +
+          'autocomplete="off" placeholder="' +
+          (on ? 'Saved — leave blank to keep it' : 'Paste the key') + '">' +
+        '<p class="mm-set-hint">Kept on the server and never shown again. ' +
+          'Leave it blank to change the model without pasting it back.</p>' +
+      '</div>' +
+
+      '<div class="mm-btn-row">' +
+        (on
+          ? '<button class="mm-btn-sm mm-btn-secondary" id="mm-ai-clear"' +
+            (aiBusy ? ' disabled' : '') + '>Remove</button>'
+          : '') +
+        (on
+          ? '<button class="mm-btn-sm mm-btn-secondary" id="mm-ai-test"' +
+            (aiBusy ? ' disabled' : '') + '>Test</button>'
+          : '') +
+        '<button class="mm-btn-sm mm-btn-primary" id="mm-ai-save"' +
+          (aiBusy ? ' disabled' : '') + '>' +
+          (aiBusy ? 'Working...' : 'Save') + '</button>' +
+      '</div>' +
+
+      '<p class="mm-task-error' + (aiErr ? '' : ' mm-set-ok') + '" ' +
+        'id="mm-ai-msg" role="alert">' + U.esc(aiMsg || '') + '</p>' +
+    '</div>';
+  }
+
+  function aiSay(m, bad) { aiMsg = m || ''; aiErr = !!bad; render(''); }
+
+  function bindAi(el) {
+    var save = el.querySelector('#mm-ai-save');
+    if (save) save.addEventListener('click', function () {
+      var provider = el.querySelector('#mm-ai-prov').value;
+      var model = (el.querySelector('#mm-ai-model').value || '').trim();
+      var key = (el.querySelector('#mm-ai-key').value || '').trim();
+      if (!model) { aiSay('Enter a model name.', true); return; }
+
+      aiBusy = true; aiSay('');
+      aiFetch('save', { provider: provider, model: model, key: key })
+        .then(function () { return aiRefresh('Saved.'); })
+        .catch(function (e) {
+          aiBusy = false;
+          aiSay('Could not save: ' + e.message, true);
+        });
+    });
+
+    var test = el.querySelector('#mm-ai-test');
+    if (test) test.addEventListener('click', function () {
+      aiBusy = true; aiSay('Asking the AI...');
+      aiFetch('test', { what: 'test' })
+        .then(function (d) {
+          aiBusy = false;
+          aiSay('Working — it suggested ' + (d.items || []).length + ' items.');
+        })
+        .catch(function (e) {
+          aiBusy = false;
+          aiSay('It did not answer: ' + e.message, true);
+        });
+    });
+
+    var clear = el.querySelector('#mm-ai-clear');
+    if (clear) clear.addEventListener('click', function () {
+      if (!window.confirm('Remove the AI key? The Suggest button will ' +
+                          'disappear until a new one is saved.')) return;
+      aiBusy = true; aiSay('');
+      aiFetch('clear', {})
+        .then(function () { return aiRefresh('Removed.'); })
+        .catch(function (e) {
+          aiBusy = false;
+          aiSay('Could not remove it: ' + e.message, true);
+        });
+    });
+  }
+
+  function aiRefresh(msg) {
+    return aiFetch('status')
+      .then(function (d) {
+        ai = d; aiBusy = false; aiSay(msg || '');
+      })
+      .catch(function () { aiBusy = false; aiSay(msg || ''); });
   }
 
   function bind(el) {
@@ -168,7 +327,13 @@ window.MM = window.MM || {};
     el.innerHTML = '<div class="mm-loading">' +
       '<span class="mm-spinner" aria-hidden="true"></span>' +
       '<span>Checking the connection&hellip;</span></div>';
-    return refresh();
+    // Both cards are drawn together, so both states are read before the
+    // first render rather than the page redrawing under the reader.
+    aiMsg = ''; aiErr = false;
+    return aiFetch('status')
+      .then(function (d) { ai = d; })
+      .catch(function () { ai = null; })
+      .then(function () { return refresh(); });
   }
 
   window.addEventListener('message', onMessage);

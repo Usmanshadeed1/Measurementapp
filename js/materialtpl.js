@@ -45,6 +45,10 @@ window.MM = window.MM || {};
   // ---- Loading -------------------------------------------------------------
 
   function load() {
+    // Asked once per session, so the Suggest box appears for anyone who has
+    // set a key up and is absent for everyone else.
+    checkAi().then(function () { if (adding || editing) render(); });
+
     var el = document.getElementById('mm-mt-body');
     if (el) el.innerHTML = '<div class="mm-empty">Loading...</div>';
 
@@ -266,6 +270,110 @@ window.MM = window.MM || {};
     '</div>';
   }
 
+  // ---- Asking the AI for a starting list -----------------------------------
+  //
+  // A first draft, not an answer. The suggestions are ADDED to whatever is
+  // already in the form and nothing is saved: the list is reviewed, cut down
+  // and added to by someone who knows the trade, then saved by them.
+  //
+  // Hidden entirely until a key has been set up in Settings, so the page is
+  // unchanged for anyone who never turns this on.
+
+  var aiOn = null;       // null = not asked yet
+  var aiBusy = false;
+  var aiMsg = '';
+
+  function checkAi() {
+    if (aiOn !== null) return Promise.resolve(aiOn);
+    return fetch('/api/ai?action=status')
+      .then(function (r) { return r.json(); })
+      .then(function (d) { aiOn = !!(d && d.configured); return aiOn; })
+      .catch(function () { aiOn = false; return false; });
+  }
+
+  function suggestBox() {
+    if (!aiOn) return '';
+    return '<div class="mm-field-group mm-mt-ai">' +
+      '<span class="mm-label">Start from a suggestion ' +
+        '<span class="mm-opt">(optional)</span></span>' +
+      '<div class="mm-mt-airow">' +
+        '<input class="mm-input" id="mm-mt-aiwhat" ' +
+          'placeholder="e.g. kitchen remodel with island" ' +
+          (aiBusy ? 'disabled ' : '') + '>' +
+        '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+          'id="mm-mt-aigo"' + (aiBusy ? ' disabled' : '') + '>' +
+          (aiBusy ? 'Thinking...' : 'Suggest items') + '</button>' +
+      '</div>' +
+      '<p class="mm-tt-hint">' +
+        (aiMsg ? U.esc(aiMsg) + ' ' : '') +
+        'Suggestions are added to the list below for you to change or ' +
+        'delete. Nothing is saved until you press Save.' +
+      '</p>' +
+    '</div>';
+  }
+
+  function suggest() {
+    var box = document.getElementById('mm-mt-aiwhat');
+    var what = (box && box.value || '').trim();
+    if (!what) {
+      aiMsg = 'Say what the job is first.';
+      render();
+      var b2 = document.getElementById('mm-mt-aiwhat');
+      if (b2) b2.focus();
+      return;
+    }
+
+    aiBusy = true; aiMsg = ''; render();
+
+    fetch('/api/ai?action=suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ what: what }),
+    })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          var d;
+          try { d = t ? JSON.parse(t) : {}; } catch (e) { d = {}; }
+          if (!r.ok) throw new Error(d.error || 'The AI did not answer.');
+          return d;
+        });
+      })
+      .then(function (d) {
+        // Dropped rather than kept: a row the person added and left blank is
+        // in the way once a real list arrives.
+        draft = draft.filter(function (r) { return !!clean(r.item); });
+
+        var added = 0;
+        (d.items || []).forEach(function (i) {
+          var name = clean(i.item);
+          if (!name) return;
+          // Nothing is replaced. Suggesting twice should not quietly
+          // duplicate half the list.
+          var has = draft.some(function (r) {
+            return r.item.toLowerCase() === name.toLowerCase();
+          });
+          if (has) return;
+          draft.push({
+            item: name, qty: clean(i.qty), unit: clean(i.unit) || 'each',
+            cost: '', supplier: '', notes: '',
+          });
+          added++;
+        });
+
+        aiBusy = false;
+        aiMsg = added
+          ? 'Added ' + added + (added === 1 ? ' item.' : ' items.')
+          : 'Nothing new to add.';
+        render();
+      })
+      .catch(function (e) {
+        aiBusy = false;
+        aiMsg = '';
+        render();
+        showError(e.message);
+      });
+  }
+
   function formBox() {
     var t = editing || { name: '', description: '' };
     var sum = total(draft);
@@ -287,6 +395,8 @@ window.MM = window.MM || {};
           'placeholder="When to use this one" ' +
           'value="' + U.esc(t.description || '') + '">' +
       '</div>' +
+
+      suggestBox() +
 
       '<div class="mm-field-group">' +
         '<span class="mm-label">Items</span>' +
@@ -328,6 +438,14 @@ window.MM = window.MM || {};
 
     var save = el.querySelector('#mm-mt-save');
     if (save) save.addEventListener('click', saveTemplate);
+
+    var aigo = el.querySelector('#mm-mt-aigo');
+    if (aigo) aigo.addEventListener('click', suggest);
+
+    var aiwhat = el.querySelector('#mm-mt-aiwhat');
+    if (aiwhat) aiwhat.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); suggest(); }
+    });
 
     var addItem = el.querySelector('#mm-mt-additem');
     if (addItem) addItem.addEventListener('click', function () {
@@ -456,7 +574,9 @@ window.MM = window.MM || {};
   function startAdd() {
     adding = true; editing = null;
     draft = [blank()];
+    aiMsg = '';
     render();
+    checkAi().then(function (on) { if (on) render(); });
     var el = document.getElementById('mm-mt-name');
     if (el) el.focus();
   }

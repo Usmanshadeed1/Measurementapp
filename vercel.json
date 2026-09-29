@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     { "source": "/api/drive/(.*)", "destination": "/api/drive" },
+    { "source": "/api/ai", "destination": "/api/ai" },
     { "source": "/api/(.*)", "destination": "/api/proxy" }
   ]
 }
