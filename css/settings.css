@@ -38,3 +38,21 @@
   .mm-set .mm-btn-row{flex-wrap:wrap}
   .mm-set .mm-btn-row .mm-btn-sm{flex:1 1 100%}
 }
+
+/* The AI wording. A monospace box: {job} is a placeholder that has to be
+   typed exactly, and it is easier to see it is right in a fixed font. */
+.mm-ai-prompt{width:100%;margin-bottom:0;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:0.84em;line-height:1.55;min-height:180px}
+
+/* The part that is always appended, shown on request rather than hidden:
+   someone editing the wording should be able to see the whole of what is
+   sent, even the part they cannot change. */
+.mm-ai-fixed{margin-top:8px}
+.mm-ai-fixed summary{font-size:0.82em;color:var(--text2);cursor:pointer;
+  padding:4px 0}
+.mm-ai-fixed summary:hover{color:var(--accent)}
+.mm-ai-fixed pre{margin:6px 0 0;padding:10px;border-radius:8px;
+  background:var(--card2);border:1px solid var(--border);
+  font-size:0.78em;line-height:1.5;color:var(--text2);
+  white-space:pre-wrap;overflow-wrap:anywhere}

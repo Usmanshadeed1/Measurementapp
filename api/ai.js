@@ -124,24 +124,47 @@ async function writeConfig(value) {
 // description, and it is capped -- this asks for a materials list, and
 // nothing that arrives can turn it into something else.
 
-function buildPrompt(what) {
-  return [
-    'You are helping a building contractor write a checklist of materials.',
-    '',
-    'The job: ' + what,
-    '',
-    'List the materials typically needed for that work.',
-    '',
-    'Rules:',
-    '- Reply with ONLY a JSON array. No explanation, no markdown fence.',
-    '- Each entry: {"item": string, "qty": number, "unit": string}',
-    '- unit must be one of: each, box, sheet, ft, sq ft, yd, gal, lb, roll,',
-    '  bag, tube, set',
-    '- Give a sensible typical quantity. The contractor will adjust it.',
-    '- Between 15 and 40 entries.',
-    '- Name real, orderable materials. No labour, no tools, no services.',
-    '- No prices and no supplier names.',
-  ].join('\n');
+// The wording is editable from the settings page, because whoever runs the
+// business knows their trade better than this file does -- what counts as a
+// material, what is normally ordered together, what should never be
+// suggested. {job} is where the description someone typed is put.
+//
+// The FORMAT rules are appended afterwards and are not editable. They are
+// not trade knowledge, they are the contract this endpoint's parser depends
+// on: an edit that dropped them would return prose, and the feature would
+// fail with an error nobody could act on.
+const DEFAULT_PROMPT = [
+  'You are helping a building contractor write a checklist of materials.',
+  '',
+  'The job: {job}',
+  '',
+  'List the materials typically needed for that work.',
+  '- Give a sensible typical quantity. The contractor will adjust it.',
+  '- Between 15 and 40 entries.',
+  '- Name real, orderable materials. No labour, no tools, no services.',
+  '- No prices and no supplier names.',
+].join('\n');
+
+const FORMAT_RULES = [
+  '',
+  'Reply with ONLY a JSON array. No explanation, no markdown fence.',
+  'Each entry: {"item": string, "qty": number, "unit": string}',
+  'unit must be one of: each, box, sheet, ft, sq ft, yd, gal, lb, roll,',
+  'bag, tube, set',
+].join('\n');
+
+function buildPrompt(what, custom) {
+  let body = String(custom || '').trim() || DEFAULT_PROMPT;
+
+  // A wording that forgets to say where the job goes would ask about
+  // nothing at all, so it is appended rather than dropped.
+  if (body.indexOf('{job}') > -1) {
+    body = body.split('{job}').join(what);
+  } else {
+    body += '\n\nThe job: ' + what;
+  }
+
+  return body + '\n' + FORMAT_RULES;
 }
 
 // The model is asked for bare JSON, but models wrap things in code fences
@@ -217,6 +240,9 @@ export default async function handler(req, res) {
         configured: !!(cfg && cfg.key),
         provider: (cfg && cfg.provider) || '',
         model: (cfg && cfg.model) || '',
+        prompt: (cfg && cfg.prompt) || '',
+        defaultPrompt: DEFAULT_PROMPT,
+        formatRules: FORMAT_RULES.trim(),
         providers: Object.keys(PROVIDERS).map((k) => ({
           id: k, label: PROVIDERS[k].label,
         })),
@@ -241,7 +267,11 @@ export default async function handler(req, res) {
         if (!finalKey) return res.status(400).json({ error: 'Enter an API key.' });
       }
 
-      await writeConfig({ provider, model, key: finalKey });
+      // Blank means "use the built-in wording", which is also how the
+      // reset button works: it clears the box and saves.
+      const prompt = String(b.prompt || '').trim().slice(0, 4000);
+
+      await writeConfig({ provider, model, key: finalKey, prompt });
       return res.status(200).json({ ok: true });
     }
 
@@ -265,7 +295,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Say what the job is.' });
       }
 
-      const prompt = buildPrompt(action === 'test' ? 'a small bathroom remodel' : what);
+      const prompt = buildPrompt(
+        action === 'test' ? 'a small bathroom remodel' : what,
+        cfg.prompt);
 
       const r = await fetch(p.url(cfg.model, cfg.key), {
         method: 'POST',

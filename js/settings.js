@@ -101,6 +101,10 @@ window.MM = window.MM || {};
   // the time anyone needed it.
 
   var ai = null;        // the last answer from /api/ai?action=status
+  // What is in the wording box right now. Held here because any message
+  // redraws the card, and a redraw would otherwise throw away an edit
+  // half-typed.
+  var aiPrompt = null;  // null = show what is saved
   var aiBusy = false;
   var aiMsg = '';
   var aiErr = false;
@@ -173,7 +177,33 @@ window.MM = window.MM || {};
           'Leave it blank to change the model without pasting it back.</p>' +
       '</div>' +
 
+      // The wording, editable. Shown filled in with whatever is in use, so
+      // it can be read before it is changed rather than edited blind.
+      '<div class="mm-mt-f" style="margin-bottom:10px">' +
+        '<span class="mm-mt-flab">What to ask the AI</span>' +
+        '<textarea class="mm-input mm-ai-prompt" id="mm-ai-prompt" rows="10">' +
+          U.esc(aiPrompt !== null ? aiPrompt
+                                  : (s.prompt || s.defaultPrompt || '')) +
+        '</textarea>' +
+        '<p class="mm-set-hint">' +
+          '<code>{job}</code> is where the words typed on the Material Lists ' +
+          'page are put. Say anything useful about how you work &mdash; the ' +
+          'area, the brands you fit, what should never be suggested.' +
+        '</p>' +
+        // Stated rather than hidden: someone editing the wording should know
+        // why the answer always comes back as a list.
+        (s.formatRules
+          ? '<details class="mm-ai-fixed"><summary>Always added at the end' +
+              '</summary><pre>' + U.esc(s.formatRules) + '</pre>' +
+              '<p class="mm-set-hint">This part is fixed. It is what makes ' +
+                'the answer readable by the app rather than a paragraph of ' +
+                'text.</p></details>'
+          : '') +
+      '</div>' +
+
       '<div class="mm-btn-row">' +
+        '<button class="mm-btn-sm mm-btn-secondary" id="mm-ai-reset"' +
+          (aiBusy ? ' disabled' : '') + '>Reset wording</button>' +
         (on
           ? '<button class="mm-btn-sm mm-btn-secondary" id="mm-ai-clear"' +
             (aiBusy ? ' disabled' : '') + '>Remove</button>'
@@ -200,11 +230,18 @@ window.MM = window.MM || {};
       var provider = el.querySelector('#mm-ai-prov').value;
       var model = (el.querySelector('#mm-ai-model').value || '').trim();
       var key = (el.querySelector('#mm-ai-key').value || '').trim();
+      var prompt = el.querySelector('#mm-ai-prompt').value || '';
       if (!model) { aiSay('Enter a model name.', true); return; }
 
+      // Saving the built-in wording unchanged stores nothing, so a later
+      // improvement to the default is picked up rather than frozen here.
+      var def = (ai && ai.defaultPrompt) || '';
+      if (prompt.trim() === def.trim()) prompt = '';
+
       aiBusy = true; aiSay('');
-      aiFetch('save', { provider: provider, model: model, key: key })
-        .then(function () { return aiRefresh('Saved.'); })
+      aiFetch('save', { provider: provider, model: model, key: key,
+                        prompt: prompt })
+        .then(function () { aiPrompt = null; return aiRefresh('Saved.'); })
         .catch(function (e) {
           aiBusy = false;
           aiSay('Could not save: ' + e.message, true);
@@ -223,6 +260,17 @@ window.MM = window.MM || {};
           aiBusy = false;
           aiSay('It did not answer: ' + e.message, true);
         });
+    });
+
+    var reset = el.querySelector('#mm-ai-reset');
+    if (reset) reset.addEventListener('click', function () {
+      aiPrompt = (ai && ai.defaultPrompt) || '';
+      aiSay('Wording reset. Press Save to keep it.');
+    });
+
+    var pbox = el.querySelector('#mm-ai-prompt');
+    if (pbox) pbox.addEventListener('input', function () {
+      aiPrompt = this.value;
     });
 
     var clear = el.querySelector('#mm-ai-clear');
@@ -329,7 +377,7 @@ window.MM = window.MM || {};
       '<span>Checking the connection&hellip;</span></div>';
     // Both cards are drawn together, so both states are read before the
     // first render rather than the page redrawing under the reader.
-    aiMsg = ''; aiErr = false;
+    aiMsg = ''; aiErr = false; aiPrompt = null;
     return aiFetch('status')
       .then(function (d) { ai = d; })
       .catch(function () { ai = null; })
