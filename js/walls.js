@@ -36,6 +36,10 @@ window.MM = window.MM || {};
     infoBody.innerHTML =
       U.fld('Wall Name', '<input class="mm-input f-name" placeholder="e.g. North Wall">') +
       U.fld('Length (in)', '<input class="mm-input f-len" type="number" placeholder="e.g. 120">') +
+      // Pieces go here, right under the length they break up. They used to
+      // sit in a section of their own further down, where someone who did
+      // not already know the app never found them.
+      '<div class="f-pieces"></div>' +
       U.fld('Height (in)', '<input class="mm-input f-hgt" type="number" placeholder="Leave blank = ceiling height">') +
       U.fld('Base Molding', U.radios('base-' + id, [['yes', 'Yes'], ['no', 'No']], 'no')) +
       U.fld('Crown Molding', U.radios('crown-' + id, [['yes', 'Yes'], ['no', 'No']], 'no')) +
@@ -52,23 +56,22 @@ window.MM = window.MM || {};
       U.sr(infoBody, 'base-' + id, U.pv(wr, 'base_molding') || 'no'); U.sr(infoBody, 'crown-' + id, U.pv(wr, 'crown_molding') || 'no'); U.sr(infoBody, 'soffit-' + id, U.pv(wr, 'soffit') || 'no');
       if (U.pv(wr, 'soffit') === 'yes') { infoBody.querySelector('.f-soff-dims').style.display = 'block'; U.sv(infoBody, 'f-sh', U.pv(wr, 'soffit_height')); U.sv(infoBody, 'f-sd', U.pv(wr, 'soffit_depth')); }
     }
+    // Pieces, mounted into the slot under Length. `pieces.value()` is read
+    // by the save below, so the wall and its pieces go in ONE write rather
+    // than two that could half-succeed.
+    // The save button is found when the callback fires rather than now: it
+    // is created further down, after this mount.
+    var pieces = window.MM.wallpieces.build(wr, function () {
+      var b = infoBody.querySelector('.f-save');
+      if (b) U.markDirty(b);
+    });
+    infoBody.querySelector('.f-pieces').appendChild(pieces.el);
+
     var title = isNew ? 'New Wall' : (U.pv(wr, 'name') || 'Wall'), sub = isNew ? '' : (U.pv(wr, 'wall_length') ? U.pv(wr, 'wall_length') + '" long' : '');
     var builtInfo = U.makeAcc(isNew, true, U.pv(wr, 'name') ? U.pv(wr, 'name') : 'Wall Info', sub, infoBody), infoAcc = builtInfo.acc;
 
     var mainBody = document.createElement('div'); mainBody.className = 'mm-acc-body';
     mainBody.appendChild(infoAcc);
-
-    // Pieces sit directly under Wall Info: they are the same measurement in
-    // more detail, and belong beside the single length rather than after the
-    // openings and appliances. Its own accordion, collapsed, so a wall that
-    // needs no pieces costs nothing on screen.
-    var pc = makeSub('Pieces', 'f-pc-list');
-    pc.btn.style.display = 'none';        // the panel has its own Add button
-    pc.acc.querySelector('.mm-acc-badge').style.display = 'none';
-    var pcBody = pc.acc.querySelector('.mm-acc-body');
-    pcBody.innerHTML = '';
-    pcBody.appendChild(window.MM.wallpieces.build(wr));
-    mainBody.appendChild(pc.acc);
 
     var op = makeSub('Wall Openings', 'f-op-list'); op.btn.textContent = '+ Add'; op.list.innerHTML = isNew ? ph : ''; mainBody.appendChild(op.acc);
     var oL = op.list;
@@ -182,6 +185,9 @@ window.MM = window.MM || {};
       if (l) p.wall_length = parseFloat(l); if (h) p.wall_height = parseFloat(h); if (nt) p.notes = nt;
       p.base_molding = U.gr(infoBody, 'base-' + id); p.crown_molding = U.gr(infoBody, 'crown-' + id); p.soffit = U.gr(infoBody, 'soffit-' + id);
       if (p.soffit === 'yes') { var sh = U.gv(infoBody, 'f-sh'), sd = U.gv(infoBody, 'f-sd'); if (sh) p.soffit_height = parseFloat(sh); if (sd) p.soffit_depth = parseFloat(sd); }
+      // The pieces go in this same write. One save for the whole form, so it
+      // cannot half-succeed and leave the wall saved with its pieces lost.
+      p.wall_pieces = pieces.value();
       sb.textContent = 'Saving...'; sb.disabled = true;
       var pr;
       if (!wr.id) {
@@ -192,6 +198,9 @@ window.MM = window.MM || {};
         pr = api.updateRec('custom_objects.wall', wr.id, p).then(function () { Object.assign(wr.properties || (wr.properties = {}), p); });
       }
       pr.then(function () {
+        // Redrawn from what was actually stored, so empty rows dropped on
+        // the way in disappear from the form too.
+        pieces.saved(p.wall_pieces);
         hdr.querySelector('.mm-acc-title').textContent = n;
         hdr.querySelector('.mm-acc-sub').textContent = l ? l + '" long' : '';
         U.clearDirty(sb); U.fbk(sb, 'Save Wall');

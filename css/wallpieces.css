@@ -1,14 +1,38 @@
 /* ==========================================================================
    Pieces, inside a wall.
 
-   The rows, boxes, totals and buttons are the room's (css/roomsize.css) so
-   the two read as the same control in two places. Nothing here repeats what
-   that file already says -- this panel sits inside an accordion that carries
-   its own "Pieces" title, so it needs no heading of its own.
+   Sits inside the wall's own form, directly under the length it breaks up:
+   a wall measured in three pieces is still one wall, and the numbers belong
+   together. It used to be a section of its own further down the page, where
+   anyone who did not already know the app never found it.
+
+   The rows, boxes and totals are the room's (css/roomsize.css) so the two
+   read as the same control in two places. What is here is only what a block
+   inside a form needs and an accordion gave it for free: its own heading,
+   and an edge marking where it starts and stops.
    ========================================================================== */
 
-.mm-wp{margin-top:4px}
+.mm-wp{margin:0 0 16px;padding:12px;border-radius:10px;
+  background:var(--card2);border:1px solid var(--border)}
+
+.mm-wp-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  margin-bottom:10px}
+.mm-wp-title{font-size:0.82em;font-weight:700;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.04em}
+
+/* The running total, beside the heading. Empty until something is typed, so
+   a wall with no pieces carries no stray punctuation. */
+.mm-wp-badge{font-size:0.82em;font-weight:700;color:var(--accent);
+  font-variant-numeric:tabular-nums}
+.mm-wp-badge:empty{display:none}
 
 /* Present even when empty, so typing has somewhere to write the feet and
    inches -- but it should not hold open a blank line before then. */
 .mm-wp-sub:empty{display:none}
+
+/* The rows sit on the card, so they need a little more contrast against it
+   than they did against the page. */
+.mm-wp .mm-rs-row{background:var(--card)}
+
+.mm-wp .mm-rs-empty{margin:0 0 10px;font-size:0.84em}
+.mm-wp .mm-rs-actions{margin:0}

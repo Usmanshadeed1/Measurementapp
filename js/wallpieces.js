@@ -92,7 +92,9 @@ window.MM = window.MM || {};
 
   // `wr` is the wall record the accordion is holding: the same object
   // walls.js saves into, so a save here is visible to it without a re-read.
-  function build(wr) {
+  //  is called whenever a piece is typed or removed, so the wall's
+  // own Save button can wake up the same way it does for its other fields.
+  function build(wr, onDirty) {
     var el = document.createElement('div');
     el.className = 'mm-wp';
 
@@ -101,23 +103,24 @@ window.MM = window.MM || {};
     var rows = RS()._parseRows(U.pv(wr, FIELD), KEYS);
 
     function render() {
-      // No heading: the accordion this sits in is already titled "Pieces".
-      var html = rows.length
+      var html =
+        '<div class="mm-wp-head">' +
+          '<span class="mm-wp-title">Pieces</span>' +
+          '<span class="mm-wp-badge">' + U.esc(totalText(rows)) + '</span>' +
+        '</div>';
+
+      html += rows.length
         ? '<div class="mm-rs-list">' + rows.map(rowHtml).join('') + '</div>'
-        : '<p class="mm-rs-empty">No pieces yet. Add one for each piece of ' +
-          'this wall that gets measured separately.</p>';
+        : '<p class="mm-rs-empty">Only if this wall is measured in more than ' +
+          'one piece. The length above is the whole wall.</p>';
 
-      if (rows.length) {
-        html += '<div class="mm-rs-total"><span>Total length</span>' +
-          '<span class="mm-rs-totalval">' + U.esc(totalText(rows)) +
-          '</span></div>';
-      }
-
+      // No save button of its own. This sits inside the wall's own form now,
+      // and "Save Wall" writes the pieces with everything else: two save
+      // buttons in one box is how someone fills in pieces, presses the wrong
+      // one and loses them.
       html += '<div class="mm-rs-actions">' +
           '<button type="button" class="mm-btn-sm mm-btn-secondary mm-wp-add">' +
             '+ Add Piece</button>' +
-          '<button type="button" class="mm-btn-sm mm-btn-primary mm-wp-save">' +
-            'Save Pieces</button>' +
         '</div>' +
         '<p class="mm-rs-error mm-wp-error" role="alert"></p>';
 
@@ -129,6 +132,7 @@ window.MM = window.MM || {};
       el.querySelector('.mm-wp-add').addEventListener('click', function () {
         rows.push({ l: '', h: '' });
         render();
+        if (onDirty) onDirty();
         // Straight into the new row's first box: on a phone that saves a tap
         // while holding a tape measure.
         var boxes = el.querySelectorAll('.mm-wp-in');
@@ -143,59 +147,48 @@ window.MM = window.MM || {};
           if (r) r[inp.getAttribute('data-k')] = inp.value;
           var subs = el.querySelectorAll('.mm-wp-sub');
           if (r && subs[i]) subs[i].textContent = subText(r);
-          var v = el.querySelector('.mm-rs-totalval');
-          if (v) v.textContent = totalText(rows);
+          badges();
+          if (onDirty) onDirty();
         });
       });
 
+      // Removing a row no longer saves by itself: the wall's own Save button
+      // writes it, like every other change in this form.
       el.querySelectorAll('.mm-wp-del').forEach(function (b) {
         b.addEventListener('click', function () {
           rows.splice(+b.getAttribute('data-del'), 1);
-          save();
+          render();
+          if (onDirty) onDirty();
         });
       });
-
-      el.querySelector('.mm-wp-save').addEventListener('click', save);
     }
 
-    function save() {
-      if (!wr.id) {
-        el.querySelector('.mm-wp-error').textContent = 'Save the wall first.';
-        return;
-      }
+    function badges() {
+      var t = totalText(rows);
+      var b = el.querySelector('.mm-wp-badge');
+      if (b) b.textContent = t;
+    }
 
-      // A row added and left empty is a change of mind, not an error:
-      // dropped rather than refused.
+    // What the wall should store, ready for walls.js to put in its own save.
+    // Empty rows are a change of mind rather than an error, so they are
+    // dropped here rather than refused.
+    function value() {
       var clean = RS()._clean;
-      rows = rows.map(function (r) {
+      var keep = rows.map(function (r) {
         return { l: clean(r.l), h: clean(r.h) };
       }).filter(function (r) { return !!(r.l || r.h); });
+      return RS()._serialise(keep, KEYS);
+    }
 
-      var btn = el.querySelector('.mm-wp-save');
-      btn.disabled = true;
-      btn.textContent = 'Saving...';
-
-      var p = {};
-      p[FIELD] = RS()._serialise(rows, KEYS);
-
-      return api.updateRec('custom_objects.wall', wr.id, p)
-        .then(function () {
-          // Written back onto the wall in hand, so reopening it shows what
-          // was saved without another read -- and so the search index being
-          // a second behind cannot show stale pieces.
-          (wr.properties || (wr.properties = {}))[FIELD] = p[FIELD];
-          render();
-          U.fbk(el.querySelector('.mm-wp-save'), 'Save Pieces');
-        })
-        .catch(function (e) {
-          render();
-          el.querySelector('.mm-wp-error').textContent =
-            'Could not save: ' + e.message;
-        });
+    // Called once the wall has been written, so reopening it shows what was
+    // saved without another read -- the search index runs a second behind.
+    function saved(stored) {
+      rows = RS()._parseRows(stored, KEYS);
+      render();
     }
 
     render();
-    return el;
+    return { el: el, value: value, saved: saved };
   }
 
   window.MM.wallpieces = { build: build };
