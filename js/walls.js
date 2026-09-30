@@ -36,10 +36,6 @@ window.MM = window.MM || {};
     infoBody.innerHTML =
       U.fld('Wall Name', '<input class="mm-input f-name" placeholder="e.g. North Wall">') +
       U.fld('Length (in)', '<input class="mm-input f-len" type="number" placeholder="e.g. 120">') +
-      // Pieces go here, right under the length they break up. They used to
-      // sit in a section of their own further down, where someone who did
-      // not already know the app never found them.
-      '<div class="f-pieces"></div>' +
       U.fld('Height (in)', '<input class="mm-input f-hgt" type="number" placeholder="Leave blank = ceiling height">') +
       U.fld('Base Molding', U.radios('base-' + id, [['yes', 'Yes'], ['no', 'No']], 'no')) +
       U.fld('Crown Molding', U.radios('crown-' + id, [['yes', 'Yes'], ['no', 'No']], 'no')) +
@@ -48,6 +44,11 @@ window.MM = window.MM || {};
         U.fld('Soffit Height (in)', '<input class="mm-input f-sh" type="number">') +
         U.fld('Soffit Depth (in)', '<input class="mm-input f-sd" type="number">') +
       '</div>' +
+      // Pieces sit at the end of the measurements, before the notes. They
+      // belong with the dimensions rather than after the openings and
+      // appliances, where nobody who did not already know the app found
+      // them -- but not between Length and Height, which are one thought.
+      '<div class="f-pieces"></div>' +
       U.fld('Notes', '<textarea class="mm-input f-notes" placeholder="Any observations..."></textarea>') +
       '<div class="acc-save-row"><button class="mm-btn mm-btn-primary f-save" style="margin-bottom:0">Save Wall</button>' +
       '<button class="mm-btn mm-btn-danger f-del" style="' + (isNew ? 'display:none;' : '') + 'margin-bottom:0;width:auto;padding:14px 20px">Delete</button></div>';
