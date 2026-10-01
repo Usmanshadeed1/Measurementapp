@@ -183,12 +183,21 @@ window.MM = window.MM || {};
     return /android/i.test(navigator.userAgent || '');
   }
 
-  // Sets up a file input to take a photo or video with the camera.
+  // Sets up a file input to take a photo with the camera.
+  //
+  // On iOS the accept list is IMAGES ONLY. Asking for images and video
+  // together alongside `capture` is a known way to get Safari's camera to
+  // open on a black frame -- it has two capture controls to choose between
+  // and settles on neither. Images alone opens the still camera reliably,
+  // and the Upload button beside it still takes a video from the library.
+  //
+  // Android keeps both, plus the allowCamera hint, because that combination
+  // is what restored its Camera option in the first place.
   function cameraInput(input) {
     input.type = 'file';
     input.accept = isAndroid()
       ? 'image/*,video/*,android/allowCamera'
-      : 'image/*,video/*';
+      : 'image/*';
     input.capture = 'environment';
     return input;
   }
