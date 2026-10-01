@@ -22,6 +22,52 @@ window.MM = window.MM || {};
     return grid;
   }
 
+  // ---- Uploading several files ---------------------------------------------
+  //
+  // Someone picking five photos of a room expects five photos. The upload
+  // buttons used to read files[0] and silently drop the rest.
+  //
+  // ONE AT A TIME, in the order they were picked. The proxy caps a request at
+  // 4.5 MB, so five phone photos sent together would fail -- and a failure
+  // half way through a batch is much harder to explain than a slower upload
+  // that works. The count in the button is what makes the wait bearable.
+  //
+  // `each(file)` must return a promise. One file failing does not stop the
+  // rest: the others are still wanted, and what failed is said at the end.
+  function uploadEach(files, btn, label, each) {
+    var list = Array.prototype.slice.call(files || []);
+    if (!list.length) return Promise.resolve();
+
+    var failed = [];
+    btn.disabled = true;
+
+    function step(i) {
+      if (i >= list.length) return Promise.resolve();
+      btn.textContent = list.length > 1
+        ? 'Uploading ' + (i + 1) + ' of ' + list.length + '...'
+        : 'Uploading...';
+      return each(list[i])
+        .catch(function (e) {
+          failed.push((list[i] && list[i].name) || 'a file');
+          // Swallowed on purpose: the next file still deserves its turn.
+          if (window.console) console.error('Upload failed:', e);
+        })
+        .then(function () { return step(i + 1); });
+    }
+
+    return step(0).then(function () {
+      btn.disabled = false;
+      if (typeof label === 'string' && label.indexOf('<') > -1) btn.innerHTML = label;
+      else btn.textContent = label;
+      if (failed.length) {
+        alert('Could not upload ' + failed.length +
+              (failed.length === 1 ? ' file:\n' : ' files:\n') +
+              failed.join('\n') +
+              '\n\nThe others were uploaded.');
+      }
+    });
+  }
+
   // ---- Looking at a photo --------------------------------------------------
   //
   // Opened from a thumbnail, and able to move to the ones beside it: someone
@@ -266,6 +312,7 @@ window.MM = window.MM || {};
 
   window.MM.media = {
     makeMediaGrid: makeMediaGrid,
+    uploadEach: uploadEach,
     buildMediaThumb: buildMediaThumb,
     addMediaThumb: addMediaThumb,
     addJobMediaThumb: addJobMediaThumb,

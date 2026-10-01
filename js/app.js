@@ -779,19 +779,27 @@
   });
   document.getElementById('mm-photo-upload').addEventListener('click', function () { document.getElementById('mm-file-input').click(); });
   document.getElementById('mm-file-input').addEventListener('change', function () {
-    if (!this.files[0]) return;
-    var file = this.files[0];
     var input = this;
-    var isVid = file.type.indexOf('video') === 0;
+    if (!input.files || !input.files.length) return;
     var btn = document.getElementById('mm-photo-upload');
     var roomName = U.pv(room, 'name') || 'Room';
-    btn.textContent = 'Uploading...'; btn.disabled = true;
-    api.uploadMediaFile(file).then(function (url) {
-      driveCopy(url, roomName, isVid);
-      return api.createPhotoOrVideo(isVid ? api.VIDEO : api.PHOTO, 'Photo – ' + roomName + ' – ' + new Date().toISOString().split('T')[0], url, job.id, room.id);
-    }).then(function (rec) { MD.addMediaThumb(rec, isVid); MD.addJobMediaThumb(rec, isVid, room.id, '', room); input.value = ''; })
-      .catch(function (e) { alert(e.message); })
-      .then(function () { btn.textContent = '📁 Upload'; btn.disabled = false; });
+
+    // Each picked file in turn -- see MD.uploadEach. The single-file case is
+    // the same work it always was, run once.
+    MD.uploadEach(input.files, btn, '📁 Upload', function (file) {
+      var isVid = file.type.indexOf('video') === 0;
+      return api.uploadMediaFile(file).then(function (url) {
+        driveCopy(url, roomName, isVid);
+        return api.createPhotoOrVideo(isVid ? api.VIDEO : api.PHOTO, 'Photo – ' + roomName + ' – ' + new Date().toISOString().split('T')[0], url, job.id, room.id);
+      }).then(function (rec) {
+        MD.addMediaThumb(rec, isVid);
+        MD.addJobMediaThumb(rec, isVid, room.id, '', room);
+      });
+    }).then(function () {
+      // Cleared at the END, so picking the same files again still fires a
+      // change event.
+      input.value = '';
+    });
   });
 
   // Copies a just-uploaded file into the job's Google Drive folder.
@@ -821,29 +829,36 @@
     input.accept = capture
       ? 'image/*,video/*,android/allowCamera'
       : 'image/*,video/*';
+    // Only the picker takes several. The camera takes one shot at a time,
+    // and `multiple` on a capture input confuses some phones into opening
+    // the gallery instead.
     if (capture) input.capture = 'environment';
+    else input.multiple = true;
 
     input.addEventListener('change', function () {
-      var file = input.files && input.files[0];
-      if (!file) return;
-      var isVid = file.type.indexOf('video') === 0;
+      if (!input.files || !input.files.length) return;
 
-      btn.textContent = 'Uploading...'; btn.disabled = true;
-      api.uploadMediaFile(file)
-        .then(function (url) {
-          driveCopy(url, 'Job', isVid);
-          return api.createPhotoOrVideo(
-            isVid ? api.VIDEO : api.PHOTO,
-            'Photo – Job – ' + new Date().toISOString().split('T')[0],
-            url, job.id, null
-          );
-        })
+      // Every file first, then ONE wait and ONE reload at the end: the
+      // gallery is rebuilt from a search, so reloading per file would cost
+      // 2.5 seconds each for a list that is thrown away immediately.
+      MD.uploadEach(input.files, btn, label, function (file) {
+        var isVid = file.type.indexOf('video') === 0;
+        return api.uploadMediaFile(file)
+          .then(function (url) {
+            driveCopy(url, 'Job', isVid);
+            return api.createPhotoOrVideo(
+              isVid ? api.VIDEO : api.PHOTO,
+              'Photo – Job – ' + new Date().toISOString().split('T')[0],
+              url, job.id, null
+            );
+          });
+      }).then(function () {
+        btn.textContent = 'Saving...';
+        btn.disabled = true;
         // GHL's search index runs a second or two behind a write, so an
-        // immediate reload can come back without the file just uploaded.
-        .then(function () {
-          btn.textContent = 'Saving...';
-          return new Promise(function (done) { setTimeout(done, 2500); });
-        })
+        // immediate reload can come back without the files just uploaded.
+        return new Promise(function (done) { setTimeout(done, 2500); });
+      })
         .then(function () { return loadJobMedia(); })
         .catch(function (e) { alert(e.message); })
         .then(function () { btn.innerHTML = label; btn.disabled = false; });

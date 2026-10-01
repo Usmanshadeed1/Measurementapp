@@ -155,11 +155,12 @@ window.MM = window.MM || {};
       input.click();
     });
     upBtn.addEventListener('click', function () {
-      var input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*,video/*';
+      // Several at once, one at a time -- see MD.uploadEach. The camera
+      // button above stays single: it takes one shot.
+      var input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*,video/*'; input.multiple = true;
       input.addEventListener('change', function () {
-        if (!input.files[0]) return;
-        upBtn.textContent = 'Uploading...'; upBtn.disabled = true;
-        handleWallMediaFile(input.files[0]).catch(function (e) { alert(e.message); }).then(function () { upBtn.textContent = '📁 Upload'; upBtn.disabled = false; });
+        if (!input.files || !input.files.length) return;
+        MD.uploadEach(input.files, upBtn, '📁 Upload', handleWallMediaFile);
       });
       input.click();
     });
