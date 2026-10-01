@@ -48,8 +48,14 @@ window.MM = window.MM || {};
         : 'Uploading...';
       return each(list[i])
         .catch(function (e) {
-          failed.push((list[i] && list[i].name) || 'a file');
-          // Swallowed on purpose: the next file still deserves its turn.
+          // The REASON travels with the name. "Could not upload 1 file" on
+          // its own tells someone nothing they can act on, and the usual
+          // reason -- the file is over the size limit -- is one they can.
+          failed.push({
+            name: (list[i] && list[i].name) || 'a file',
+            why: (e && e.message) || 'Unknown error',
+          });
+          // Swallowed here on purpose: the next file still deserves its turn.
           if (window.console) console.error('Upload failed:', e);
         })
         .then(function () { return step(i + 1); });
@@ -60,10 +66,16 @@ window.MM = window.MM || {};
       if (typeof label === 'string' && label.indexOf('<') > -1) btn.innerHTML = label;
       else btn.textContent = label;
       if (failed.length) {
-        alert('Could not upload ' + failed.length +
-              (failed.length === 1 ? ' file:\n' : ' files:\n') +
-              failed.join('\n') +
-              '\n\nThe others were uploaded.');
+        var nl = String.fromCharCode(10);
+        var done = list.length - failed.length;
+        alert(
+          (done ? done + ' uploaded. ' : '') +
+          failed.length + (failed.length === 1 ? ' failed:' : ' failed:') +
+          nl + nl +
+          failed.map(function (f) {
+            return f.name + nl + '   ' + f.why;
+          }).join(nl + nl)
+        );
       }
     });
   }

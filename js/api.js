@@ -189,18 +189,109 @@ window.MM = window.MM || {};
   // the size is checked here and explained in plain words instead.
   var MAX_UPLOAD_MB = 4.4;
 
-  function uploadMediaFile(file) {
+  // ---- Shrinking a photo before it is sent ---------------------------------
+  //
+  // A phone camera writes 12 megapixels and 6MB because it is built for
+  // printing and cropping. A measurement photo is looked at on a screen, and
+  // nobody zooms into a kitchen wall at full resolution -- so the file is
+  // resized before it leaves the browser.
+  //
+  // This also makes every upload faster, which matters more than it sounds
+  // when someone is standing in a customer's kitchen on mobile data.
+  //
+  // PHOTOS ONLY. A video cannot be re-encoded in a browser in any way worth
+  // having, so videos are sent as they are and a long clip is still refused
+  // by the size check below.
+  //
+  // Anything that goes wrong -- a format the canvas cannot read, a browser
+  // without these APIs -- falls back to the original file. A photo that is
+  // merely large is far better than a photo that is lost.
+  var MAX_EDGE = 2400;     // px on the long side; plenty for a wall on screen
+  var JPEG_Q = 0.85;
+
+  function shrinkImage(file) {
+    if (!file || file.type.indexOf('image/') !== 0) return Promise.resolve(file);
+    // A format the canvas would mangle rather than shrink.
+    if (/svg|gif/i.test(file.type)) return Promise.resolve(file);
+    if (!window.URL || !window.HTMLCanvasElement) return Promise.resolve(file);
+
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { URL.revokeObjectURL(url); resolve(file); return; }
+
+        var scale = Math.min(1, MAX_EDGE / Math.max(w, h));
+        // Already small enough AND already under the limit: nothing to gain
+        // by re-encoding it, and re-encoding always loses a little.
+        if (scale === 1 && file.size <= MAX_UPLOAD_MB * 1024 * 1024) {
+          URL.revokeObjectURL(url);
+          resolve(file);
+          return;
+        }
+
+        var cw = Math.round(w * scale), ch = Math.round(h * scale);
+        var canvas = document.createElement('canvas');
+        canvas.width = cw; canvas.height = ch;
+        var ctx = canvas.getContext('2d');
+        if (!ctx) { URL.revokeObjectURL(url); resolve(file); return; }
+        ctx.drawImage(img, 0, 0, cw, ch);
+        URL.revokeObjectURL(url);
+
+        canvas.toBlob(function (blob) {
+          // A re-encode that somehow came out BIGGER is not an improvement.
+          if (!blob || blob.size >= file.size) { resolve(file); return; }
+          var name = String(file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
+          try {
+            resolve(new File([blob], name, {
+              type: 'image/jpeg',
+              lastModified: file.lastModified || Date.now(),
+            }));
+          } catch (e) {
+            // Older Safari has no File constructor; a Blob uploads too, it
+            // just needs the name supplied separately.
+            blob.name = name;
+            resolve(blob);
+          }
+        }, 'image/jpeg', JPEG_Q);
+      };
+
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
+  // `keepFull` is passed by the places where resolution is the point: a
+  // design drawing goes to the customer and gets read closely, and a scanned
+  // document has to stay legible. A measurement photo does not.
+  function uploadMediaFile(file, keepFull) {
+    if (keepFull) return sendMediaFile(file);
+    return shrinkImage(file).then(sendMediaFile);
+  }
+
+  function sendMediaFile(file) {
     if (file && file.size > MAX_UPLOAD_MB * 1024 * 1024) {
       var mb = (file.size / (1024 * 1024)).toFixed(1);
+      var isVid = String(file.type || '').indexOf('video/') === 0;
       return Promise.reject(new Error(
         'This file is ' + mb + 'MB. The largest that can be uploaded is ' +
         MAX_UPLOAD_MB + 'MB.' + String.fromCharCode(10, 10) +
-        'For a video, record a shorter clip or use your ' +
-        'phone’s lower quality setting, then try again.'
+        // Photos are shrunk before they get here, so one that is still too
+        // big is unusual -- and the advice for a video is no use for it.
+        (isVid
+          ? 'Record a shorter clip, or use your phone’s lower quality ' +
+            'setting, then try again.'
+          : 'Try taking the photo again at a lower resolution.')
       ));
     }
     var fd = new FormData();
-    fd.append('file', file);
+    // The name is passed explicitly: a shrunk photo can arrive as a plain
+    // Blob on older Safari, and FormData would otherwise send it as "blob"
+    // with no extension for the platform to recognise.
+    if (file && file.name) fd.append('file', file, file.name);
+    else fd.append('file', file);
     fd.append('locationId', LOC);
     return fetch('/api/medias/upload-file', { method: 'POST', body: fd })
       .then(function (r) {
