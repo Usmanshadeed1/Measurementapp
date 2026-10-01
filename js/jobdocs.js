@@ -280,7 +280,9 @@ window.MM = window.MM || {};
       var shot = document.createElement('input');
       shot.type = 'file';
       // The Android camera hint, as on the room camera in app.js.
-      shot.accept = 'image/*,video/*,android/allowCamera';
+      shot.accept = U.isAndroid()
+        ? 'image/*,video/*,android/allowCamera'
+        : 'image/*,video/*';
       shot.capture = 'environment';
       shot.addEventListener('change', function () {
         if (!shot.files || !shot.files[0]) return;

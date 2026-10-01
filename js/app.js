@@ -750,16 +750,11 @@
 
   document.getElementById('mm-photo-camera').addEventListener('click', function () {
     var btn = this;
-    // android/allowCamera is a non-standard MIME type Chrome on Android looks
-    // for. Android 14 and 15 dropped the Camera option from file inputs, so
-    // this button opened the gallery instead of the camera; this restores it.
-    // Safari does not know the type and ignores it, so the iPhone behaves
-    // exactly as before.
-    //
-    // It is a workaround, not a standard: if a future Chrome stops honouring
-    // it, the button falls back to the gallery -- which is where it already
-    // was, so nothing is lost by trying.
-    var input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*,video/*,android/allowCamera'; input.capture = 'environment';
+    // The camera, set up per platform -- see U.cameraInput. Safari does NOT
+    // simply ignore the Android hint, as this comment used to claim: an
+    // unknown MIME type in `accept` makes it drop capture altogether, and
+    // the iPhone opened to a black screen.
+    var input = U.cameraInput(document.createElement('input'));
     input.addEventListener('change', function () {
       if (!input.files[0]) return;
       var file = input.files[0];
@@ -823,17 +818,18 @@
 
   function addJobMedia(btn, label, capture) {
     var input = document.createElement('input');
-    input.type = 'file';
-    // Only the camera button carries the Android hint -- see the room camera
-    // above. The upload button is a plain file picker and stays one.
-    input.accept = capture
-      ? 'image/*,video/*,android/allowCamera'
-      : 'image/*,video/*';
-    // Only the picker takes several. The camera takes one shot at a time,
-    // and `multiple` on a capture input confuses some phones into opening
-    // the gallery instead.
-    if (capture) input.capture = 'environment';
-    else input.multiple = true;
+    if (capture) {
+      // The camera, with the Android hint applied only on Android -- see
+      // U.cameraInput.
+      U.cameraInput(input);
+    } else {
+      // The upload button is a plain file picker, and takes several at once.
+      // `multiple` is not put on a capture input: some phones read it as a
+      // reason to open the gallery instead of the camera.
+      input.type = 'file';
+      input.accept = 'image/*,video/*';
+      input.multiple = true;
+    }
 
     input.addEventListener('change', function () {
       if (!input.files || !input.files.length) return;

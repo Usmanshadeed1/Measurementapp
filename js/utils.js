@@ -165,6 +165,34 @@ window.MM = window.MM || {};
     }
   }
 
+  // ---- Opening the camera from a file input --------------------------------
+  //
+  // `android/allowCamera` is a non-standard MIME type Chrome on Android looks
+  // for. Android 14 and 15 dropped the Camera option from file inputs, so
+  // without it the camera button opened the gallery.
+  //
+  // It must NOT be sent to anything else. The HTML capture spec says that an
+  // accept value carrying a MIME type with no associated capture control
+  // makes the user agent behave "as if there was no capture attribute" -- so
+  // on an iPhone the made-up type quietly broke capture, and the camera
+  // opened to a black screen.
+  //
+  // So the hint goes to Android and nowhere else, and every other phone gets
+  // the plain standard attributes it understands.
+  function isAndroid() {
+    return /android/i.test(navigator.userAgent || '');
+  }
+
+  // Sets up a file input to take a photo or video with the camera.
+  function cameraInput(input) {
+    input.type = 'file';
+    input.accept = isAndroid()
+      ? 'image/*,video/*,android/allowCamera'
+      : 'image/*,video/*';
+    input.capture = 'environment';
+    return input;
+  }
+
   function esc(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -298,6 +326,7 @@ window.MM = window.MM || {};
 
   window.MM.utils = {
     esc: esc, streetPart: streetPart, titleCase: titleCase,
+    cameraInput: cameraInput, isAndroid: isAndroid,
     copyBtn: copyBtn, copyInit: copyInit, phone: phone, ghlContactUrl: ghlContactUrl, callButtons: callButtons, pv: pv, uid: uid, fbk: fbk,
     FONT_SIZES: FONT_SIZES, getFontIndex: getFontIndex, applyFont: applyFont,
     getTheme: getTheme, applyTheme: applyTheme, toggleTheme: toggleTheme,

@@ -146,7 +146,7 @@ window.MM = window.MM || {};
     }
     camBtn.addEventListener('click', function () {
       // The Android camera hint, as on the room camera in app.js.
-      var input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*,video/*,android/allowCamera'; input.capture = 'environment';
+      var input = U.cameraInput(document.createElement('input'));
       input.addEventListener('change', function () {
         if (!input.files[0]) return;
         camBtn.textContent = 'Uploading...'; camBtn.disabled = true;
