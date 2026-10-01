@@ -241,9 +241,7 @@ window.MM = window.MM || {};
 
     return list.reduce(function (chain, file) {
       return chain.then(function () {
-        // Full resolution: this goes to the customer and gets read
-        // closely, so it is not a photo to shrink.
-        return api.uploadMediaFile(file, true)
+        return api.uploadMediaFile(file)
           .then(function (url) {
             return api.createPhotoOrVideo(
               /^video\//.test(file.type) ? api.VIDEO : api.PHOTO,

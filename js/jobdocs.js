@@ -334,8 +334,7 @@ window.MM = window.MM || {};
     btn.disabled = true; btn.textContent = 'Uploading...';
 
     var isVid = /^video\//.test(file.type);
-    // Full resolution: a document has to stay legible.
-    api.uploadMediaFile(file, true)
+    api.uploadMediaFile(file)
       .then(function (url) {
         return api.createPhotoOrVideo(
           isVid ? api.VIDEO : api.PHOTO,
