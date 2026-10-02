@@ -4,19 +4,23 @@
 // One list, shared by every door style -- which is how the manufacturer sells
 // them, and how the customer chooses: first the door, then the colour.
 //
-// A colour is a NAME and a swatch. No photograph: the name is what the image
-// model is told ("in Pitch Black") and the swatch is only so a person can
-// recognise it on screen. That is why the names matter more than they look
-// like they should -- "Pitch Black" must not drift into "Jet Black" or the
-// picture comes back in the wrong paint.
+// A colour is a NAME, a PHOTOGRAPH of the door in that finish, and a swatch.
 //
-// The list is seeded from the manufacturer's own finishes the first time this
-// page is opened, because typing twenty-three colours by hand is how names
-// get mistyped. Everything is editable afterwards.
+// The photograph is the important one. A name alone was not enough: the
+// stains are real wood, and no description of "Timber" produces timber --
+// the model has to see it. With the photograph it sees the finish as well
+// as being told its name, and the result comes back in the right paint.
+//
+// The swatch is only so the list is recognisable at a glance before the
+// photographs are added.
+//
+// The list is seeded from the manufacturer's own finishes the first time
+// this page is opened, because typing twenty-three colours by hand is how
+// names get mistyped. Everything is editable afterwards.
 window.MM = window.MM || {};
 
 (function () {
-  var U = window.MM.utils, auth = window.MM.auth;
+  var U = window.MM.utils, auth = window.MM.auth, api = window.MM.api;
 
   var rows = [];
   var editing = null;    // colour being edited, or null
@@ -132,20 +136,33 @@ window.MM = window.MM || {};
     }).join('');
   }
 
+  // The photograph leads, because that is what someone recognises. A colour
+  // with none falls back to its swatch and says so: without the photograph
+  // the AI can only be told the name, which is not enough for a stain.
   function chip(c) {
     return '<div class="mm-dc">' +
-      '<span class="mm-dc-swatch" style="background:' + U.esc(c.swatch) + '" ' +
-        'aria-hidden="true"></span>' +
+      (c.image
+        ? '<img class="mm-dc-shot" src="' + U.esc(c.image) + '" alt="">'
+        : '<span class="mm-dc-shot mm-dc-noshot" ' +
+          'style="background:' + U.esc(c.swatch || '#ccc') + '" ' +
+          'aria-hidden="true"></span>') +
       '<span class="mm-dc-name">' + U.esc(c.name) + '</span>' +
-      '<button type="button" class="mm-dc-icon" data-edit="' + U.esc(c.id) + '" ' +
-        'aria-label="Edit ' + U.esc(c.name) + '">&#9998;</button>' +
-      '<button type="button" class="mm-dc-icon mm-dc-del" data-del="' + U.esc(c.id) + '" ' +
-        'aria-label="Delete ' + U.esc(c.name) + '">&times;</button>' +
+      (c.image ? '' : '<span class="mm-dc-need">No photo</span>') +
+      '<span class="mm-dc-acts">' +
+        '<button type="button" class="mm-dc-icon" data-edit="' + U.esc(c.id) + '" ' +
+          'aria-label="Edit ' + U.esc(c.name) + '">&#9998;</button>' +
+        '<button type="button" class="mm-dc-icon mm-dc-del" data-del="' + U.esc(c.id) + '" ' +
+          'aria-label="Delete ' + U.esc(c.name) + '">&times;</button>' +
+      '</span>' +
     '</div>';
   }
 
+  // Held while the form is open, so an upload does not lose a half-typed
+  // name and cancelling leaves the saved colour exactly as it was.
+  var draft = { name: '', swatch: '#cccccc', grp: '', image: '' };
+
   function form() {
-    var c = editing || { name: '', swatch: '#cccccc', grp: '' };
+    var c = draft;
     var seenGrps = [];
     rows.forEach(function (x) {
       var g = x.grp || '';
@@ -166,9 +183,30 @@ window.MM = window.MM || {};
           'this is the word the AI is given.</p>' +
       '</div>' +
 
+      '<div class="mm-field-group">' +
+        '<span class="mm-label">Photo of the door in this finish</span>' +
+        (c.image
+          ? '<div class="mm-dc-edshot">' +
+              '<img src="' + U.esc(c.image) + '" alt="">' +
+              '<button type="button" class="mm-dc-rm" id="mm-dc-rmshot" ' +
+                'aria-label="Remove this photo">&times;</button>' +
+            '</div>'
+          : '') +
+        '<div class="mm-btn-row">' +
+          '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+            'id="mm-dc-pickshot"' + (busy ? ' disabled' : '') + '>' +
+            '&#128193; ' + (c.image ? 'Change photo' : 'Add photo') + '</button>' +
+        '</div>' +
+        // The reason it matters, said once where someone is deciding
+        // whether to bother.
+        '<p class="mm-tt-hint">The AI is shown this photograph, so the ' +
+          'finish comes out right &mdash; a stain especially, which no ' +
+          'description produces on its own.</p>' +
+      '</div>' +
+
       '<div class="mm-mt-sub" style="margin-bottom:12px">' +
         '<label class="mm-mt-f" style="flex:0 0 110px">' +
-          '<span class="mm-mt-flab">Colour</span>' +
+          '<span class="mm-mt-flab">Swatch</span>' +
           '<input class="mm-input mm-dc-pick" type="color" id="mm-dc-swatch" ' +
             'value="' + U.esc(c.swatch || '#cccccc') + '">' +
         '</label>' +
@@ -205,7 +243,47 @@ window.MM = window.MM || {};
   function bind(el) {
     var cancel = el.querySelector('#mm-dc-cancel');
     if (cancel) cancel.addEventListener('click', function () {
-      adding = false; editing = null; showError(''); render();
+      adding = false; editing = null;
+      draft = { name: '', swatch: '#cccccc', grp: '', image: '' };
+      showError(''); render();
+    });
+
+    // Typing is kept as it is entered: uploading a photo redraws the form,
+    // and a redraw must not throw away a half-typed name.
+    var nameBox = el.querySelector('#mm-dc-name');
+    if (nameBox) nameBox.addEventListener('input', function () {
+      draft.name = this.value;
+    });
+    var grpBox = el.querySelector('#mm-dc-grp');
+    if (grpBox) grpBox.addEventListener('input', function () {
+      draft.grp = this.value;
+    });
+    var swBox = el.querySelector('#mm-dc-swatch');
+    if (swBox) swBox.addEventListener('input', function () {
+      draft.swatch = this.value;
+    });
+
+    var pickShot = el.querySelector('#mm-dc-pickshot');
+    if (pickShot) pickShot.addEventListener('click', function () {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.addEventListener('change', function () {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        busy = true; render();
+        api.uploadMediaFile(file)
+          .then(function (url) { draft.image = url; })
+          .catch(function (e) { showError('Could not upload: ' + e.message); })
+          .then(function () { busy = false; render(); });
+      });
+      input.click();
+    });
+
+    var rmShot = el.querySelector('#mm-dc-rmshot');
+    if (rmShot) rmShot.addEventListener('click', function () {
+      draft.image = '';
+      render();
     });
 
     var save = el.querySelector('#mm-dc-save');
@@ -218,6 +296,11 @@ window.MM = window.MM || {};
         });
         if (!c) return;
         editing = c; adding = false;
+        // A copy, so cancelling leaves the saved colour as it was.
+        draft = {
+          name: c.name || '', swatch: c.swatch || '#cccccc',
+          grp: c.grp || '', image: c.image || '',
+        };
         showError(''); render();
         var f = document.getElementById('mm-dc-name');
         if (f) f.focus();
@@ -246,17 +329,19 @@ window.MM = window.MM || {};
   }
 
   function saveColor() {
-    var name = (document.getElementById('mm-dc-name').value || '').trim();
+    var name = (draft.name || '').trim();
     if (!name) {
       showError('Give the colour a name.');
-      document.getElementById('mm-dc-name').focus();
+      var f = document.getElementById('mm-dc-name');
+      if (f) f.focus();
       return;
     }
 
     var body = {
       name: name,
-      swatch: document.getElementById('mm-dc-swatch').value || '#cccccc',
-      grp: (document.getElementById('mm-dc-grp').value || '').trim() || null,
+      swatch: draft.swatch || '#cccccc',
+      grp: (draft.grp || '').trim() || null,
+      image: draft.image || null,
     };
 
     showError('');
@@ -279,6 +364,7 @@ window.MM = window.MM || {};
 
   function startAdd() {
     adding = true; editing = null;
+    draft = { name: '', swatch: '#cccccc', grp: '', image: '' };
     showError(''); render();
     var f = document.getElementById('mm-dc-name');
     if (f) f.focus();
