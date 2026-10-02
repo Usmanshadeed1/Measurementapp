@@ -154,7 +154,7 @@ const IMAGE_PROMPT_DEFAULT = [
   'region to make it easier.',
 ].join('\n');
 
-function buildImagePrompt(custom, styleName, styleNotes, extra, roomCount) {
+function buildImagePrompt(custom, styleName, styleNotes, extra, roomCount, colour) {
   let body = String(custom || '').trim() || IMAGE_PROMPT_DEFAULT;
 
   // How many photographs of the room were sent, said in words, so the model
@@ -180,6 +180,19 @@ function buildImagePrompt(custom, styleName, styleNotes, extra, roomCount) {
 
   let style = styleName || 'the reference doors';
   if (styleNotes) style += ' (' + styleNotes + ')';
+
+  // The reference photographs carry the SHAPE -- the panel, the edge, the
+  // profile. The colour is given in words, because one line of text covers
+  // twenty-three paints and photographing every door in every finish does
+  // not. So the two are stated separately and the difference is spelled
+  // out, or the model copies the colour of the sample it was shown.
+  const paint = String(colour || '').trim();
+  if (paint) {
+    style += ', painted ' + paint +
+      '. Copy the SHAPE of the reference doors exactly -- the panel, the ' +
+      'edge, the profile -- but paint them ' + paint + ' rather than the ' +
+      'colour they are in the reference photographs';
+  }
 
   if (body.indexOf('{style}') > -1) body = body.split('{style}').join(style);
   else body += '\n\nThe doors to fit: ' + style;
@@ -772,7 +785,8 @@ export default async function handler(req, res) {
         String(body.style || '').slice(0, 120),
         String(body.notes || '').slice(0, 300),
         String(body.extra || '').slice(0, 500),
-        rooms.length
+        rooms.length,
+        String(body.colour || '').slice(0, 60)
       );
 
       // The room first, then the doors: the order matches what the prompt

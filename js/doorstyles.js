@@ -21,15 +21,12 @@ window.MM = window.MM || {};
 (function () {
   var U = window.MM.utils, api = window.MM.api, auth = window.MM.auth;
 
-  // Enough of the door for a model to copy it, and few enough that someone
-  // actually sets one up. Straight-on beats artful.
   var MIN_SHOTS = 1;
-  var WANT_SHOTS = 3;
 
   var rows = [];
   var editing = null;    // style being edited, or null
   var adding = false;
-  var draft = { name: '', notes: '', images: [], colors: [] };
+  var draft = { name: '', notes: '', images: [] };
   var busy = false;
 
   function db(method, path, body) { return auth.dbFetch(method, path, body); }
@@ -86,35 +83,19 @@ window.MM = window.MM || {};
 
   function card(s) {
     var imgs = s.images || [];
-    var cols = s.colors || [];
     return '<div class="mm-ds">' +
       '<div class="mm-ds-shots">' +
         (imgs.length
-          ? imgs.slice(0, 2).map(function (u) {
+          ? imgs.slice(0, 4).map(function (u) {
               return '<img class="mm-ds-shot" src="' + U.esc(u) + '" alt="">';
             }).join('')
           : '<div class="mm-ds-noshot">No photo</div>') +
       '</div>' +
       '<div class="mm-ds-main">' +
         '<div class="mm-ds-name">' + U.esc(s.name) + '</div>' +
+        '<div class="mm-ds-count">' + imgs.length +
+          (imgs.length === 1 ? ' photo' : ' photos') + '</div>' +
         (s.notes ? '<div class="mm-ds-notes">' + U.esc(s.notes) + '</div>' : '') +
-        // The colours this style comes in, as the little doors themselves:
-        // it is what someone recognises, and it says at a glance which
-        // styles are set up and which are still waiting.
-        (cols.length
-          ? '<div class="mm-ds-cols">' +
-              cols.map(function (c) {
-                return '<span class="mm-ds-col" title="' + U.esc(c.name) + '">' +
-                  (c.image
-                    ? '<img src="' + U.esc(c.image) + '" alt="">'
-                    : '<span class="mm-ds-colsw" style="background:' +
-                      U.esc(c.swatch || '#ccc') + '"></span>') +
-                  '<span class="mm-ds-colname">' + U.esc(c.name) + '</span>' +
-                '</span>';
-              }).join('') +
-            '</div>'
-          : '<div class="mm-ds-nocols">No colours yet &mdash; add them so ' +
-            'they can be chosen on a job.</div>') +
       '</div>' +
       '<div class="mm-ds-side">' +
         '<button type="button" class="mm-ds-icon" data-edit="' + U.esc(s.id) + '" ' +
@@ -155,13 +136,6 @@ window.MM = window.MM || {};
           '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
             'id="mm-ds-pick"' + (busy ? ' disabled' : '') + '>&#128193; Upload</button>' +
         '</div>' +
-        // The advice matters more than any wording in the prompt: a sharp,
-        // square-on, evenly lit photo is what makes a render show THIS door
-        // rather than something that merely resembles it.
-        '<p class="mm-tt-hint">Take ' + WANT_SHOTS + ' if you can: the door ' +
-          'square-on in good light, a close-up of the panel and edge, and one ' +
-          'showing the handle. Sharp, straight photos give much better ' +
-          'results than artful ones.</p>' +
       '</div>' +
 
       '<div class="mm-field-group">' +
@@ -170,11 +144,7 @@ window.MM = window.MM || {};
         '<input class="mm-input" id="mm-ds-notes" ' +
           'placeholder="e.g. soft close, shaker profile, matt finish" ' +
           'value="' + U.esc(draft.notes) + '">' +
-        '<p class="mm-tt-hint">Anything here is told to the AI as well, so a ' +
-          'word about the finish or the profile is worth adding.</p>' +
       '</div>' +
-
-      colorsBlock() +
 
       '<div class="mm-btn-row">' +
         '<button class="mm-btn-sm mm-btn-secondary" id="mm-ds-cancel"' +
@@ -184,77 +154,6 @@ window.MM = window.MM || {};
           (busy ? 'Working...' : (editing ? 'Save changes' : 'Add style')) +
         '</button>' +
       '</div>' +
-    '</div>';
-  }
-
-  // ---- The colours this style comes in --------------------------------------
-  //
-  // Each style has its OWN list: Fusion comes in Dove and Pitch Black,
-  // Catalina comes in Black Gloss and Clubhouse Oak. They are not the same
-  // colours with different names -- they are different finishes on different
-  // doors, which is why they live inside the style rather than in a list of
-  // their own.
-  //
-  // Each colour is a name and a PHOTOGRAPH of this door in that finish. The
-  // photograph is what makes a stain or a gloss come out right: no
-  // description of "Clubhouse Oak" produces oak, but a picture of it does.
-  // The swatch is a fallback so a colour still reads before its photograph
-  // is added.
-
-  function colorsBlock() {
-    return '<div class="mm-field-group">' +
-      '<span class="mm-label">Colours this door comes in</span>' +
-      '<p class="mm-tt-hint">On a job you pick the door first, then one of ' +
-        'these. The photograph is what the AI is shown, so the finish comes ' +
-        'out right.</p>' +
-
-      (draft.colors.length
-        ? '<div class="mm-ds-collist">' +
-            draft.colors.map(colorRow).join('') +
-          '</div>'
-        : '') +
-
-      '<div class="mm-btn-row">' +
-        '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
-          'id="mm-ds-addcol"' + (busy ? ' disabled' : '') + '>' +
-          '+ Add colour</button>' +
-        '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
-          'id="mm-ds-addmany"' + (busy ? ' disabled' : '') + '>' +
-          '&#128193; Add several photos</button>' +
-      '</div>' +
-      '<p class="mm-tt-hint">&ldquo;Add several photos&rdquo; takes a whole ' +
-        'folder at once and names each one after its file &mdash; quicker ' +
-        'than adding twenty by hand.</p>' +
-    '</div>';
-  }
-
-  function colorRow(c, i) {
-    return '<div class="mm-ds-colrow">' +
-      (c.image
-        ? '<img class="mm-ds-colshot" src="' + U.esc(c.image) + '" alt="">'
-        : '<span class="mm-ds-colshot mm-ds-colempty" ' +
-          'style="background:' + U.esc(c.swatch || '#cccccc') + '"></span>') +
-
-      '<div class="mm-ds-colfields">' +
-        '<input class="mm-input mm-ds-colin" data-ci="' + i + '" ' +
-          'data-ck="name" placeholder="Colour name, e.g. Pitch Black" ' +
-          'value="' + U.esc(c.name || '') + '">' +
-        '<div class="mm-ds-colbtns">' +
-          '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
-            'data-colshot="' + i + '">' +
-            (c.image ? 'Change photo' : '&#128193; Photo') + '</button>' +
-          // Offered for a colour with no photograph of its own: better than
-          // nothing, and the only way to show a custom paint the
-          // manufacturer has no sample of.
-          '<input class="mm-input mm-ds-colpick" type="color" ' +
-            'data-ci="' + i + '" data-ck="swatch" ' +
-            'value="' + U.esc(c.swatch || '#cccccc') + '" ' +
-            'aria-label="Colour swatch">' +
-        '</div>' +
-      '</div>' +
-
-      '<button type="button" class="mm-ds-colrm" data-colrm="' + i + '" ' +
-        'aria-label="Remove this colour">&times;</button>' +
     '</div>';
   }
 
@@ -298,7 +197,7 @@ window.MM = window.MM || {};
     var cancel = el.querySelector('#mm-ds-cancel');
     if (cancel) cancel.addEventListener('click', function () {
       adding = false; editing = null;
-      draft = { name: '', notes: '', images: [], colors: [] };
+      draft = { name: '', notes: '', images: [] };
       showError('');
       render();
     });
@@ -342,94 +241,6 @@ window.MM = window.MM || {};
       });
     });
 
-    // ---- The colours ----
-
-    var addCol = el.querySelector('#mm-ds-addcol');
-    if (addCol) addCol.addEventListener('click', function () {
-      draft.colors.push({ name: '', image: '', swatch: '#cccccc' });
-      render();
-      var boxes = document.querySelectorAll('.mm-ds-colin');
-      if (boxes.length) boxes[boxes.length - 1].focus();
-    });
-
-    // Typing is written straight into the draft, so a redraw after an
-    // upload cannot lose a half-typed name.
-    el.querySelectorAll('.mm-ds-colin,.mm-ds-colpick').forEach(function (inp) {
-      function take() {
-        var c = draft.colors[+inp.getAttribute('data-ci')];
-        if (c) c[inp.getAttribute('data-ck')] = inp.value;
-      }
-      inp.addEventListener('input', take);
-      inp.addEventListener('change', take);
-    });
-
-    el.querySelectorAll('[data-colrm]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        draft.colors.splice(+b.getAttribute('data-colrm'), 1);
-        render();
-      });
-    });
-
-    el.querySelectorAll('[data-colshot]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var i = +b.getAttribute('data-colshot');
-        var input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.addEventListener('change', function () {
-          var file = input.files && input.files[0];
-          if (!file) return;
-          busy = true; render();
-          api.uploadMediaFile(file)
-            .then(function (url) {
-              if (draft.colors[i]) draft.colors[i].image = url;
-            })
-            .catch(function (e) { showError('Could not upload: ' + e.message); })
-            .then(function () { busy = false; render(); });
-        });
-        input.click();
-      });
-    });
-
-    // A folder of swatches in one go. The file name becomes the colour
-    // name -- "pitch-black.jpg" becomes "Pitch Black" -- because naming
-    // twenty colours by hand after uploading them is the tedious part.
-    var addMany = el.querySelector('#mm-ds-addmany');
-    if (addMany) addMany.addEventListener('click', function () {
-      var input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.multiple = true;
-      input.addEventListener('change', function () {
-        var list = Array.prototype.slice.call(input.files || []);
-        if (!list.length) return;
-
-        busy = true;
-        showError('');
-        render();
-
-        list.reduce(function (chain, file, i) {
-          return chain.then(function () {
-            var b = document.getElementById('mm-ds-addmany');
-            if (b) b.textContent = 'Uploading ' + (i + 1) + ' of ' + list.length + '...';
-            return api.uploadMediaFile(file)
-              .then(function (url) {
-                draft.colors.push({
-                  name: nameFromFile(file.name),
-                  image: url,
-                  swatch: '#cccccc',
-                });
-              })
-              .catch(function () { /* one bad file does not stop the rest */ });
-          });
-        }, Promise.resolve()).then(function () {
-          busy = false;
-          render();
-        });
-      });
-      input.click();
-    });
-
     var save = el.querySelector('#mm-ds-save');
     if (save) save.addEventListener('click', saveStyle);
 
@@ -446,14 +257,6 @@ window.MM = window.MM || {};
           name: s.name || '',
           notes: s.notes || '',
           images: (s.images || []).slice(),
-          // Copied one level deep, so editing a colour and cancelling
-          // leaves the saved style untouched.
-          colors: (s.colors || []).map(function (c) {
-            return {
-              name: c.name || '', image: c.image || '',
-              swatch: c.swatch || '#cccccc',
-            };
-          }),
         };
         showError('');
         render();
@@ -486,18 +289,6 @@ window.MM = window.MM || {};
     });
   }
 
-  // "pitch-black.jpg" -> "Pitch Black". A guess at the name, and one that is
-  // right often enough to save the typing; it is editable either way.
-  function nameFromFile(fname) {
-    return String(fname || '')
-      .replace(/\.[^.]+$/, '')
-      .replace(/[_-]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/(^|\s)\S/g, function (ch) { return ch.toUpperCase(); })
-      .slice(0, 60);
-  }
-
   function saveStyle() {
     var name = (draft.name || '').trim();
     if (!name) {
@@ -515,17 +306,6 @@ window.MM = window.MM || {};
       name: name,
       notes: (draft.notes || '').trim() || null,
       images: draft.images,
-      // A colour with no name was a row someone started and thought better
-      // of, so it is dropped rather than refused.
-      colors: draft.colors.filter(function (c) {
-        return !!String(c.name || '').trim();
-      }).map(function (c) {
-        return {
-          name: String(c.name).trim(),
-          image: c.image || '',
-          swatch: c.swatch || '#cccccc',
-        };
-      }),
     };
 
     showError('');
@@ -541,7 +321,7 @@ window.MM = window.MM || {};
         (editing ? 'Updated door style ' : 'Added door style ') + name, {});
       busy = false;
       adding = false; editing = null;
-      draft = { name: '', notes: '', images: [], colors: [] };
+      draft = { name: '', notes: '', images: [] };
       return load();
     }).catch(function (e) {
       busy = false;
@@ -552,7 +332,7 @@ window.MM = window.MM || {};
 
   function startAdd() {
     adding = true; editing = null;
-    draft = { name: '', notes: '', images: [], colors: [] };
+    draft = { name: '', notes: '', images: [] };
     showError('');
     render();
     var f = document.getElementById('mm-ds-name');

@@ -86,7 +86,7 @@ window.MM = window.MM || {};
     // page that has moved on.
     stopTicking();
     currentJob = job;
-    shots = []; styleId = ''; extra = '';
+    shots = []; styleId = ''; extra = ''; colour = '';
     onJob = []; picking = false;
     results = []; busy = false; msg = ''; isErr = false;
 
@@ -149,6 +149,7 @@ window.MM = window.MM || {};
     el.innerHTML =
       stepPhoto() +
       stepStyle() +
+      stepColour() +
       stepGo() +
       (results.length ? stepResults() : '') +
       (msg ? '<p class="mm-vz-msg' + (isErr ? ' is-bad' : '') + '" role="alert">' +
@@ -223,6 +224,74 @@ window.MM = window.MM || {};
   // door help; a long list starts to crowd out the room.
   var MAX_REFS = 4;
 
+  // ---- The paint colours -----------------------------------------------
+  //
+  // Written here rather than set up by hand, because they are the same list
+  // for everybody and typing twenty-three names is how names get mistyped.
+  // The NAME is what the AI is told -- "paint them Pitch Black" -- so it has
+  // to match what the manufacturer calls it.
+  //
+  // The swatch is only so the list is recognisable on screen. The door's own
+  // photographs carry the shape; this carries the colour.
+  //
+  // Paints only. A stain or a gloss is a material rather than a colour, and
+  // a word does not produce wood grain -- those need a photograph of their
+  // own, which is a thing to add if it is ever actually asked for.
+  var COLOURS = [
+    { name: 'Frost', swatch: '#f2f0ea' },
+    { name: 'Dove', swatch: '#efebe0' },
+    { name: 'Linen', swatch: '#e8e3d5' },
+    { name: 'Cloud White', swatch: '#eeece5' },
+    { name: 'Macadamia Beige', swatch: '#e2d6bd' },
+    { name: 'Oyster', swatch: '#c2ab8f' },
+    { name: 'Repose Gray', swatch: '#cbc7bd' },
+    { name: 'Nickel', swatch: '#b4b5ae' },
+    { name: 'Stone', swatch: '#8d8178' },
+    { name: 'Mint Green', swatch: '#dde3d9' },
+    { name: 'Pistachio Green', swatch: '#b4bda7' },
+    { name: 'Sage Green', swatch: '#b3c4b4' },
+    { name: 'Pewter Green', swatch: '#5f6355' },
+    { name: 'Forest Green', swatch: '#5c6354' },
+    { name: 'Hunter Green', swatch: '#3c4634' },
+    { name: 'Izel Blue', swatch: '#7fa3bb' },
+    { name: 'Denim Blue', swatch: '#4a6e8c' },
+    { name: 'Naval', swatch: '#2f3e52' },
+    { name: 'Indigo', swatch: '#2b3440' },
+    { name: 'Orchid Purple', swatch: '#d9bdd4' },
+    { name: 'Cabernet Red', swatch: '#6d1f2a' },
+    { name: 'Graphite Black', swatch: '#33352f' },
+    { name: 'Pitch Black', swatch: '#1c1c1e' },
+  ];
+
+  // Which colour is chosen, if any. Empty means "leave the doors the colour
+  // the reference photographs show", which is a real answer: someone fitting
+  // Nexus Linen wants it linen.
+  var colour = '';
+
+  function stepColour() {
+    return '<div class="mm-vz-step">' +
+      '<div class="mm-vz-head"><span class="mm-vz-n">3</span>' +
+        '<span class="mm-vz-title">Colour</span></div>' +
+      '<div class="mm-vz-cols">' +
+        '<button type="button" class="mm-vz-col mm-vz-colnone' +
+            (colour ? '' : ' is-on') + '" data-col=""' +
+            (busy ? ' disabled' : '') + '>' +
+          '<span class="mm-vz-colname">As the photo</span>' +
+        '</button>' +
+        COLOURS.map(function (c) {
+          return '<button type="button" class="mm-vz-col' +
+              (c.name === colour ? ' is-on' : '') + '" ' +
+              'data-col="' + U.esc(c.name) + '"' +
+              (busy ? ' disabled' : '') + '>' +
+            '<span class="mm-vz-colsw" style="background:' +
+              U.esc(c.swatch) + '" aria-hidden="true"></span>' +
+            '<span class="mm-vz-colname">' + U.esc(c.name) + '</span>' +
+          '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }
+
   function stepStyle() {
     var chosen = styles.find(function (x) { return String(x.id) === styleId; });
 
@@ -281,7 +350,7 @@ window.MM = window.MM || {};
   function stepGo() {
     var can = !!(shots.length && styleId) && !busy;
     return '<div class="mm-vz-step">' +
-      '<div class="mm-vz-head"><span class="mm-vz-n">3</span>' +
+      '<div class="mm-vz-head"><span class="mm-vz-n">4</span>' +
         '<span class="mm-vz-title">Anything else ' +
         '<span class="mm-opt">(optional)</span></span></div>' +
       '<input class="mm-input" id="mm-vz-extra" ' +
@@ -452,6 +521,7 @@ window.MM = window.MM || {};
             refs: ready.refs,
             style: s.name,
             notes: s.notes || '',
+            colour: colour,
             extra: extra,
           }),
         });
@@ -623,6 +693,13 @@ window.MM = window.MM || {};
         shots.splice(+b.getAttribute('data-drop'), 1);
         results = [];
         say('');
+      });
+    });
+
+    el.querySelectorAll('[data-col]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        colour = b.getAttribute('data-col');
+        render();
       });
     });
 
