@@ -157,9 +157,9 @@ window.MM = window.MM || {};
           'autocomplete="off" placeholder="' +
           (on ? 'Saved — leave blank to keep it' : 'Paste the Gemini key') + '">' +
         '<p class="mm-set-hint">Kept on the server and never shown again. ' +
-          'Use a key of its own, restricted to the Generative Language API ' +
-          '&mdash; not the one the address lookup uses, which is readable in ' +
-          'the page.</p>' +
+          'It must belong to the provider chosen above. For Google, use a ' +
+          'key of its own rather than the one the address lookup uses ' +
+          '&mdash; that one is readable in the page.</p>' +
       '</div>' +
 
       '<div class="mm-mt-f" style="margin-bottom:10px">' +
