@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="css/templates.css">
 <link rel="stylesheet" href="css/materialtpl.css">
 <link rel="stylesheet" href="css/doorstyles.css">
+<link rel="stylesheet" href="css/visualise.css">
 <link rel="stylesheet" href="css/materials.css">
 <link rel="stylesheet" href="css/emailtpl.css">
 <link rel="stylesheet" href="css/meetings.css">
@@ -881,6 +882,7 @@
     <button class="mm-jobtab" data-jobtab="measure" role="tab" aria-selected="false">Measure</button>
     <button class="mm-jobtab" data-jobtab="tasks" role="tab" aria-selected="false">Tasks</button>
     <button class="mm-jobtab" data-jobtab="chat" role="tab" aria-selected="false">Chat</button>
+    <button class="mm-jobtab" data-jobtab="visualise" role="tab" aria-selected="false">Visualise</button>
   </div>
 
   <div class="mm-content">
@@ -920,6 +922,12 @@
          where the whole thread across every channel already lives. -->
     <div class="mm-jobpane" data-pane="chat">
       <div class="card" id="mm-job-chat"></div>
+    </div>
+
+    <!-- The customer's own kitchen, with the doors this business sells. The
+         photo is taken here: nothing on this tab reads the measurement. -->
+    <div class="mm-jobpane" data-pane="visualise">
+      <div id="mm-job-visualise"></div>
     </div>
   </div>
 </div>
@@ -1002,6 +1010,7 @@
 <script src="js/templates.js"></script>
 <script src="js/materialtpl.js"></script>
 <script src="js/doorstyles.js"></script>
+<script src="js/visualise.js"></script>
 <script src="js/materials.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/import.js"></script>

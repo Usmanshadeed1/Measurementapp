@@ -81,6 +81,71 @@ const PROVIDERS = {
   },
 };
 
+// ---- Visualising a room --------------------------------------------------
+//
+// One photo of a real kitchen, plus photographs of the doors this business
+// actually sells, and a picture of that same kitchen with those doors in it.
+//
+// The reference photos are the whole point. Without them a model invents a
+// cabinet, and a customer shown a door nobody can order is worse off than a
+// customer shown nothing -- which is exactly what the client said when the
+// idea came up.
+//
+// GEMINI ONLY. Image editing from reference photographs is not something the
+// other providers here do, so this refuses rather than pretending.
+//
+// The images arrive as data URLs from the browser, which already holds them;
+// the server fetches nothing of its own.
+
+const IMAGE_MODEL_DEFAULT = 'gemini-3-pro-image';
+
+const IMAGE_PROMPT_DEFAULT = [
+  'This is a photograph of a real room in a customer\'s home.',
+  '',
+  'Replace ONLY the cabinet doors and drawer fronts with the doors shown in',
+  'the reference photographs: {style}.',
+  '',
+  'Match the reference doors exactly — the same profile, panel, colour and',
+  'finish. Do not substitute a similar style.',
+  '',
+  'Everything else in the photograph must stay exactly as it is:',
+  '- the room layout and the position of every cabinet',
+  '- the windows, floor, walls and ceiling',
+  '- the countertops, sink, tap and backsplash',
+  '- the appliances',
+  '- the camera angle, perspective and lighting',
+  '',
+  'Do not move, add or remove anything else. The result must look like a',
+  'photograph of the same room, not a new design.',
+].join('\n');
+
+function buildImagePrompt(custom, styleName, styleNotes, extra) {
+  let body = String(custom || '').trim() || IMAGE_PROMPT_DEFAULT;
+
+  let style = styleName || 'the reference doors';
+  if (styleNotes) style += ' (' + styleNotes + ')';
+
+  if (body.indexOf('{style}') > -1) body = body.split('{style}').join(style);
+  else body += '\n\nThe doors to fit: ' + style;
+
+  // Whatever was typed for this one job, last, so it reads as the latest
+  // instruction rather than being buried in the standing wording.
+  const note = String(extra || '').trim();
+  if (note) body += '\n\nAlso: ' + note;
+
+  return body;
+}
+
+// "data:image/jpeg;base64,xxxx" as Gemini wants it. Anything that is not a
+// data URL is refused rather than guessed at: the server does not fetch
+// URLs on someone else's say-so.
+function inlinePart(dataUrl) {
+  const m = /^data:([^;,]+);base64,(.+)$/.exec(String(dataUrl || ''));
+  if (!m) return null;
+  if (m[1].indexOf('image/') !== 0) return null;
+  return { inline_data: { mime_type: m[1], data: m[2] } };
+}
+
 // ---- The database --------------------------------------------------------
 
 function db(method, path, body) {
@@ -243,6 +308,10 @@ export default async function handler(req, res) {
         prompt: (cfg && cfg.prompt) || '',
         defaultPrompt: DEFAULT_PROMPT,
         formatRules: FORMAT_RULES.trim(),
+        imageModel: (cfg && cfg.imageModel) || '',
+        imagePrompt: (cfg && cfg.imagePrompt) || '',
+        defaultImageModel: IMAGE_MODEL_DEFAULT,
+        defaultImagePrompt: IMAGE_PROMPT_DEFAULT,
         providers: Object.keys(PROVIDERS).map((k) => ({
           id: k, label: PROVIDERS[k].label,
         })),
@@ -258,20 +327,29 @@ export default async function handler(req, res) {
       if (!PROVIDERS[provider]) return res.status(400).json({ error: 'Pick a platform.' });
       if (!model) return res.status(400).json({ error: 'Enter a model name.' });
 
+      // Read once, for everything that falls back to what is stored.
+      const cur = await readConfig();
+
       // An empty key on save means "keep the one already stored", so the
       // model can be changed without pasting the key again.
-      let finalKey = key;
-      if (!finalKey) {
-        const cfg = await readConfig();
-        finalKey = (cfg && cfg.key) || '';
-        if (!finalKey) return res.status(400).json({ error: 'Enter an API key.' });
-      }
+      const finalKey = key || (cur && cur.key) || '';
+      if (!finalKey) return res.status(400).json({ error: 'Enter an API key.' });
 
       // Blank means "use the built-in wording", which is also how the
       // reset button works: it clears the box and saves.
       const prompt = String(b.prompt || '').trim().slice(0, 4000);
+      // An absent picture field keeps what is already stored rather than
+      // clearing it: the settings page sends the whole lot, but a future
+      // caller might not.
+      const imageModel = b.imageModel !== undefined
+        ? String(b.imageModel || '').trim().slice(0, 120)
+        : ((cur && cur.imageModel) || '');
+      const imagePrompt = b.imagePrompt !== undefined
+        ? String(b.imagePrompt || '').trim().slice(0, 4000)
+        : ((cur && cur.imagePrompt) || '');
 
-      await writeConfig({ provider, model, key: finalKey, prompt });
+      await writeConfig({ provider, model, key: finalKey, prompt,
+                          imageModel, imagePrompt });
       return res.status(200).json({ ok: true });
     }
 
@@ -331,6 +409,97 @@ export default async function handler(req, res) {
       }
 
       return res.status(200).json({ items });
+    }
+
+    if (req.method === 'POST' && action === 'visualise') {
+      const cfg = await readConfig();
+      if (!cfg || !cfg.key) {
+        return res.status(400).json({ error: 'No AI key has been set up yet.' });
+      }
+      if (cfg.provider !== 'gemini') {
+        return res.status(400).json({
+          error: 'Visualising needs a Google Gemini key. The platform in ' +
+                 'Settings is set to ' + cfg.provider + '.',
+        });
+      }
+
+      const room = inlinePart(body.room);
+      if (!room) return res.status(400).json({ error: 'No room photo was sent.' });
+
+      const refs = (Array.isArray(body.refs) ? body.refs : [])
+        .map(inlinePart).filter(Boolean);
+      if (!refs.length) {
+        return res.status(400).json({
+          error: 'That door style has no usable photos.',
+        });
+      }
+
+      const prompt = buildImagePrompt(
+        cfg.imagePrompt,
+        String(body.style || '').slice(0, 120),
+        String(body.notes || '').slice(0, 300),
+        String(body.extra || '').slice(0, 500)
+      );
+
+      // The room first, then the doors: the order matches what the prompt
+      // says about "this photograph" and "the reference photographs".
+      const parts = [{ text: prompt }, room].concat(refs);
+      const model = cfg.imageModel || IMAGE_MODEL_DEFAULT;
+
+      const r = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/' +
+          encodeURIComponent(model) + ':generateContent?key=' +
+          encodeURIComponent(cfg.key),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+          }),
+        }
+      );
+
+      const text = await r.text();
+      if (!r.ok) {
+        let msg = text.slice(0, 300);
+        try {
+          const d = JSON.parse(text);
+          msg = (d.error && (d.error.message || d.error)) || msg;
+        } catch (e) { /* keep the raw text */ }
+        return res.status(400).json({ error: String(msg).slice(0, 300) });
+      }
+
+      let data;
+      try { data = JSON.parse(text); } catch (e) {
+        return res.status(502).json({ error: 'The AI sent something unreadable.' });
+      }
+
+      // The picture comes back beside any words the model felt like adding,
+      // so the parts are searched rather than assumed to be in an order.
+      const out = [];
+      let said = '';
+      const cand = (data.candidates || [])[0];
+      ((cand && cand.content && cand.content.parts) || []).forEach((p) => {
+        const d = p.inline_data || p.inlineData;
+        if (d && d.data) {
+          out.push('data:' + (d.mime_type || d.mimeType || 'image/png') +
+                   ';base64,' + d.data);
+        } else if (p.text) {
+          said += p.text;
+        }
+      });
+
+      if (!out.length) {
+        // A refusal explains itself in the text part, and that explanation
+        // is far more use than "no image returned".
+        return res.status(502).json({
+          error: said.trim().slice(0, 300) ||
+                 'The AI returned no picture. Try a different photo.',
+        });
+      }
+
+      return res.status(200).json({ images: out, note: said.trim().slice(0, 500) });
     }
 
     return res.status(404).json({ error: 'Unknown request.' });

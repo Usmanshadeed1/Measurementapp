@@ -1,0 +1,95 @@
+/* ==========================================================================
+   Visualising a room.
+
+   Used standing in a customer's kitchen, on a phone, with the customer
+   watching. So it reads as three numbered steps rather than a form: take the
+   photo, pick the door, press the button. Nothing else on screen competes
+   for attention.
+   ========================================================================== */
+
+.mm-vz-step{padding:16px;margin-bottom:14px;border-radius:12px;
+  background:var(--card);border:1px solid var(--border)}
+
+.mm-vz-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.mm-vz-n{flex:0 0 auto;width:26px;height:26px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--accent);color:#fff;font-size:0.8em;font-weight:800}
+.mm-vz-title{font-weight:700;color:var(--text)}
+
+.mm-vz-hint{margin:0 0 10px;font-size:0.84em;color:var(--text2);
+  line-height:1.5}
+
+/* ---- The room photo ---- */
+
+.mm-vz-shot{position:relative;margin-bottom:10px}
+.mm-vz-shot img{width:100%;max-height:300px;object-fit:contain;
+  border-radius:10px;background:var(--card2);
+  border:1px solid var(--border);display:block}
+.mm-vz-rm{position:absolute;top:8px;right:8px;
+  width:34px;height:34px;padding:0;border-radius:50%;
+  border:none;background:rgba(20,20,20,.7);color:#fff;
+  font-size:1.2em;line-height:1;cursor:pointer}
+.mm-vz-rm:hover{background:rgba(20,20,20,.9)}
+.mm-vz-rm:focus-visible{outline:3px solid #fff;outline-offset:2px}
+
+/* ---- Choosing the door ----
+   By sight. Someone picks a door because they recognise it, not because
+   they read its name. */
+
+.mm-vz-styles{display:flex;flex-wrap:wrap;gap:10px}
+.mm-vz-style{width:104px;padding:6px;border-radius:10px;cursor:pointer;
+  border:2px solid var(--border);background:var(--card2);
+  font-family:inherit;color:var(--text);
+  display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.mm-vz-style img,.mm-vz-nostyle{width:100%;height:76px;object-fit:cover;
+  border-radius:6px;background:var(--card);display:block}
+.mm-vz-nostyle{border:1px dashed var(--border)}
+.mm-vz-styname{font-size:0.78em;font-weight:700;line-height:1.3;
+  overflow-wrap:anywhere}
+.mm-vz-style:hover{border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.mm-vz-style.is-on{border-color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 14%,var(--card2))}
+.mm-vz-style:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-vz-style:disabled{opacity:.6;cursor:not-allowed}
+
+/* ---- The button that costs money ---- */
+
+.mm-vz-go{width:100%;min-height:52px;margin-bottom:0;font-size:1em}
+
+/* ---- What came back ---- */
+
+.mm-vz-outs{display:flex;flex-direction:column;gap:14px;margin-bottom:12px}
+.mm-vz-out img{width:100%;border-radius:10px;display:block;
+  border:1px solid var(--border);background:var(--card2)}
+.mm-vz-outbar{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.mm-vz-outbar .mm-btn-sm{flex:1 1 auto;text-align:center;
+  text-decoration:none;display:inline-flex;align-items:center;
+  justify-content:center;min-height:42px}
+.mm-vz-saved{flex:1 1 auto;display:flex;align-items:center;
+  justify-content:center;min-height:42px;
+  font-size:0.84em;font-weight:700;color:var(--success)}
+
+/* Not a promise. Stated here, and written onto the picture itself when it
+   is saved -- an email can be forwarded without its text. */
+.mm-vz-warn{margin:0;padding:10px 12px;border-radius:8px;
+  background:color-mix(in srgb,#f0a02a 14%,transparent);
+  border:1px solid color-mix(in srgb,#f0a02a 36%,transparent);
+  font-size:0.82em;line-height:1.5;color:var(--text)}
+
+.mm-vz-msg{margin:0;font-size:0.86em;font-weight:700;color:var(--accent);
+  line-height:1.45}
+.mm-vz-msg.is-bad{color:var(--danger-text)}
+
+/* ---- Before it is set up ---- */
+
+.mm-vz-off{padding:28px 20px;text-align:center;border-radius:12px;
+  background:var(--card);border:1px dashed var(--border)}
+.mm-vz-offtitle{margin:0 0 6px;font-size:1.05em;font-weight:700;
+  color:var(--text)}
+.mm-vz-offsub{margin:0;font-size:0.88em;color:var(--text2);line-height:1.5}
+
+@media (max-width: 620px){
+  .mm-vz-step{padding:12px}
+  .mm-vz-style{width:calc(50% - 5px)}
+  .mm-vz-outbar .mm-btn-sm,.mm-vz-saved{flex:1 1 100%}
+}
