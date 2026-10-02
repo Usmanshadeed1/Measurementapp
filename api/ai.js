@@ -101,24 +101,57 @@ const PROVIDERS = {
 // The images arrive as data URLs from the browser, which already holds them;
 // the server fetches nothing of its own.
 
+// Written as an EDIT, not as a description of a kitchen. The first wording
+// read like a brief, and the models answered it like one: they produced a
+// nice kitchen that was not the customer's, put cabinets over windows, and
+// refaced some doors while leaving others alone.
+//
+// Three things fixed that, and they are worth keeping in this order:
+// the job is retouching one photograph; EVERY door changes, not some; and
+// anything that is not a cabinet door is untouchable.
 const IMAGE_PROMPT_DEFAULT = [
   '{rooms}',
   '',
-  'Replace ONLY the cabinet doors and drawer fronts with the doors shown in',
-  'the reference photographs: {style}.',
+  'TASK: retouch this photograph. Return the SAME photograph with one',
+  'change made to it. This is not a new design, not a render, and not a',
+  'different kitchen. Think of it as swapping the cabinet fronts in a photo',
+  'editor, pixel for pixel, leaving the rest of the image untouched.',
   '',
-  'Match the reference doors exactly — the same profile, panel, colour and',
-  'finish. Do not substitute a similar style.',
+  'THE ONE CHANGE: every cabinet door and drawer front in the photograph is',
+  'refaced with the doors shown in the reference photographs: {style}.',
   '',
-  'Everything else in the photograph must stay exactly as it is:',
-  '- the room layout and the position of every cabinet',
-  '- the windows, floor, walls and ceiling',
-  '- the countertops, sink, tap and backsplash',
-  '- the appliances',
-  '- the camera angle, perspective and lighting',
+  'Match those reference doors exactly — the same panel profile, the same',
+  'edge, the same colour, the same finish, the same sheen. Do not invent a',
+  'similar door. Do not use a stock cabinet. Copy what is in the reference',
+  'photographs.',
   '',
-  'Do not move, add or remove anything else. The result must look like a',
-  'photograph of the same room, not a new design.',
+  'EVERY cabinet, without exception — wall cabinets, base cabinets, the tall',
+  'pantry, the island, above the fridge, above the cooker. Leaving one door',
+  'in the old style ruins the picture, so check the whole image before you',
+  'finish.',
+  '',
+  'NEVER ADD A CABINET. If a part of the wall has no cabinet — a window, an',
+  'open wall, a doorway, a gap — it still has no cabinet afterwards. Do not',
+  'fill windows. Do not extend runs of units. Do not tidy the layout.',
+  '',
+  'These must come through completely unchanged, pixel for pixel:',
+  '- the position, size and number of every cabinet',
+  '- every window, and whatever is visible through it',
+  '- the floor, the walls, the ceiling and any mouldings',
+  '- the countertops, sink, tap, backsplash and tiling',
+  '- every appliance, including handles and controls',
+  '- the camera angle, the perspective, the lens distortion',
+  '- the lighting, the shadows and the time of day',
+  '- anything sitting on the counters',
+  '',
+  'Keep the photograph\'s own character: the same grain, the same slightly',
+  'uneven light, the same reflections. A result that looks like a brochure',
+  'is wrong. It should look like someone refaced these cabinets and took',
+  'the photograph again from the same spot.',
+  '',
+  'If a cabinet is partly hidden or at an awkward angle, reface the part',
+  'that is visible and leave the rest of the image alone. Never redraw a',
+  'region to make it easier.',
 ].join('\n');
 
 function buildImagePrompt(custom, styleName, styleNotes, extra, roomCount) {
@@ -129,10 +162,20 @@ function buildImagePrompt(custom, styleName, styleNotes, extra, roomCount) {
   // angles of one kitchen give it more to keep unchanged.
   var n = roomCount || 1;
   var rooms = n > 1
-    ? 'The first ' + n + ' images are photographs of ONE real room in a ' +
-      'customer\'s home, taken from different angles. Produce your picture ' +
-      'from the FIRST of them, and use the others only to understand the room.'
-    : 'This is a photograph of a real room in a customer\'s home.';
+    ? 'IMAGES 1 to ' + n + ' are photographs of ONE real room in a ' +
+      'customer\'s home, taken from different angles. Your result must be ' +
+      'IMAGE 1, edited. The others are only there to show you more of the ' +
+      'same room; never mix them together into one picture.' +
+      '\n\nEVERY IMAGE AFTER THAT is a close-up of the cabinet door to fit. ' +
+      'Those are product photographs, not rooms. Nothing in them — no ' +
+      'background, no surroundings — appears in your result. Only the door ' +
+      'itself is copied.'
+    : 'IMAGE 1 is a photograph of a real room in a customer\'s home. Your ' +
+      'result is that photograph, edited.' +
+      '\n\nEVERY IMAGE AFTER IT is a close-up of the cabinet door to fit. ' +
+      'Those are product photographs, not rooms. Nothing in them — no ' +
+      'background, no surroundings — appears in your result. Only the door ' +
+      'itself is copied.';
   body = body.split('{rooms}').join(rooms);
 
   let style = styleName || 'the reference doors';
@@ -180,9 +223,12 @@ const IMAGE_PROVIDERS = {
   },
   kie: {
     label: 'Kie.ai',
-    defaultModel: 'google/nano-banana-edit',
+    // The Pro model, not the cheap one. The cheap one refaced some doors
+    // and not others, and put cabinets where the windows were.
+    defaultModel: 'google/nano-banana-pro',
     needsUrls: true,
-    note: 'Resells the same models by the image, and gives trial credit.',
+    note: 'Resells the same models by the image, and gives trial credit. ' +
+          'google/nano-banana-edit is cheaper but much less faithful.',
   },
 };
 
