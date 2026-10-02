@@ -107,6 +107,10 @@ window.MM = window.MM || {};
   function imgCard() {
     var s = img || {};
     var on = !!s.configured;
+    var provs = s.providers || [{ id: 'gemini', label: 'Google Gemini (direct)' }];
+    var here = provs.find(function (p) {
+      return p.id === (s.provider || 'gemini');
+    }) || provs[0];
 
     return '<div class="mm-set">' +
       '<div class="mm-set-head">Visualising a room</div>' +
@@ -124,13 +128,27 @@ window.MM = window.MM || {};
       '</div>' +
 
       '<div class="mm-mt-f" style="margin-bottom:10px">' +
+        '<span class="mm-mt-flab">Provider</span>' +
+        '<select class="mm-select" id="mm-img-prov">' +
+          provs.map(function (p) {
+            return '<option value="' + U.esc(p.id) + '"' +
+              (p.id === (s.provider || 'gemini') ? ' selected' : '') + '>' +
+              U.esc(p.label) + '</option>';
+          }).join('') +
+        '</select>' +
+        (here && here.note
+          ? '<p class="mm-set-hint">' + U.esc(here.note) + '</p>' : '') +
+      '</div>' +
+
+      '<div class="mm-mt-f" style="margin-bottom:10px">' +
         '<span class="mm-mt-flab">Model name</span>' +
         '<input class="mm-input" id="mm-img-model" ' +
-          'placeholder="' + U.esc(s.defaultModel || 'gemini-3-pro-image') + '" ' +
+          'placeholder="' + U.esc((here && here.defaultModel) || '') + '" ' +
           'value="' + U.esc(s.model || '') + '">' +
-        '<p class="mm-set-hint">It must be an image model. ' +
-          '<code>gemini-3-pro-image</code> keeps the room closest to the ' +
-          'photo; the Flash ones are cheaper and take more liberties.</p>' +
+        '<p class="mm-set-hint">Leave blank to use ' +
+          '<code>' + U.esc((here && here.defaultModel) || '') + '</code>. ' +
+          'A Pro model keeps the room closest to the photo; the Flash ones ' +
+          'are cheaper and take more liberties.</p>' +
       '</div>' +
 
       '<div class="mm-mt-f" style="margin-bottom:10px">' +
@@ -181,11 +199,30 @@ window.MM = window.MM || {};
       imgPrompt = this.value;
     });
 
+    var prov = el.querySelector('#mm-img-prov');
+    if (prov) prov.addEventListener('change', function () {
+      img = img || {};
+      img.provider = this.value;
+      // The model name belongs to the provider that was chosen, so a stale
+      // one is cleared rather than sent to somewhere that never had it.
+      img.model = '';
+      imgSay('');
+    });
+
     var save = el.querySelector('#mm-img-save');
     if (save) save.addEventListener('click', function () {
+      var provider = el.querySelector('#mm-img-prov').value;
       var model = (el.querySelector('#mm-img-model').value || '').trim();
       var key = (el.querySelector('#mm-img-key').value || '').trim();
       var prompt = el.querySelector('#mm-img-prompt').value || '';
+      // Blank means "whatever that provider's default is", which is what the
+      // placeholder says -- so it is filled in here rather than refused.
+      if (!model) {
+        var p = (img && img.providers || []).find(function (x) {
+          return x.id === provider;
+        });
+        model = (p && p.defaultModel) || '';
+      }
       if (!model) { imgSay('Enter a model name.', true); return; }
 
       // Saving the built-in wording unchanged stores nothing, so a later
@@ -194,7 +231,8 @@ window.MM = window.MM || {};
       if (prompt.trim() === def.trim()) prompt = '';
 
       imgBusy = true; imgSay('');
-      aiFetch('image-save', { model: model, key: key, prompt: prompt })
+      aiFetch('image-save', { provider: provider, model: model,
+                              key: key, prompt: prompt })
         .then(function () { imgPrompt = null; return imgRefresh('Saved.'); })
         .catch(function (e) {
           imgBusy = false;

@@ -28,8 +28,8 @@ window.MM = window.MM || {};
   var currentJob = null;
   var ready = null;        // null = not asked yet; is the AI set up
   var styles = [];
-  var roomShot = '';       // data URL of the photo being worked from
-  var roomName = '';
+  var shots = [];          // data URLs of the room photos, first one leads
+  var needsUrls = false;   // does the chosen provider want public URLs
   var styleId = '';
   var extra = '';
   var results = [];        // data URLs that came back
@@ -85,7 +85,7 @@ window.MM = window.MM || {};
 
   function showForJob(job) {
     currentJob = job;
-    roomShot = ''; roomName = ''; styleId = ''; extra = '';
+    shots = []; styleId = ''; extra = '';
     results = []; busy = false; msg = ''; isErr = false;
 
     render();
@@ -109,7 +109,14 @@ window.MM = window.MM || {};
     if (ready !== null) return Promise.resolve(ready);
     return fetch('/api/ai?action=image-status')
       .then(function (r) { return r.json(); })
-      .then(function (d) { ready = !!(d && d.configured); return ready; })
+      .then(function (d) {
+        ready = !!(d && d.configured);
+        var p = (d && d.providers || []).find(function (x) {
+          return x.id === (d.provider || 'gemini');
+        });
+        needsUrls = !!(p && p.needsUrls);
+        return ready;
+      })
       .catch(function () { ready = false; return false; });
   }
 
@@ -144,22 +151,36 @@ window.MM = window.MM || {};
     return '<div class="mm-vz-step">' +
       '<div class="mm-vz-head"><span class="mm-vz-n">1</span>' +
         '<span class="mm-vz-title">The room</span></div>' +
-      (roomShot
-        ? '<div class="mm-vz-shot">' +
-            '<img src="' + U.esc(roomShot) + '" alt="The room photo">' +
-            '<button type="button" class="mm-vz-rm" id="mm-vz-clear" ' +
-              'aria-label="Remove this photo">&times;</button>' +
+      (shots.length
+        ? '<div class="mm-vz-shots">' +
+            shots.map(function (u, i) {
+              return '<div class="mm-vz-shot' + (i === 0 ? ' is-first' : '') + '">' +
+                '<img src="' + U.esc(u) + '" alt="Room photo ' + (i + 1) + '">' +
+                (i === 0 ? '<span class="mm-vz-lead">Main</span>' : '') +
+                '<button type="button" class="mm-vz-rm" data-drop="' + i + '" ' +
+                  'aria-label="Remove photo ' + (i + 1) + '">&times;</button>' +
+              '</div>';
+            }).join('') +
           '</div>'
-        : '<p class="mm-vz-hint">Photograph the kitchen straight on, with as ' +
-          'much of the cabinets in frame as you can. Good light and a steady ' +
-          'shot make a far better picture than a clever angle.</p>') +
+        : '') +
+      '<p class="mm-vz-hint">' +
+        (shots.length
+          // Which photo the picture is made FROM matters, and it is the
+          // first: the rest only tell the model more about the room.
+          ? 'The picture is made from the one marked <strong>Main</strong>. ' +
+            'The others just help it understand the room &mdash; add two or ' +
+            'three angles if you can.'
+          : 'Photograph the kitchen straight on, with as much of the ' +
+            'cabinets in frame as you can. Add two or three angles if you ' +
+            'can &mdash; the first one is the one the picture is made from.') +
+      '</p>' +
       '<div class="mm-btn-row">' +
         '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
           'id="mm-vz-shoot"' + (busy ? ' disabled' : '') + '>' +
-          '&#128247; ' + (roomShot ? 'Retake' : 'Camera') + '</button>' +
+          '&#128247; Camera</button>' +
         '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
           'id="mm-vz-pick"' + (busy ? ' disabled' : '') + '>' +
-          '&#128193; ' + (roomShot ? 'Choose another' : 'Upload') + '</button>' +
+          '&#128193; ' + (shots.length ? 'Add more' : 'Upload') + '</button>' +
       '</div>' +
     '</div>';
   }
@@ -196,7 +217,7 @@ window.MM = window.MM || {};
   }
 
   function stepGo() {
-    var can = !!(roomShot && styleId) && !busy;
+    var can = !!(shots.length && styleId) && !busy;
     return '<div class="mm-vz-step">' +
       '<div class="mm-vz-head"><span class="mm-vz-n">3</span>' +
         '<span class="mm-vz-title">Anything else ' +
@@ -284,44 +305,57 @@ window.MM = window.MM || {};
 
   // ---- Actions -------------------------------------------------------------
 
-  function takePhoto(files) {
-    var file = files && files[0];
-    if (!file) return;
-    busy = true; say('Reading the photo...');
-    readAsDataUrl(file)
-      .then(downscale)
-      .then(function (url) {
-        roomShot = url;
-        roomName = file.name || '';
-        results = [];
-        busy = false;
-        say('');
-      })
-      .catch(function (e) { busy = false; say(e.message, true); });
+  // Several at a time, kept in the order they were picked. The first is the
+  // one the picture is made from, so it is the one to get right.
+  var MAX_SHOTS = 5;
+
+  function takePhotos(files) {
+    var list = Array.prototype.slice.call(files || []);
+    if (!list.length) return;
+
+    busy = true;
+    say(list.length > 1 ? 'Reading the photos...' : 'Reading the photo...');
+
+    list.reduce(function (chain, file) {
+      return chain.then(function () {
+        if (shots.length >= MAX_SHOTS) return null;
+        return readAsDataUrl(file)
+          .then(downscale)
+          .then(function (url) { shots.push(url); })
+          .catch(function () { /* one bad file does not stop the rest */ });
+      });
+    }, Promise.resolve()).then(function () {
+      results = [];
+      busy = false;
+      say(list.length + shots.length > MAX_SHOTS
+        ? 'Kept the first ' + MAX_SHOTS + '.' : '');
+    });
   }
 
   function go() {
     var s = styles.find(function (x) { return String(x.id) === styleId; });
-    if (!roomShot || !s) return;
+    if (!shots.length || !s) return;
 
     var refs = (s.images || []).slice(0, 4);
     if (!refs.length) { say('That door style has no photos.', true); return; }
 
     busy = true;
-    say('Working on it — this takes up to a minute.');
+    say(needsUrls ? 'Uploading the photos...'
+                  : 'Working on it — this takes up to a minute.');
 
-    // The door photos are URLs on the record; they are fetched here and sent
-    // as data, so the server never fetches a URL it was handed.
-    Promise.all(refs.map(toDataUrl))
-      .then(function (list) {
-        var usable = list.filter(Boolean);
-        if (!usable.length) throw new Error('Could not read the door photos.');
+    // The two providers want the pictures differently, and the difference
+    // cannot be hidden: Google takes them as data in the request, while Kie
+    // takes public links and goes and fetches them itself. So when the
+    // chosen provider needs links, the room photos are uploaded first.
+    prepare(refs)
+      .then(function (ready) {
+        say('Working on it — this takes up to a minute.');
         return fetch('/api/ai?action=visualise', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            room: roomShot,
-            refs: usable,
+            rooms: ready.rooms,
+            refs: ready.refs,
             style: s.name,
             notes: s.notes || '',
             extra: extra,
@@ -347,6 +381,47 @@ window.MM = window.MM || {};
       .catch(function (e) {
         busy = false;
         say(e.message, true);
+      });
+  }
+
+  // The room photos and the door photos, in whatever form the chosen
+  // provider takes.
+  //
+  // For Google: everything as data. The door photos are stored as links, so
+  // they are read back here rather than handed to the server for it to go
+  // and fetch -- the server never fetches a URL it was given.
+  //
+  // For Kie: everything as public links. The door photos already are links;
+  // the room photos are uploaded to get one.
+  function prepare(refs) {
+    if (!needsUrls) {
+      return Promise.all(refs.map(toDataUrl)).then(function (list) {
+        var usable = list.filter(Boolean);
+        if (!usable.length) throw new Error('Could not read the door photos.');
+        return { rooms: shots.slice(), refs: usable };
+      });
+    }
+
+    var links = refs.filter(function (u) { return /^https?:\/\//i.test(u); });
+    if (!links.length) throw new Error('That door style has no usable photos.');
+
+    return shots.reduce(function (chain, url, i) {
+      return chain.then(function (done) {
+        say('Uploading photo ' + (i + 1) + ' of ' + shots.length + '...');
+        return toFile(url, 'room-' + (i + 1) + '.jpg')
+          .then(api.uploadMediaFile)
+          .then(function (link) { done.push(link); return done; });
+      });
+    }, Promise.resolve([])).then(function (roomLinks) {
+      return { rooms: roomLinks, refs: links };
+    });
+  }
+
+  function toFile(dataUrl, name) {
+    return fetch(dataUrl).then(function (r) { return r.blob(); })
+      .then(function (blob) {
+        try { return new File([blob], name, { type: 'image/jpeg' }); }
+        catch (e) { blob.name = name; return blob; }
       });
   }
 
@@ -419,7 +494,7 @@ window.MM = window.MM || {};
     var shoot = el.querySelector('#mm-vz-shoot');
     if (shoot) shoot.addEventListener('click', function () {
       var input = U.cameraInput(document.createElement('input'));
-      input.addEventListener('change', function () { takePhoto(input.files); });
+      input.addEventListener('change', function () { takePhotos(input.files); });
       input.click();
     });
 
@@ -428,13 +503,17 @@ window.MM = window.MM || {};
       var input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
-      input.addEventListener('change', function () { takePhoto(input.files); });
+      input.multiple = true;
+      input.addEventListener('change', function () { takePhotos(input.files); });
       input.click();
     });
 
-    var clear = el.querySelector('#mm-vz-clear');
-    if (clear) clear.addEventListener('click', function () {
-      roomShot = ''; results = []; say('');
+    el.querySelectorAll('[data-drop]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        shots.splice(+b.getAttribute('data-drop'), 1);
+        results = [];
+        say('');
+      });
     });
 
     el.querySelectorAll('[data-style]').forEach(function (b) {

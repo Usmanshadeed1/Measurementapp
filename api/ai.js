@@ -101,10 +101,8 @@ const PROVIDERS = {
 // The images arrive as data URLs from the browser, which already holds them;
 // the server fetches nothing of its own.
 
-const IMAGE_MODEL_DEFAULT = 'gemini-3-pro-image';
-
 const IMAGE_PROMPT_DEFAULT = [
-  'This is a photograph of a real room in a customer\'s home.',
+  '{rooms}',
   '',
   'Replace ONLY the cabinet doors and drawer fronts with the doors shown in',
   'the reference photographs: {style}.',
@@ -123,8 +121,19 @@ const IMAGE_PROMPT_DEFAULT = [
   'photograph of the same room, not a new design.',
 ].join('\n');
 
-function buildImagePrompt(custom, styleName, styleNotes, extra) {
+function buildImagePrompt(custom, styleName, styleNotes, extra, roomCount) {
   let body = String(custom || '').trim() || IMAGE_PROMPT_DEFAULT;
+
+  // How many photographs of the room were sent, said in words, so the model
+  // knows which of the images are the room and which are the doors. Several
+  // angles of one kitchen give it more to keep unchanged.
+  var n = roomCount || 1;
+  var rooms = n > 1
+    ? 'The first ' + n + ' images are photographs of ONE real room in a ' +
+      'customer\'s home, taken from different angles. Produce your picture ' +
+      'from the FIRST of them, and use the others only to understand the room.'
+    : 'This is a photograph of a real room in a customer\'s home.';
+  body = body.split('{rooms}').join(rooms);
 
   let style = styleName || 'the reference doors';
   if (styleNotes) style += ' (' + styleNotes + ')';
@@ -148,6 +157,164 @@ function inlinePart(dataUrl) {
   if (!m) return null;
   if (m[1].indexOf('image/') !== 0) return null;
   return { inline_data: { mime_type: m[1], data: m[2] } };
+}
+
+// ---- Who draws the picture -----------------------------------------------
+//
+// Two routes to the same family of models. Google direct needs a prepaid
+// balance; the resellers sell the same thing by the image and hand out trial
+// credit, which is the difference between testing an idea this afternoon and
+// not testing it at all.
+//
+// They do not agree on anything else. Google takes the pictures as data in
+// the request and answers immediately. Kie takes public URLs, answers with a
+// job number, and the picture is collected afterwards. Both shapes live
+// here so the rest of the app only ever asks for "a visualisation".
+
+const IMAGE_PROVIDERS = {
+  gemini: {
+    label: 'Google Gemini (direct)',
+    defaultModel: 'gemini-3-pro-image',
+    needsUrls: false,
+    note: 'Billed by Google. Needs a prepaid balance on the account.',
+  },
+  kie: {
+    label: 'Kie.ai',
+    defaultModel: 'google/nano-banana-edit',
+    needsUrls: true,
+    note: 'Resells the same models by the image, and gives trial credit.',
+  },
+};
+
+// Google: the pictures travel as data, and the answer comes straight back.
+async function drawWithGemini(cfg, prompt, images) {
+  const parts = [{ text: prompt }].concat(
+    images.map(inlinePart).filter(Boolean)
+  );
+
+  const r = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/' +
+      encodeURIComponent(cfg.model || IMAGE_PROVIDERS.gemini.defaultModel) +
+      ':generateContent?key=' + encodeURIComponent(cfg.key),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+      }),
+    }
+  );
+
+  const text = await r.text();
+  if (!r.ok) throw new Error(readError(text));
+
+  let data;
+  try { data = JSON.parse(text); } catch (e) {
+    throw new Error('The AI sent something unreadable.');
+  }
+
+  const out = [];
+  let said = '';
+  const cand = (data.candidates || [])[0];
+  ((cand && cand.content && cand.content.parts) || []).forEach((p) => {
+    const d = p.inline_data || p.inlineData;
+    if (d && d.data) {
+      out.push('data:' + (d.mime_type || d.mimeType || 'image/png') +
+               ';base64,' + d.data);
+    } else if (p.text) {
+      said += p.text;
+    }
+  });
+
+  return { images: out, note: said.trim() };
+}
+
+// Kie: the pictures must already be somewhere public, the work is queued,
+// and the result is collected by asking repeatedly.
+async function drawWithKie(cfg, prompt, images) {
+  const urls = images.filter((u) => /^https?:\/\//i.test(u));
+  if (!urls.length) {
+    throw new Error('This provider needs the photos uploaded first.');
+  }
+
+  const start = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + cfg.key,
+    },
+    body: JSON.stringify({
+      model: cfg.model || IMAGE_PROVIDERS.kie.defaultModel,
+      input: {
+        prompt,
+        image_urls: urls.slice(0, 10),
+        output_format: 'jpeg',
+        aspect_ratio: 'auto',
+      },
+    }),
+  });
+
+  const startText = await start.text();
+  if (!start.ok) throw new Error(readError(startText));
+
+  let started;
+  try { started = JSON.parse(startText); } catch (e) {
+    throw new Error('The provider sent something unreadable.');
+  }
+
+  const taskId = (started.data && started.data.taskId) || started.taskId;
+  if (!taskId) throw new Error(readError(startText));
+
+  // Asked for every few seconds. A serverless function cannot wait for ever,
+  // so this gives up after about 90 seconds and says so rather than being
+  // killed mid-request with no explanation.
+  const until = Date.now() + 90000;
+  while (Date.now() < until) {
+    await new Promise((done) => setTimeout(done, 3000));
+
+    const look = await fetch(
+      'https://api.kie.ai/api/v1/jobs/recordInfo?taskId=' +
+        encodeURIComponent(taskId),
+      { headers: { Authorization: 'Bearer ' + cfg.key } }
+    );
+    const lookText = await look.text();
+    if (!look.ok) continue;
+
+    let info;
+    try { info = JSON.parse(lookText); } catch (e) { continue; }
+
+    const d = info.data || {};
+    const state = String(d.state || d.status || '').toLowerCase();
+
+    if (state === 'success') {
+      let urlsOut = [];
+      try {
+        const j = typeof d.resultJson === 'string'
+          ? JSON.parse(d.resultJson) : (d.resultJson || {});
+        urlsOut = j.resultUrls || j.result_urls || [];
+      } catch (e) { urlsOut = []; }
+      if (!urlsOut.length) throw new Error('The provider returned no picture.');
+      return { images: urlsOut, note: '' };
+    }
+
+    if (state === 'fail' || state === 'failed') {
+      throw new Error(d.failMsg || d.failmsg || 'The provider could not draw it.');
+    }
+  }
+
+  throw new Error('It is taking longer than expected. Try again in a moment.');
+}
+
+// A provider's own words help -- a wrong model and a flat balance read very
+// differently -- but the key must never come back in an error.
+function readError(text) {
+  let msg = String(text || '').slice(0, 300);
+  try {
+    const d = JSON.parse(text);
+    msg = (d.error && (d.error.message || d.error)) || d.msg || d.message || msg;
+  } catch (e) { /* keep the raw text */ }
+  return String(msg).slice(0, 300);
 }
 
 // ---- The database --------------------------------------------------------
@@ -421,17 +588,28 @@ export default async function handler(req, res) {
       const cfg = await readImageConfig();
       return res.status(200).json({
         configured: !!(cfg && cfg.key),
+        provider: (cfg && cfg.provider) || 'gemini',
         model: (cfg && cfg.model) || '',
         prompt: (cfg && cfg.prompt) || '',
-        defaultModel: IMAGE_MODEL_DEFAULT,
         defaultPrompt: IMAGE_PROMPT_DEFAULT,
+        providers: Object.keys(IMAGE_PROVIDERS).map((k) => ({
+          id: k,
+          label: IMAGE_PROVIDERS[k].label,
+          defaultModel: IMAGE_PROVIDERS[k].defaultModel,
+          needsUrls: IMAGE_PROVIDERS[k].needsUrls,
+          note: IMAGE_PROVIDERS[k].note,
+        })),
       });
     }
 
     if (req.method === 'POST' && action === 'image-save') {
       const b = body;
+      const provider = String(b.provider || 'gemini').toLowerCase();
       const model = String(b.model || '').trim();
       const key = String(b.key || '').trim();
+      if (!IMAGE_PROVIDERS[provider]) {
+        return res.status(400).json({ error: 'Pick a provider.' });
+      }
       if (!model) return res.status(400).json({ error: 'Enter a model name.' });
 
       const cur = await readImageConfig();
@@ -444,7 +622,7 @@ export default async function handler(req, res) {
       // button works: it clears the box and saves.
       const prompt = String(b.prompt || '').trim().slice(0, 4000);
 
-      await writeImageConfig({ model, key: finalKey, prompt });
+      await writeImageConfig({ provider, model, key: finalKey, prompt });
       return res.status(200).json({ ok: true });
     }
 
@@ -457,15 +635,21 @@ export default async function handler(req, res) {
       const cfg = await readImageConfig();
       if (!cfg || !cfg.key) {
         return res.status(400).json({
-          error: 'Visualising is not set up yet — add a Gemini key in Settings.',
+          error: 'Visualising is not set up yet — see Settings.',
         });
       }
 
-      const room = inlinePart(body.room);
-      if (!room) return res.status(400).json({ error: 'No room photo was sent.' });
+      const who = IMAGE_PROVIDERS[cfg.provider] ? cfg.provider : 'gemini';
 
-      const refs = (Array.isArray(body.refs) ? body.refs : [])
-        .map(inlinePart).filter(Boolean);
+      // Several photographs of the room are better than one: more angles
+      // give the model more of the kitchen to keep unchanged.
+      const rooms = (Array.isArray(body.rooms) ? body.rooms
+                    : (body.room ? [body.room] : [])).filter(Boolean);
+      if (!rooms.length) {
+        return res.status(400).json({ error: 'No room photo was sent.' });
+      }
+
+      const refs = (Array.isArray(body.refs) ? body.refs : []).filter(Boolean);
       if (!refs.length) {
         return res.status(400).json({
           error: 'That door style has no usable photos.',
@@ -476,68 +660,34 @@ export default async function handler(req, res) {
         cfg.prompt,
         String(body.style || '').slice(0, 120),
         String(body.notes || '').slice(0, 300),
-        String(body.extra || '').slice(0, 500)
+        String(body.extra || '').slice(0, 500),
+        rooms.length
       );
 
       // The room first, then the doors: the order matches what the prompt
       // says about "this photograph" and "the reference photographs".
-      const parts = [{ text: prompt }, room].concat(refs);
-      const model = cfg.model || IMAGE_MODEL_DEFAULT;
+      const images = rooms.concat(refs).slice(0, 10);
 
-      const r = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/' +
-          encodeURIComponent(model) + ':generateContent?key=' +
-          encodeURIComponent(cfg.key),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-          }),
+      try {
+        const out = who === 'kie'
+          ? await drawWithKie(cfg, prompt, images)
+          : await drawWithGemini(cfg, prompt, images);
+
+        if (!out.images.length) {
+          // A refusal explains itself in the text, and that explanation is
+          // far more use than "no image returned".
+          return res.status(502).json({
+            error: out.note.slice(0, 300) ||
+                   'No picture came back. Try a different photo.',
+          });
         }
-      );
-
-      const text = await r.text();
-      if (!r.ok) {
-        let msg = text.slice(0, 300);
-        try {
-          const d = JSON.parse(text);
-          msg = (d.error && (d.error.message || d.error)) || msg;
-        } catch (e) { /* keep the raw text */ }
-        return res.status(400).json({ error: String(msg).slice(0, 300) });
-      }
-
-      let data;
-      try { data = JSON.parse(text); } catch (e) {
-        return res.status(502).json({ error: 'The AI sent something unreadable.' });
-      }
-
-      // The picture comes back beside any words the model felt like adding,
-      // so the parts are searched rather than assumed to be in an order.
-      const out = [];
-      let said = '';
-      const cand = (data.candidates || [])[0];
-      ((cand && cand.content && cand.content.parts) || []).forEach((p) => {
-        const d = p.inline_data || p.inlineData;
-        if (d && d.data) {
-          out.push('data:' + (d.mime_type || d.mimeType || 'image/png') +
-                   ';base64,' + d.data);
-        } else if (p.text) {
-          said += p.text;
-        }
-      });
-
-      if (!out.length) {
-        // A refusal explains itself in the text part, and that explanation
-        // is far more use than "no image returned".
-        return res.status(502).json({
-          error: said.trim().slice(0, 300) ||
-                 'The AI returned no picture. Try a different photo.',
+        return res.status(200).json({
+          images: out.images,
+          note: (out.note || '').slice(0, 500),
         });
+      } catch (e) {
+        return res.status(400).json({ error: e.message });
       }
-
-      return res.status(200).json({ images: out, note: said.trim().slice(0, 500) });
     }
 
     return res.status(404).json({ error: 'Unknown request.' });
