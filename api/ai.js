@@ -244,37 +244,31 @@ const IMAGE_PROVIDERS = {
     // "google/" in front of it while google/nano-banana-edit does. Every id
     // below was read from their own documentation rather than guessed from
     // the pattern of another, which is how the first two were got wrong.
-    defaultModel: 'nano-banana-pro',
+    defaultModel: 'gpt-image-2-5-sunburst-image-to-image',
     needsUrls: true,
     note: 'Resells the same models by the image, and gives trial credit.',
+    // Two, both tried. Every id here was read from the provider's own page
+    // rather than guessed from the pattern of another one, which is how the
+    // earlier ones were got wrong.
+    //
+    // The ones left out: Qwen Image Edit takes a SINGLE picture, so it never
+    // sees the door photographs at all; the cheap Nano Banana Edit refaced
+    // some doors and not others and put cabinets over windows.
     models: [
+      {
+        id: 'gpt-image-2-5-sunburst-image-to-image',
+        label: 'GPT Image 2.5 Sunburst',
+        price: '6 credits (about $0.03)',
+        note: 'From OpenAI. Takes 16 pictures and a long instruction, and ' +
+              'is built for changing one thing and leaving the rest of the ' +
+              'photograph alone.',
+      },
       {
         id: 'nano-banana-pro',
         label: 'Nano Banana Pro (Gemini 3 Pro)',
-        price: 'about $0.09',
-        note: 'The most faithful to the original photo. Use this unless ' +
-              'cost matters more than accuracy.',
-      },
-      {
-        id: 'qwen/image-edit',
-        label: 'Qwen Image Edit',
-        price: 'about $0.017',
-        note: 'Five times cheaper, and built for changing one thing and ' +
-              'leaving the rest alone. Worth trying against the Pro model.',
-      },
-      {
-        id: 'gpt-image/1.5-image-to-image',
-        label: 'GPT Image 1.5',
-        price: 'about $0.03',
-        note: 'From OpenAI. Strong at keeping a product looking like ' +
-              'itself, which is what the door photographs are for.',
-      },
-      {
-        id: 'google/nano-banana-edit',
-        label: 'Nano Banana Edit (Gemini 2.5 Flash)',
-        price: 'about $0.04',
-        note: 'The cheap Google one. It refaced some doors and not others, ' +
-              'and put cabinets over windows.',
+        price: '9 credits (about $0.09)',
+        note: 'The best from Google. The most faithful to the original ' +
+              'photograph, and three times the price.',
       },
     ],
   },
@@ -340,16 +334,19 @@ async function drawWithKie(cfg, prompt, images) {
     },
     body: JSON.stringify({
       model: cfg.model || IMAGE_PROVIDERS.kie.defaultModel,
-      // The models here do not agree on what the input pictures are called:
-      // nano-banana-edit wants `image_urls`, nano-banana-pro wants
-      // `image_input`, gpt-image wants `input_urls`. All three are sent,
-      // because a model ignores the name it does not know -- and the
-      // alternative is this failing on whichever model someone picks.
-      // Only the two fields every model here agrees on. The optional ones --
-      // output_format, aspect_ratio, resolution -- take different values on
-      // different models, and one wrong value is refused outright. Left out,
-      // each model uses its own default, and any model name typed into
-      // Settings keeps working.
+      // Two things make this awkward, and both are the provider's.
+      //
+      // First, the models do not agree on what the input pictures are
+      // called: nano-banana-pro wants `image_input`, gpt-image wants
+      // `input_urls`, and the cheaper Google one wants `image_urls`. All
+      // three are sent, because a model ignores the name it does not know
+      // and the alternative is failing on whichever model someone picks.
+      //
+      // Second, nothing optional is sent at all. output_format,
+      // aspect_ratio and resolution take different values on different
+      // models, and one wrong value is refused outright -- so each model is
+      // left to use its own default, and a model name typed into Settings
+      // keeps working.
       input: {
         prompt,
         image_urls: urls.slice(0, 10),
