@@ -103,14 +103,13 @@ window.MM = window.MM || {};
     });
   }
 
+  // Visualising has its own key, separate from the suggestions: it needs
+  // Gemini, and the suggestions can run on anything.
   function checkReady() {
     if (ready !== null) return Promise.resolve(ready);
-    return fetch('/api/ai?action=status')
+    return fetch('/api/ai?action=image-status')
       .then(function (r) { return r.json(); })
-      .then(function (d) {
-        ready = !!(d && d.configured && d.provider === 'gemini');
-        return ready;
-      })
+      .then(function (d) { ready = !!(d && d.configured); return ready; })
       .catch(function () { ready = false; return false; });
   }
 
@@ -125,7 +124,7 @@ window.MM = window.MM || {};
         '<div class="mm-vz-off">' +
           '<p class="mm-vz-offtitle">Visualising is not set up yet</p>' +
           '<p class="mm-vz-offsub">It needs a Google Gemini key, added on ' +
-            'the Settings page under AI suggestions.</p>' +
+            'the Settings page under <strong>Visualising a room</strong>.</p>' +
         '</div>';
       return;
     }

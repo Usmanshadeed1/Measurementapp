@@ -23,6 +23,10 @@
 
 const SUPABASE_URL = 'https://ozmpcygzbooddrbplxcz.supabase.co';
 const SETTING_KEY = 'ai_config';
+// Visualising keeps its OWN row. It needs Gemini specifically, while the
+// suggestions can run on any provider -- sharing one setting meant choosing
+// a platform for one broke the other.
+const IMAGE_KEY = 'ai_image_config';
 
 const PROVIDERS = {
   gemini: {
@@ -173,6 +177,21 @@ async function readConfig() {
   try { return JSON.parse(rows[0].value); } catch (e) { return null; }
 }
 
+async function readImageConfig() {
+  const rows = await db('GET', '/app_settings?key=eq.' + IMAGE_KEY + '&select=value');
+  if (!rows || !rows.length || !rows[0].value) return null;
+  try { return JSON.parse(rows[0].value); } catch (e) { return null; }
+}
+
+async function writeImageConfig(value) {
+  const text = value ? JSON.stringify(value) : '';
+  const rows = await db('GET', '/app_settings?key=eq.' + IMAGE_KEY + '&select=key');
+  if (rows && rows.length) {
+    return db('PATCH', '/app_settings?key=eq.' + IMAGE_KEY, { value: text });
+  }
+  return db('POST', '/app_settings', { key: IMAGE_KEY, value: text });
+}
+
 async function writeConfig(value) {
   const text = value ? JSON.stringify(value) : '';
   const rows = await db('GET', '/app_settings?key=eq.' + SETTING_KEY + '&select=key');
@@ -308,10 +327,6 @@ export default async function handler(req, res) {
         prompt: (cfg && cfg.prompt) || '',
         defaultPrompt: DEFAULT_PROMPT,
         formatRules: FORMAT_RULES.trim(),
-        imageModel: (cfg && cfg.imageModel) || '',
-        imagePrompt: (cfg && cfg.imagePrompt) || '',
-        defaultImageModel: IMAGE_MODEL_DEFAULT,
-        defaultImagePrompt: IMAGE_PROMPT_DEFAULT,
         providers: Object.keys(PROVIDERS).map((k) => ({
           id: k, label: PROVIDERS[k].label,
         })),
@@ -338,18 +353,7 @@ export default async function handler(req, res) {
       // Blank means "use the built-in wording", which is also how the
       // reset button works: it clears the box and saves.
       const prompt = String(b.prompt || '').trim().slice(0, 4000);
-      // An absent picture field keeps what is already stored rather than
-      // clearing it: the settings page sends the whole lot, but a future
-      // caller might not.
-      const imageModel = b.imageModel !== undefined
-        ? String(b.imageModel || '').trim().slice(0, 120)
-        : ((cur && cur.imageModel) || '');
-      const imagePrompt = b.imagePrompt !== undefined
-        ? String(b.imagePrompt || '').trim().slice(0, 4000)
-        : ((cur && cur.imagePrompt) || '');
-
-      await writeConfig({ provider, model, key: finalKey, prompt,
-                          imageModel, imagePrompt });
+      await writeConfig({ provider, model, key: finalKey, prompt });
       return res.status(200).json({ ok: true });
     }
 
@@ -411,15 +415,49 @@ export default async function handler(req, res) {
       return res.status(200).json({ items });
     }
 
+    // ---- Visualising: its own key, model and wording ----
+
+    if (req.method === 'GET' && action === 'image-status') {
+      const cfg = await readImageConfig();
+      return res.status(200).json({
+        configured: !!(cfg && cfg.key),
+        model: (cfg && cfg.model) || '',
+        prompt: (cfg && cfg.prompt) || '',
+        defaultModel: IMAGE_MODEL_DEFAULT,
+        defaultPrompt: IMAGE_PROMPT_DEFAULT,
+      });
+    }
+
+    if (req.method === 'POST' && action === 'image-save') {
+      const b = body;
+      const model = String(b.model || '').trim();
+      const key = String(b.key || '').trim();
+      if (!model) return res.status(400).json({ error: 'Enter a model name.' });
+
+      const cur = await readImageConfig();
+      // An empty key means "keep the one already stored", so the model or
+      // the wording can be changed without pasting the key again.
+      const finalKey = key || (cur && cur.key) || '';
+      if (!finalKey) return res.status(400).json({ error: 'Enter an API key.' });
+
+      // Blank wording means "use the built-in", which is also how the reset
+      // button works: it clears the box and saves.
+      const prompt = String(b.prompt || '').trim().slice(0, 4000);
+
+      await writeImageConfig({ model, key: finalKey, prompt });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (req.method === 'POST' && action === 'image-clear') {
+      await writeImageConfig(null);
+      return res.status(200).json({ ok: true });
+    }
+
     if (req.method === 'POST' && action === 'visualise') {
-      const cfg = await readConfig();
+      const cfg = await readImageConfig();
       if (!cfg || !cfg.key) {
-        return res.status(400).json({ error: 'No AI key has been set up yet.' });
-      }
-      if (cfg.provider !== 'gemini') {
         return res.status(400).json({
-          error: 'Visualising needs a Google Gemini key. The platform in ' +
-                 'Settings is set to ' + cfg.provider + '.',
+          error: 'Visualising is not set up yet — add a Gemini key in Settings.',
         });
       }
 
@@ -435,7 +473,7 @@ export default async function handler(req, res) {
       }
 
       const prompt = buildImagePrompt(
-        cfg.imagePrompt,
+        cfg.prompt,
         String(body.style || '').slice(0, 120),
         String(body.notes || '').slice(0, 300),
         String(body.extra || '').slice(0, 500)
@@ -444,7 +482,7 @@ export default async function handler(req, res) {
       // The room first, then the doors: the order matches what the prompt
       // says about "this photograph" and "the reference photographs".
       const parts = [{ text: prompt }, room].concat(refs);
-      const model = cfg.imageModel || IMAGE_MODEL_DEFAULT;
+      const model = cfg.model || IMAGE_MODEL_DEFAULT;
 
       const r = await fetch(
         'https://generativelanguage.googleapis.com/v1beta/models/' +

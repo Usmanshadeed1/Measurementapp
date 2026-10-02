@@ -84,10 +84,148 @@ window.MM = window.MM || {};
         '<p class="mm-task-error' + (isError ? '' : ' mm-set-ok') + '" ' +
           'id="mm-set-msg" role="alert">' + U.esc(msg || '') + '</p>' +
       '</div>' +
-      aiCard();
+      aiCard() +
+      imgCard();
 
     bind(el);
     bindAi(el);
+    bindImg(el);
+  }
+
+  // ---- Visualising a room --------------------------------------------------
+  //
+  // Its own key, separate from the suggestions above. Visualising needs
+  // Google Gemini specifically, while the suggestions run on any provider --
+  // sharing one setting meant choosing a platform for one broke the other.
+
+  var img = null;        // the last answer from /api/ai?action=image-status
+  var imgBusy = false;
+  var imgMsg = '';
+  var imgErr = false;
+  var imgPrompt = null;  // null = show what is saved
+
+  function imgCard() {
+    var s = img || {};
+    var on = !!s.configured;
+
+    return '<div class="mm-set">' +
+      '<div class="mm-set-head">Visualising a room</div>' +
+      '<p class="mm-set-note">' +
+        'The <strong>Visualise</strong> tab on a job: a photo of the ' +
+        'customer&rsquo;s kitchen, shown with the doors you sell. Needs a ' +
+        'Google Gemini key &mdash; this is separate from the suggestions ' +
+        'above, so the two never affect each other.' +
+      '</p>' +
+
+      '<div class="mm-set-state' + (on ? ' is-on' : '') + '">' +
+        (on
+          ? 'Set up' + (s.model ? ' &mdash; ' + U.esc(s.model) : '') + '.'
+          : 'Not set up. The Visualise tab says so until it is.') +
+      '</div>' +
+
+      '<div class="mm-mt-f" style="margin-bottom:10px">' +
+        '<span class="mm-mt-flab">Model name</span>' +
+        '<input class="mm-input" id="mm-img-model" ' +
+          'placeholder="' + U.esc(s.defaultModel || 'gemini-3-pro-image') + '" ' +
+          'value="' + U.esc(s.model || '') + '">' +
+        '<p class="mm-set-hint">It must be an image model. ' +
+          '<code>gemini-3-pro-image</code> keeps the room closest to the ' +
+          'photo; the Flash ones are cheaper and take more liberties.</p>' +
+      '</div>' +
+
+      '<div class="mm-mt-f" style="margin-bottom:10px">' +
+        '<span class="mm-mt-flab">API key</span>' +
+        '<input class="mm-input" id="mm-img-key" type="password" ' +
+          'autocomplete="off" placeholder="' +
+          (on ? 'Saved — leave blank to keep it' : 'Paste the Gemini key') + '">' +
+        '<p class="mm-set-hint">Kept on the server and never shown again. ' +
+          'Use a key of its own, restricted to the Generative Language API ' +
+          '&mdash; not the one the address lookup uses, which is readable in ' +
+          'the page.</p>' +
+      '</div>' +
+
+      '<div class="mm-mt-f" style="margin-bottom:10px">' +
+        '<span class="mm-mt-flab">What to ask for</span>' +
+        '<textarea class="mm-input mm-ai-prompt" id="mm-img-prompt" rows="12">' +
+          U.esc(imgPrompt !== null ? imgPrompt
+                                   : (s.prompt || s.defaultPrompt || '')) +
+        '</textarea>' +
+        '<p class="mm-set-hint">' +
+          '<code>{style}</code> is where the chosen door style goes. The rest ' +
+          'is yours to change &mdash; what to keep untouched, how literally to ' +
+          'follow the reference photos.</p>' +
+      '</div>' +
+
+      '<div class="mm-btn-row">' +
+        '<button class="mm-btn-sm mm-btn-secondary" id="mm-img-reset"' +
+          (imgBusy ? ' disabled' : '') + '>Reset wording</button>' +
+        (on
+          ? '<button class="mm-btn-sm mm-btn-secondary" id="mm-img-clear"' +
+            (imgBusy ? ' disabled' : '') + '>Remove</button>'
+          : '') +
+        '<button class="mm-btn-sm mm-btn-primary" id="mm-img-save"' +
+          (imgBusy ? ' disabled' : '') + '>' +
+          (imgBusy ? 'Working...' : 'Save') + '</button>' +
+      '</div>' +
+
+      '<p class="mm-task-error' + (imgErr ? '' : ' mm-set-ok') + '" ' +
+        'id="mm-img-msg" role="alert">' + U.esc(imgMsg || '') + '</p>' +
+    '</div>';
+  }
+
+  function imgSay(m, bad) { imgMsg = m || ''; imgErr = !!bad; render(''); }
+
+  function bindImg(el) {
+    var pbox = el.querySelector('#mm-img-prompt');
+    if (pbox) pbox.addEventListener('input', function () {
+      imgPrompt = this.value;
+    });
+
+    var save = el.querySelector('#mm-img-save');
+    if (save) save.addEventListener('click', function () {
+      var model = (el.querySelector('#mm-img-model').value || '').trim();
+      var key = (el.querySelector('#mm-img-key').value || '').trim();
+      var prompt = el.querySelector('#mm-img-prompt').value || '';
+      if (!model) { imgSay('Enter a model name.', true); return; }
+
+      // Saving the built-in wording unchanged stores nothing, so a later
+      // improvement to the default is picked up rather than frozen here.
+      var def = (img && img.defaultPrompt) || '';
+      if (prompt.trim() === def.trim()) prompt = '';
+
+      imgBusy = true; imgSay('');
+      aiFetch('image-save', { model: model, key: key, prompt: prompt })
+        .then(function () { imgPrompt = null; return imgRefresh('Saved.'); })
+        .catch(function (e) {
+          imgBusy = false;
+          imgSay('Could not save: ' + e.message, true);
+        });
+    });
+
+    var reset = el.querySelector('#mm-img-reset');
+    if (reset) reset.addEventListener('click', function () {
+      imgPrompt = (img && img.defaultPrompt) || '';
+      imgSay('Wording reset. Press Save to keep it.');
+    });
+
+    var clear = el.querySelector('#mm-img-clear');
+    if (clear) clear.addEventListener('click', function () {
+      if (!window.confirm('Remove the visualising key? The Visualise tab ' +
+                          'stops working until a new one is saved.')) return;
+      imgBusy = true; imgSay('');
+      aiFetch('image-clear', {})
+        .then(function () { return imgRefresh('Removed.'); })
+        .catch(function (e) {
+          imgBusy = false;
+          imgSay('Could not remove it: ' + e.message, true);
+        });
+    });
+  }
+
+  function imgRefresh(msg) {
+    return aiFetch('image-status')
+      .then(function (d) { img = d; imgBusy = false; imgSay(msg || ''); })
+      .catch(function () { imgBusy = false; imgSay(msg || ''); });
   }
 
   // ---- The AI key ----------------------------------------------------------
@@ -378,10 +516,15 @@ window.MM = window.MM || {};
     // Both cards are drawn together, so both states are read before the
     // first render rather than the page redrawing under the reader.
     aiMsg = ''; aiErr = false; aiPrompt = null;
-    return aiFetch('status')
-      .then(function (d) { ai = d; })
-      .catch(function () { ai = null; })
-      .then(function () { return refresh(); });
+    imgMsg = ''; imgErr = false; imgPrompt = null;
+    // All three cards are drawn together, so every state is read before the
+    // first render rather than the page rearranging under the reader.
+    return Promise.all([
+      aiFetch('status').then(function (d) { ai = d; })
+        .catch(function () { ai = null; }),
+      aiFetch('image-status').then(function (d) { img = d; })
+        .catch(function () { img = null; }),
+    ]).then(function () { return refresh(); });
   }
 
   window.addEventListener('message', onMessage);
