@@ -301,12 +301,15 @@ async function drawWithKie(cfg, prompt, images) {
       // `image_input`, and others differ again. Both are sent, because a
       // model ignores the name it does not know and the alternative is this
       // failing on a model name someone typed in Settings.
+      // Only the two fields every model here agrees on. The optional ones --
+      // output_format, aspect_ratio, resolution -- take different values on
+      // different models, and one wrong value is refused outright. Left out,
+      // each model uses its own default, and any model name typed into
+      // Settings keeps working.
       input: {
         prompt,
         image_urls: urls.slice(0, 10),
         image_input: urls.slice(0, 10),
-        output_format: 'jpeg',
-        aspect_ratio: 'auto',
       },
     }),
   });
