@@ -223,12 +223,16 @@ const IMAGE_PROVIDERS = {
   },
   kie: {
     label: 'Kie.ai',
-    // The Pro model, not the cheap one. The cheap one refaced some doors
+    // The Pro model, not the cheap one: the cheap one refaced some doors
     // and not others, and put cabinets where the windows were.
-    defaultModel: 'google/nano-banana-pro',
+    //
+    // Note the naming is not consistent on their side -- this one has no
+    // "google/" in front of it while google/nano-banana-edit does.
+    defaultModel: 'nano-banana-pro',
     needsUrls: true,
     note: 'Resells the same models by the image, and gives trial credit. ' +
-          'google/nano-banana-edit is cheaper but much less faithful.',
+          'nano-banana-pro is the faithful one; google/nano-banana-edit is ' +
+          'cheaper and takes more liberties.',
   },
 };
 
@@ -292,9 +296,15 @@ async function drawWithKie(cfg, prompt, images) {
     },
     body: JSON.stringify({
       model: cfg.model || IMAGE_PROVIDERS.kie.defaultModel,
+      // The models here do not agree on what the input pictures are called:
+      // nano-banana-edit wants `image_urls`, nano-banana-pro wants
+      // `image_input`, and others differ again. Both are sent, because a
+      // model ignores the name it does not know and the alternative is this
+      // failing on a model name someone typed in Settings.
       input: {
         prompt,
         image_urls: urls.slice(0, 10),
+        image_input: urls.slice(0, 10),
         output_format: 'jpeg',
         aspect_ratio: 'auto',
       },

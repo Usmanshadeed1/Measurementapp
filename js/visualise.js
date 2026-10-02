@@ -185,7 +185,13 @@ window.MM = window.MM || {};
     '</div>';
   }
 
+  // As many door photographs as are worth sending. More angles of the same
+  // door help; a long list starts to crowd out the room.
+  var MAX_REFS = 4;
+
   function stepStyle() {
+    var chosen = styles.find(function (x) { return String(x.id) === styleId; });
+
     if (!styles.length) {
       return '<div class="mm-vz-step">' +
         '<div class="mm-vz-head"><span class="mm-vz-n">2</span>' +
@@ -204,15 +210,37 @@ window.MM = window.MM || {};
       '<div class="mm-vz-styles">' +
         styles.map(function (s) {
           var shot = (s.images || [])[0] || '';
+          var n = (s.images || []).length;
           return '<button type="button" class="mm-vz-style' +
               (String(s.id) === styleId ? ' is-on' : '') + '" ' +
               'data-style="' + U.esc(s.id) + '"' + (busy ? ' disabled' : '') + '>' +
             (shot ? '<img src="' + U.esc(shot) + '" alt="">'
                   : '<span class="mm-vz-nostyle"></span>') +
             '<span class="mm-vz-styname">' + U.esc(s.name) + '</span>' +
+            // How many photographs back this door up. The tile can only show
+            // one, and without the count it looks as though only one is used.
+            (n > 1
+              ? '<span class="mm-vz-styn">' + n + ' photos</span>'
+              : '') +
           '</button>';
         }).join('') +
       '</div>' +
+      // Every photograph that will actually be sent, once a door is chosen.
+      // The tile above shows one of them, and that made it look as though
+      // the rest were being ignored.
+      (chosen && (chosen.images || []).length
+        ? '<div class="mm-vz-refs">' +
+            '<div class="mm-vz-reflab">Sent as the reference:</div>' +
+            '<div class="mm-vz-refshots">' +
+              (chosen.images || []).slice(0, MAX_REFS).map(function (u) {
+                return '<img class="mm-vz-ref" src="' + U.esc(u) + '" alt="">';
+              }).join('') +
+            '</div>' +
+            (chosen.notes
+              ? '<div class="mm-vz-refnote">' + U.esc(chosen.notes) + '</div>'
+              : '') +
+          '</div>'
+        : '') +
     '</div>';
   }
 
@@ -336,7 +364,7 @@ window.MM = window.MM || {};
     var s = styles.find(function (x) { return String(x.id) === styleId; });
     if (!shots.length || !s) return;
 
-    var refs = (s.images || []).slice(0, 4);
+    var refs = (s.images || []).slice(0, MAX_REFS);
     if (!refs.length) { say('That door style has no photos.', true); return; }
 
     busy = true;
