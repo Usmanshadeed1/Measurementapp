@@ -36,7 +36,6 @@
     else if (tab === 'doorstyles') {
       showScreen('doorstyles');
       window.MM.doorstyles.load().catch(function () {});
-      window.MM.doorcolors.load().catch(function () {});
     }
     else if (tab === 'emailtpl') { showScreen('emailtpl'); window.MM.emailtpl.show(); }
     else if (tab === 'settings') { showScreen('settings'); window.MM.settings.show(); }
@@ -912,7 +911,6 @@
   TPL.init();
   window.MM.materialtpl.init();
   window.MM.doorstyles.init();
-  window.MM.doorcolors.init();
   window.MM.jobedit.init();
   MY.init();
   window.MM.senddesign.init();
