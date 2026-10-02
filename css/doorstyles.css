@@ -1,0 +1,66 @@
+/* ==========================================================================
+   Door styles.
+
+   A list where the PICTURE is the point: someone choosing a door recognises
+   it by sight, not by reading "Nexus Linen". So every row leads with the
+   photographs and the name sits beside them.
+
+   The form and the empty state are the templates' own (css/templates.css),
+   so the admin pages read as one set.
+   ========================================================================== */
+
+.mm-ds-list{display:flex;flex-direction:column;gap:12px}
+
+.mm-ds{display:flex;align-items:flex-start;gap:12px;padding:12px;
+  border:1px solid var(--border);border-radius:12px;background:var(--card);
+  min-width:0}
+
+/* The photographs, as a strip. Four at most on the card -- the rest are
+   there, they just do not earn the room. */
+.mm-ds-shots{flex:0 0 auto;display:flex;gap:4px}
+.mm-ds-shot{width:52px;height:52px;object-fit:cover;border-radius:8px;
+  border:1px solid var(--border);background:var(--card2)}
+.mm-ds-noshot{width:52px;height:52px;border-radius:8px;
+  border:1px dashed var(--border);background:var(--card2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.68em;color:var(--empty);text-align:center;padding:4px}
+
+.mm-ds-main{flex:1 1 auto;min-width:0}
+.mm-ds-name{font-weight:700;color:var(--text);overflow-wrap:anywhere}
+.mm-ds-count{margin-top:3px;font-size:0.8em;color:var(--accent);
+  font-weight:700}
+.mm-ds-notes{margin-top:4px;font-size:0.84em;color:var(--text2);
+  line-height:1.45;overflow-wrap:anywhere}
+
+.mm-ds-side{flex:0 0 auto;display:flex;flex-direction:column;gap:2px}
+.mm-ds-icon{width:32px;height:32px;padding:0;border:none;border-radius:6px;
+  background:none;color:var(--text2);font-family:inherit;font-size:0.95em;
+  line-height:1;cursor:pointer;opacity:.6}
+.mm-ds:hover .mm-ds-icon{opacity:.9}
+.mm-ds-icon:hover{background:var(--card2);color:var(--accent);opacity:1}
+.mm-ds-del:hover{background:var(--danger-bg);color:var(--danger-text)}
+.mm-ds-icon:focus-visible{opacity:1;
+  outline:3px solid var(--accent);outline-offset:2px}
+@media (hover: none){
+  .mm-ds-icon{opacity:.8}
+}
+
+/* ---- The photos while editing ----
+   Bigger here than on the card: this is where someone decides whether the
+   shot was good enough to copy a door from. */
+.mm-ds-edshots{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.mm-ds-edshot{position:relative;width:92px;height:92px}
+.mm-ds-edshot img{width:100%;height:100%;object-fit:cover;border-radius:8px;
+  border:1px solid var(--border);background:var(--card2)}
+.mm-ds-rm{position:absolute;top:-6px;right:-6px;
+  width:26px;height:26px;padding:0;border-radius:50%;
+  border:1px solid var(--border);background:var(--card);
+  color:var(--text2);font-size:0.95em;line-height:1;cursor:pointer}
+.mm-ds-rm:hover{background:var(--danger-bg);color:var(--danger-text)}
+.mm-ds-rm:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+@media (max-width: 620px){
+  .mm-ds{padding:10px;gap:10px}
+  .mm-ds-shots{flex-wrap:wrap;max-width:112px}
+  .mm-ds-side{flex-direction:row}
+}

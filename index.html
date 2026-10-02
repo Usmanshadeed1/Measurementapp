@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="css/checklist.css">
 <link rel="stylesheet" href="css/templates.css">
 <link rel="stylesheet" href="css/materialtpl.css">
+<link rel="stylesheet" href="css/doorstyles.css">
 <link rel="stylesheet" href="css/materials.css">
 <link rel="stylesheet" href="css/emailtpl.css">
 <link rel="stylesheet" href="css/meetings.css">
@@ -94,6 +95,7 @@
          to come back, and subtasks are still only visible there. -->
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="materialtpl">Material Lists</a>
+      <a href="#" class="mm-nav-link mm-admin-only" data-tab="doorstyles">Door Styles</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="emailtpl">Email Templates</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
@@ -127,6 +129,7 @@
          to come back, and subtasks are still only visible there. -->
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="templates">Task Templates</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="materialtpl">Material Lists</a>
+    <a href="#" class="mm-nav-link mm-admin-only" data-tab="doorstyles">Door Styles</a>
       <a href="#" class="mm-nav-link mm-admin-only" data-tab="emailtpl">Email Templates</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="workers">Workers</a>
     <a href="#" class="mm-nav-link mm-admin-only" data-tab="history">History</a>
@@ -438,6 +441,19 @@
       design or quote. You can still change any email before sending it &mdash;
       editing it there never changes the template.</p>
     <div id="mm-et-body"><div class="mm-empty">Loading...</div></div>
+  </div>
+</div>
+
+<div class="screen" id="screen-doorstyles">
+  <div class="mm-content">
+    <div class="section-header">
+      <span class="section-title">Door Styles</span>
+      <button class="mm-btn-sm mm-btn-primary" id="mm-ds-add">+ New Style</button>
+    </div>
+    <p class="mm-view-note">The cabinet doors you sell, with a photo of each.
+      A visualisation puts these doors into the customer&rsquo;s own kitchen,
+      so the picture shows what they would actually be buying.</p>
+    <div id="mm-ds-body"><div class="mm-empty">Loading...</div></div>
   </div>
 </div>
 
@@ -985,6 +1001,7 @@
 <script src="js/checklist.js"></script>
 <script src="js/templates.js"></script>
 <script src="js/materialtpl.js"></script>
+<script src="js/doorstyles.js"></script>
 <script src="js/materials.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/import.js"></script>
