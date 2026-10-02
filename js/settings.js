@@ -140,15 +140,39 @@ window.MM = window.MM || {};
           ? '<p class="mm-set-hint">' + U.esc(here.note) + '</p>' : '') +
       '</div>' +
 
+      // The models worth knowing about, with what each costs, because the
+      // difference between them is five times the price and a visibly
+      // different result. The box underneath stays, because this list goes
+      // out of date the moment the provider adds something.
+      ((here && here.models || []).length
+        ? '<div class="mm-mt-f" style="margin-bottom:10px">' +
+            '<span class="mm-mt-flab">Model</span>' +
+            '<div class="mm-img-models">' +
+              here.models.map(function (m) {
+                var on = (s.model || here.defaultModel) === m.id;
+                return '<button type="button" class="mm-img-model' +
+                    (on ? ' is-on' : '') + '" data-model="' + U.esc(m.id) + '">' +
+                  '<span class="mm-img-mtop">' +
+                    '<span class="mm-img-mname">' + U.esc(m.label) + '</span>' +
+                    '<span class="mm-img-mprice">' + U.esc(m.price) + '</span>' +
+                  '</span>' +
+                  '<span class="mm-img-mnote">' + U.esc(m.note) + '</span>' +
+                '</button>';
+              }).join('') +
+            '</div>' +
+          '</div>'
+        : '') +
+
       '<div class="mm-mt-f" style="margin-bottom:10px">' +
-        '<span class="mm-mt-flab">Model name</span>' +
+        '<span class="mm-mt-flab">Model name ' +
+          '<span class="mm-opt">(or type another)</span></span>' +
         '<input class="mm-input" id="mm-img-model" ' +
           'placeholder="' + U.esc((here && here.defaultModel) || '') + '" ' +
           'value="' + U.esc(s.model || '') + '">' +
         '<p class="mm-set-hint">Leave blank to use ' +
           '<code>' + U.esc((here && here.defaultModel) || '') + '</code>. ' +
-          'A Pro model keeps the room closest to the photo; the Flash ones ' +
-          'are cheaper and take more liberties.</p>' +
+          'Any model the provider offers can be typed here &mdash; copy the ' +
+          'name exactly as their own documentation prints it.</p>' +
       '</div>' +
 
       '<div class="mm-mt-f" style="margin-bottom:10px">' +
@@ -169,9 +193,18 @@ window.MM = window.MM || {};
                                    : (s.prompt || s.defaultPrompt || '')) +
         '</textarea>' +
         '<p class="mm-set-hint">' +
-          '<code>{style}</code> is where the chosen door style goes. The rest ' +
-          'is yours to change &mdash; what to keep untouched, how literally to ' +
-          'follow the reference photos.</p>' +
+          '<code>{style}</code> is where the chosen door style goes, and ' +
+          '<code>{rooms}</code> is where it is told which images are the ' +
+          'room. The rest is yours to change. ' +
+          (s.prompt
+            // Only worth saying once something has been saved: until then
+            // the box already shows the built-in wording.
+            ? 'This is your own wording &mdash; <strong>Reset wording</strong> ' +
+              'puts the built-in one back, and later improvements to it ' +
+              'are only picked up once you do.'
+            : 'This is the built-in wording, and it stays up to date on its ' +
+              'own until you change it.') +
+        '</p>' +
       '</div>' +
 
       '<div class="mm-btn-row">' +
@@ -207,6 +240,18 @@ window.MM = window.MM || {};
       // one is cleared rather than sent to somewhere that never had it.
       img.model = '';
       imgSay('');
+    });
+
+    // Choosing one fills the box below, so what will be sent is always
+    // visible and can still be edited by hand.
+    el.querySelectorAll('[data-model]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var box = el.querySelector('#mm-img-model');
+        if (box) box.value = b.getAttribute('data-model');
+        img = img || {};
+        img.model = b.getAttribute('data-model');
+        imgSay('Press Save to use it.');
+      });
     });
 
     var save = el.querySelector('#mm-img-save');

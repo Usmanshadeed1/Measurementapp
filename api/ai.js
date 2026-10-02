@@ -220,6 +220,20 @@ const IMAGE_PROVIDERS = {
     defaultModel: 'gemini-3-pro-image',
     needsUrls: false,
     note: 'Billed by Google. Needs a prepaid balance on the account.',
+    models: [
+      {
+        id: 'gemini-3-pro-image',
+        label: 'Gemini 3 Pro Image',
+        price: 'about $0.13',
+        note: 'The most faithful to the original photo.',
+      },
+      {
+        id: 'gemini-2.5-flash-image',
+        label: 'Gemini 2.5 Flash Image',
+        price: 'about $0.04',
+        note: 'Cheaper, and takes more liberties with the room.',
+      },
+    ],
   },
   kie: {
     label: 'Kie.ai',
@@ -227,12 +241,42 @@ const IMAGE_PROVIDERS = {
     // and not others, and put cabinets where the windows were.
     //
     // Note the naming is not consistent on their side -- this one has no
-    // "google/" in front of it while google/nano-banana-edit does.
+    // "google/" in front of it while google/nano-banana-edit does. Every id
+    // below was read from their own documentation rather than guessed from
+    // the pattern of another, which is how the first two were got wrong.
     defaultModel: 'nano-banana-pro',
     needsUrls: true,
-    note: 'Resells the same models by the image, and gives trial credit. ' +
-          'nano-banana-pro is the faithful one; google/nano-banana-edit is ' +
-          'cheaper and takes more liberties.',
+    note: 'Resells the same models by the image, and gives trial credit.',
+    models: [
+      {
+        id: 'nano-banana-pro',
+        label: 'Nano Banana Pro (Gemini 3 Pro)',
+        price: 'about $0.09',
+        note: 'The most faithful to the original photo. Use this unless ' +
+              'cost matters more than accuracy.',
+      },
+      {
+        id: 'qwen/image-edit',
+        label: 'Qwen Image Edit',
+        price: 'about $0.017',
+        note: 'Five times cheaper, and built for changing one thing and ' +
+              'leaving the rest alone. Worth trying against the Pro model.',
+      },
+      {
+        id: 'gpt-image/1.5-image-to-image',
+        label: 'GPT Image 1.5',
+        price: 'about $0.03',
+        note: 'From OpenAI. Strong at keeping a product looking like ' +
+              'itself, which is what the door photographs are for.',
+      },
+      {
+        id: 'google/nano-banana-edit',
+        label: 'Nano Banana Edit (Gemini 2.5 Flash)',
+        price: 'about $0.04',
+        note: 'The cheap Google one. It refaced some doors and not others, ' +
+              'and put cabinets over windows.',
+      },
+    ],
   },
 };
 
@@ -298,9 +342,9 @@ async function drawWithKie(cfg, prompt, images) {
       model: cfg.model || IMAGE_PROVIDERS.kie.defaultModel,
       // The models here do not agree on what the input pictures are called:
       // nano-banana-edit wants `image_urls`, nano-banana-pro wants
-      // `image_input`, and others differ again. Both are sent, because a
-      // model ignores the name it does not know and the alternative is this
-      // failing on a model name someone typed in Settings.
+      // `image_input`, gpt-image wants `input_urls`. All three are sent,
+      // because a model ignores the name it does not know -- and the
+      // alternative is this failing on whichever model someone picks.
       // Only the two fields every model here agrees on. The optional ones --
       // output_format, aspect_ratio, resolution -- take different values on
       // different models, and one wrong value is refused outright. Left out,
@@ -310,6 +354,7 @@ async function drawWithKie(cfg, prompt, images) {
         prompt,
         image_urls: urls.slice(0, 10),
         image_input: urls.slice(0, 10),
+        input_urls: urls.slice(0, 10),
       },
     }),
   });
@@ -657,6 +702,7 @@ export default async function handler(req, res) {
           defaultModel: IMAGE_PROVIDERS[k].defaultModel,
           needsUrls: IMAGE_PROVIDERS[k].needsUrls,
           note: IMAGE_PROVIDERS[k].note,
+          models: IMAGE_PROVIDERS[k].models || [],
         })),
       });
     }

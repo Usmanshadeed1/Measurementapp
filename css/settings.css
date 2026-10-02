@@ -56,3 +56,21 @@
   background:var(--card2);border:1px solid var(--border);
   font-size:0.78em;line-height:1.5;color:var(--text2);
   white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* ---- Choosing the model that draws the picture ----
+   Listed with what each one costs, because the difference between them is
+   five times the price and a visibly different result. */
+.mm-img-models{display:flex;flex-direction:column;gap:8px}
+.mm-img-model{display:flex;flex-direction:column;gap:4px;
+  width:100%;padding:10px 12px;text-align:left;cursor:pointer;
+  border:2px solid var(--border);border-radius:10px;background:var(--card2);
+  font-family:inherit;color:var(--text)}
+.mm-img-model:hover{border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.mm-img-model.is-on{border-color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 12%,var(--card2))}
+.mm-img-model:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm-img-mtop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.mm-img-mname{font-weight:700;font-size:0.92em}
+.mm-img-mprice{margin-left:auto;font-size:0.82em;font-weight:700;
+  color:var(--accent);white-space:nowrap}
+.mm-img-mnote{font-size:0.8em;color:var(--text2);line-height:1.45}

@@ -30,16 +30,14 @@ window.MM = window.MM || {};
   var styles = [];
   var shots = [];          // data URLs of the room photos, first one leads
   var needsUrls = false;   // does the chosen provider want public URLs
+  var onJob = [];          // photos already on this job, offered to pick from
+  var picking = false;     // is that list open
   var styleId = '';
   var extra = '';
   var results = [];        // data URLs that came back
   var busy = false;
   var msg = '';
   var isErr = false;
-
-  // Each render costs real money, so the number is said out loud rather than
-  // discovered on a bill. Roughly $0.13 at 2K on the Pro model.
-  var COST_EACH = 0.14;
 
   // ---- Reading a file ------------------------------------------------------
 
@@ -86,6 +84,7 @@ window.MM = window.MM || {};
   function showForJob(job) {
     currentJob = job;
     shots = []; styleId = ''; extra = '';
+    onJob = []; picking = false;
     results = []; busy = false; msg = ''; isErr = false;
 
     render();
@@ -96,9 +95,17 @@ window.MM = window.MM || {};
       checkReady(),
       window.MM.doorstyles ? window.MM.doorstyles.ensure().catch(function () { return []; })
                            : Promise.resolve([]),
+      // The job's photos, read and nothing more. A failure here is not worth
+      // reporting: the Upload button still works.
+      api.queryMediaByField(api.PHOTO, 'job_id', job.id)
+        .catch(function () { return []; }),
     ]).then(function (r) {
       styles = r[1] || [];
       if (styles.length === 1) styleId = String(styles[0].id);
+
+      onJob = (r[2] || []).map(function (m) { return U.pv(m, 'file_url'); })
+        .filter(Boolean);
+
       render();
     });
   }
@@ -181,7 +188,31 @@ window.MM = window.MM || {};
         '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
           'id="mm-vz-pick"' + (busy ? ' disabled' : '') + '>' +
           '&#128193; ' + (shots.length ? 'Add more' : 'Upload') + '</button>' +
+        // The job's own photos, offered rather than made someone upload
+        // again what they already photographed. Read only: this lists them,
+        // copies the one that is chosen, and never writes to them.
+        (onJob.length
+          ? '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+            'id="mm-vz-fromjob"' + (busy ? ' disabled' : '') + '>' +
+            (picking ? 'Hide job photos' : 'From this job (' + onJob.length + ')') +
+            '</button>'
+          : '') +
       '</div>' +
+
+      (picking
+        ? '<div class="mm-vz-pickjob">' +
+            '<p class="mm-vz-hint">Tap one to use it. The job keeps its ' +
+              'copy &mdash; nothing here changes the Measure tab.</p>' +
+            '<div class="mm-vz-joblist">' +
+              onJob.map(function (u, i) {
+                return '<button type="button" class="mm-vz-jobshot" ' +
+                    'data-job="' + i + '" aria-label="Use this photo">' +
+                  '<img src="' + U.esc(u) + '" alt="">' +
+                '</button>';
+              }).join('') +
+            '</div>' +
+          '</div>'
+        : '') +
     '</div>';
   }
 
@@ -258,8 +289,7 @@ window.MM = window.MM || {};
           'id="mm-vz-go"' + (can ? '' : ' disabled') + '>' +
           (busy ? 'Working on it...' : 'Visualise this room') + '</button>' +
       '</div>' +
-      '<p class="mm-vz-hint">One picture, about ' +
-        U.esc('$' + COST_EACH.toFixed(2)) + '. It takes up to a minute.</p>' +
+      '<p class="mm-vz-hint">It takes up to a minute.</p>' +
     '</div>';
   }
 
@@ -270,14 +300,21 @@ window.MM = window.MM || {};
       '<div class="mm-vz-outs">' +
         results.map(function (r, i) {
           return '<div class="mm-vz-out">' +
-            '<img src="' + U.esc(r.url) + '" alt="The room visualised">' +
+            // Shown at a size that fits on the screen beside everything
+            // else, and opened full size on a tap: a picture that fills
+            // three screens cannot be judged.
+            '<button type="button" class="mm-vz-open" data-open="' + i + '" ' +
+                'aria-label="Open this picture full size">' +
+              '<img src="' + U.esc(r.url) + '" alt="The room visualised">' +
+              '<span class="mm-vz-zoom" aria-hidden="true">Tap to enlarge</span>' +
+            '</button>' +
             '<div class="mm-vz-outbar">' +
               (r.saved
                 ? '<span class="mm-vz-saved">&#10003; Saved to the job</span>'
                 : '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
                   'data-save="' + i + '"' + (busy ? ' disabled' : '') +
                   '>Save to job</button>') +
-              '<a class="mm-btn-sm mm-btn-secondary" download="visualisation.png" ' +
+              '<a class="mm-btn-sm mm-btn-secondary" download="visualisation.jpg" ' +
                 'href="' + U.esc(r.url) + '">Download</a>' +
             '</div>' +
           '</div>';
@@ -403,8 +440,16 @@ window.MM = window.MM || {};
           return { url: u, saved: false };
         });
         busy = false;
-        say(results.length ? '' : 'No picture came back. Try another photo.',
-            !results.length);
+        if (!results.length) {
+          say('No picture came back. Try another photo.', true);
+          return;
+        }
+        say('');
+        // Kept without being asked. It cost money to make, and a picture
+        // lost because nobody pressed a button is the worst outcome here.
+        results.forEach(function (r, i) {
+          if (!r.saved) saveResult(i, true);
+        });
       })
       .catch(function (e) {
         busy = false;
@@ -472,12 +517,13 @@ window.MM = window.MM || {};
       .catch(function () { return null; });
   }
 
-  function saveResult(i) {
+  function saveResult(i, quiet) {
     var r = results[i];
-    if (!r || r.saved || !currentJob) return;
+    if (!r || r.saved || r.saving || !currentJob) return;
 
-    busy = true;
-    say('Saving...');
+    r.saving = true;
+    if (!quiet) { busy = true; say('Saving...'); }
+    else say('Saving to the job...');
 
     stamp(r.url)
       .then(function (marked) {
@@ -505,6 +551,7 @@ window.MM = window.MM || {};
       })
       .then(function () {
         r.saved = true;
+        r.saving = false;
         busy = false;
         window.MM.activity.log('list_added', 'Saved a visualisation', {
           jobId: currentJob.id,
@@ -513,8 +560,12 @@ window.MM = window.MM || {};
         say('Saved to the job’s photos.');
       })
       .catch(function (e) {
+        r.saving = false;
         busy = false;
-        say('Could not save: ' + e.message, true);
+        // Still downloadable, and the Save button comes back, so a failure
+        // here never loses the picture.
+        say('Could not save it to the job: ' + e.message +
+            ' You can still download it.', true);
       });
   }
 
@@ -562,6 +613,81 @@ window.MM = window.MM || {};
         saveResult(+b.getAttribute('data-save'));
       });
     });
+
+    var fromJob = el.querySelector('#mm-vz-fromjob');
+    if (fromJob) fromJob.addEventListener('click', function () {
+      picking = !picking;
+      render();
+    });
+
+    el.querySelectorAll('[data-job]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var url = onJob[+b.getAttribute('data-job')];
+        if (!url) return;
+        if (shots.length >= MAX_SHOTS) {
+          say('That is as many photos as it takes.', true);
+          return;
+        }
+        busy = true;
+        say('Reading the photo...');
+        // Copied into this tab's own list. The job's photo is untouched --
+        // it is read, scaled for sending, and left exactly where it is.
+        toDataUrl(url)
+          .then(function (d) {
+            if (!d) throw new Error('Could not read that photo.');
+            return downscale(d);
+          })
+          .then(function (d) {
+            shots.push(d);
+            results = [];
+            picking = false;
+            busy = false;
+            say('');
+          })
+          .catch(function (e) { busy = false; say(e.message, true); });
+      });
+    });
+
+    // A result, full size. Reuses the viewer the photo galleries use, so
+    // swiping and the arrows work here too.
+    el.querySelectorAll('[data-open]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var r = results[+b.getAttribute('data-open')];
+        if (r) openFull(r.url);
+      });
+    });
+  }
+
+  // A picture on its own, as big as the screen allows. Written here rather
+  // than reusing the gallery viewer: that one walks a grid of thumbnails,
+  // and a result has no grid to walk.
+  function openFull(url) {
+    var wrap = document.createElement('div');
+    wrap.className = 'mm-lightbox';
+
+    var close = document.createElement('button');
+    close.className = 'mm-lightbox-close';
+    close.textContent = '✕';
+    close.setAttribute('aria-label', 'Close');
+    wrap.appendChild(close);
+
+    var img = document.createElement('img');
+    img.src = url;
+    img.alt = 'The room visualised';
+    wrap.appendChild(img);
+
+    function shut() {
+      document.removeEventListener('keydown', onKey);
+      wrap.remove();
+    }
+    function onKey(e) { if (e.key === 'Escape') shut(); }
+
+    close.addEventListener('click', shut);
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) shut(); });
+    document.addEventListener('keydown', onKey);
+
+    document.body.appendChild(wrap);
+    close.focus();
   }
 
   window.MM.visualise = { showForJob: showForJob };
