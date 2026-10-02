@@ -367,12 +367,21 @@ async function drawWithKie(cfg, prompt, images) {
   const taskId = (started.data && started.data.taskId) || started.taskId;
   if (!taskId) throw new Error(readError(startText));
 
-  // Asked for every few seconds. A serverless function cannot wait for ever,
-  // so this gives up after about 90 seconds and says so rather than being
-  // killed mid-request with no explanation.
-  const until = Date.now() + 90000;
+  // Asked for repeatedly until the picture is ready.
+  //
+  // Vercel kills a function at 300 seconds, so this stops at 240 and says
+  // so: being cut off mid-request gives a blank page with no explanation,
+  // and the picture has usually been paid for by then either way.
+  //
+  // The first check comes quickly and they slow down after that. A fast
+  // model is finished in a few seconds, and waiting three of them to ask is
+  // three seconds of someone standing in a customer's kitchen watching a
+  // button say "Working on it".
+  const until = Date.now() + 240000;
+  let wait = 1200;
   while (Date.now() < until) {
-    await new Promise((done) => setTimeout(done, 3000));
+    await new Promise((done) => setTimeout(done, wait));
+    if (wait < 4000) wait += 400;
 
     const look = await fetch(
       'https://api.kie.ai/api/v1/jobs/recordInfo?taskId=' +

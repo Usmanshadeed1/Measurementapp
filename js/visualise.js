@@ -82,6 +82,9 @@ window.MM = window.MM || {};
   // ---- Loading -------------------------------------------------------------
 
   function showForJob(job) {
+    // A counter left running from the last job would keep writing into a
+    // page that has moved on.
+    stopTicking();
     currentJob = job;
     shots = []; styleId = ''; extra = '';
     onJob = []; picking = false;
@@ -329,6 +332,32 @@ window.MM = window.MM || {};
 
   function say(m, bad) { msg = m || ''; isErr = !!bad; render(); }
 
+  // A count of the seconds while the picture is being drawn. Some models
+  // take ten seconds and some take two minutes, and a message that never
+  // changes is indistinguishable from one that has stopped.
+  var tick = null;
+
+  function startTicking() {
+    stopTicking();
+    var from = Date.now();
+    function show() {
+      var secs = Math.round((Date.now() - from) / 1000);
+      msg = 'Drawing the picture — ' + secs + 's so far.' +
+            (secs > 60 ? ' Some models take a couple of minutes.' : '');
+      isErr = false;
+      // Only the message is redrawn: a full render every second would take
+      // the focus out of whatever is being typed.
+      var el = document.querySelector('.mm-vz-msg');
+      if (el) el.textContent = msg; else render();
+    }
+    show();
+    tick = setInterval(show, 1000);
+  }
+
+  function stopTicking() {
+    if (tick) { clearInterval(tick); tick = null; }
+  }
+
   // ---- The disclaimer ------------------------------------------------------
 
   // Written onto the picture before it is saved. An email can be forwarded
@@ -414,7 +443,7 @@ window.MM = window.MM || {};
     // chosen provider needs links, the room photos are uploaded first.
     prepare(refs)
       .then(function (ready) {
-        say('Working on it — this takes up to a minute.');
+        startTicking();
         return fetch('/api/ai?action=visualise', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -439,6 +468,7 @@ window.MM = window.MM || {};
         results = (d.images || []).map(function (u) {
           return { url: u, saved: false };
         });
+        stopTicking();
         busy = false;
         if (!results.length) {
           say('No picture came back. Try another photo.', true);
@@ -452,6 +482,7 @@ window.MM = window.MM || {};
         });
       })
       .catch(function (e) {
+        stopTicking();
         busy = false;
         say(e.message, true);
       });
