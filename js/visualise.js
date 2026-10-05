@@ -209,11 +209,11 @@ window.MM = window.MM || {};
     '</div>';
   }
 
-  // As many door photographs as are worth sending. More angles of the same
-  // door help; a long list starts to crowd out the room.
-  // More angles of the same door do not make the render more faithful; they
-  // make it slower, and a render that times out costs the credits anyway.
-  var MAX_REFS = 2;
+  // ONE door photograph: the first one of the chosen colour. A colour can
+  // hold several, but one clear picture of the door in that finish is all
+  // the model needs, and every extra one is more for it to read before it
+  // starts drawing.
+  var MAX_REFS = 1;
 
   // ---- The colour --------------------------------------------------------
   //
@@ -386,38 +386,79 @@ window.MM = window.MM || {};
   // Written onto the picture before it is saved. An email can be forwarded
   // without its text, and a rendering with no mark on it is one screenshot
   // away from looking like a promise.
-  function stamp(dataUrl) {
-    return new Promise(function (resolve) {
-      var img = new Image();
-      img.onload = function () {
-        var c = document.createElement('canvas');
-        c.width = img.naturalWidth;
-        c.height = img.naturalHeight;
-        var ctx = c.getContext('2d');
-        if (!ctx) { resolve(dataUrl); return; }
-        ctx.drawImage(img, 0, 0);
+  // The finished picture arrives as a link to the provider's own server, and
+  // a canvas that draws an image from another site refuses to be read back.
+  // That made the stamp below fail SILENTLY: the disclaimer was never added,
+  // and the provider's original file -- uncompressed, nearly 5MB -- was sent
+  // to be saved and refused for being too large.
+  //
+  // So the picture is fetched as data first. A canvas drawing local data can
+  // be read, the stamp goes on, and the result is sized to fit.
+  function asLocal(src) {
+    if (/^(data|blob):/.test(src)) return Promise.resolve(src);
+    return fetch(src)
+      .then(function (r) {
+        if (!r.ok) throw new Error('Could not fetch the picture.');
+        return r.blob();
+      })
+      .then(function (b) { return URL.createObjectURL(b); });
+  }
 
-        var pad = Math.max(10, Math.round(c.width * 0.012));
-        var size = Math.max(13, Math.round(c.width * 0.022));
-        var text = 'Concept illustration — not a construction drawing';
+  // Saving has a 4.4MB limit. A render is 2000-odd pixels across, and that
+  // fits easily as a good JPEG -- this is the long edge it is kept to, and
+  // nothing is shrunk that does not need to be.
+  var SAVE_EDGE = 2400;
+  var SAVE_MAX = 4 * 1024 * 1024;
 
-        ctx.font = '600 ' + size + 'px system-ui, -apple-system, sans-serif';
-        var w = ctx.measureText(text).width;
-        var barH = size + pad * 1.4;
-
-        ctx.fillStyle = 'rgba(0,0,0,.6)';
-        ctx.fillRect(0, c.height - barH, c.width, barH);
-        ctx.fillStyle = '#fff';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, Math.max(pad, (c.width - w) / 2),
-                     c.height - barH / 2);
-
-        try { resolve(c.toDataURL('image/jpeg', 0.92)); }
-        catch (e) { resolve(dataUrl); }
-      };
-      img.onerror = function () { resolve(dataUrl); };
-      img.src = dataUrl;
+  function stamp(src) {
+    return asLocal(src).then(function (local) {
+      return new Promise(function (resolve, reject) {
+        var img = new Image();
+        img.onload = function () { draw(img, local, resolve, reject); };
+        img.onerror = function () { reject(new Error('Could not read the picture.')); };
+        img.src = local;
+      });
     });
+  }
+
+  function draw(img, local, resolve, reject) {
+    var scale = Math.min(1, SAVE_EDGE /
+      Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+    var c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * scale);
+    c.height = Math.round(img.naturalHeight * scale);
+    var ctx = c.getContext('2d');
+    if (!ctx) { reject(new Error('Could not prepare the picture.')); return; }
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+
+    var pad = Math.max(10, Math.round(c.width * 0.012));
+    var size = Math.max(13, Math.round(c.width * 0.022));
+    var text = 'Concept illustration \u2014 not a construction drawing';
+
+    ctx.font = '600 ' + size + 'px system-ui, -apple-system, sans-serif';
+    var w = ctx.measureText(text).width;
+    var barH = size + pad * 1.4;
+
+    ctx.fillStyle = 'rgba(0,0,0,.6)';
+    ctx.fillRect(0, c.height - barH, c.width, barH);
+    ctx.fillStyle = '#fff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, Math.max(pad, (c.width - w) / 2), c.height - barH / 2);
+
+    if (/^blob:/.test(local)) URL.revokeObjectURL(local);
+
+    // High quality first, lower only if the file is still over the limit.
+    var qualities = [0.9, 0.82, 0.74];
+    (function next(i) {
+      c.toBlob(function (blob) {
+        if (!blob) { reject(new Error('Could not prepare the picture.')); return; }
+        if (blob.size <= SAVE_MAX || i === qualities.length - 1) {
+          resolve(blob);
+          return;
+        }
+        next(i + 1);
+      }, 'image/jpeg', qualities[i]);
+    })(0);
   }
 
   // ---- Actions -------------------------------------------------------------
@@ -638,10 +679,8 @@ window.MM = window.MM || {};
     if (!quiet) { busy = true; say('Saving...'); }
     else say('Saving to the job...');
 
+    // stamp() hands back the finished file -- disclaimer on, sized to fit.
     stamp(r.url)
-      .then(function (marked) {
-        return fetch(marked).then(function (res) { return res.blob(); });
-      })
       .then(function (blob) {
         var name = 'Visualisation - ' +
           new Date().toISOString().split('T')[0] + '.jpg';
