@@ -433,39 +433,36 @@ window.MM = window.MM || {};
   function colourForm() {
     var c = colourDraft;
 
-    // The colours on offer, narrowed by whatever has been typed. Shown with
-    // their swatches: a name read off a list is one thing, a name next to
-    // the colour it means is another.
+    // Once a colour is settled on, the list it was chosen from goes away:
+    // leaving it on screen reads as "you have not picked yet", which is
+    // exactly the confusion it caused.
     var typed = String(c.name || '').trim().toLowerCase();
-    var opts = colourOptions().filter(function (o) {
+    var all = colourOptions();
+    var exact = all.some(function (o) { return o.name.toLowerCase() === typed; });
+    var settled = !!c.picked;
+    var opts = settled ? [] : all.filter(function (o) {
       return !typed || o.name.toLowerCase().indexOf(typed) > -1;
-    });
-    var exact = colourOptions().some(function (o) {
-      return o.name.toLowerCase() === typed;
     });
 
     return '<div class="mm-ds-newcol">' +
       '<div class="mm-mt-f">' +
-        '<span class="mm-mt-flab">Colour</span>' +
-        '<p class="mm-ds-searchhint">Search the list, or type any name of ' +
-          'your own.</p>' +
-        '<div class="mm-ds-search">' +
-          (c.name
-            ? '<span class="mm-ds-searchsw" style="background:' +
-              U.esc(c.swatch || '#cccccc') + '" aria-hidden="true"></span>'
-            : '') +
-          '<input class="mm-input" id="mm-ds-colname" autocomplete="off" ' +
-            'placeholder="Search, or type a new name" ' +
-            'value="' + U.esc(c.name) + '">' +
-        '</div>' +
+        // Settled: the colour itself, with one way back to the list.
+        (settled
+          ? '<div class="mm-ds-chosen">' +
+              '<span class="mm-ds-chosensw" style="background:' +
+                U.esc(c.swatch || '#cccccc') + '" aria-hidden="true"></span>' +
+              '<span class="mm-ds-chosenname">' + U.esc(c.name) + '</span>' +
+              '<button type="button" class="mm-ds-change" id="mm-ds-colchange">' +
+                'Change</button>' +
+            '</div>'
+          : '<div class="mm-ds-search">' +
+              '<input class="mm-input" id="mm-ds-colname" autocomplete="off" ' +
+                'placeholder="Search a colour, or type a new name" ' +
+                'value="' + U.esc(c.name) + '">' +
+            '</div>') +
 
         // The list narrows as it is typed into, so twenty-three colours is
         // two keystrokes rather than a scroll.
-        (!opts.length && typed
-          ? '<p class="mm-ds-nomatch">Nothing matches &ldquo;' +
-            U.esc(c.name) + '&rdquo; &mdash; it will be added as a new ' +
-            'colour.</p>'
-          : '') +
 
         (opts.length
           ? '<div class="mm-ds-opts">' +
@@ -490,11 +487,9 @@ window.MM = window.MM || {};
         // A new name is the one case that needs a swatch typed, because
         // there is no preset to take one from. Hex, not RGB: it is what a
         // paint chart prints and what anyone can copy.
-        (typed && !exact
+        (typed && !exact && !settled
           ? '<div class="mm-ds-custom">' +
-              '<p class="mm-ds-newname">&ldquo;' + U.esc(c.name) +
-                '&rdquo; is a new colour. Give it a shade so it can be ' +
-                'recognised in a list.</p>' +
+              '<p class="mm-ds-newname">New colour &mdash; give it a shade</p>' +
               '<div class="mm-ds-hexrow">' +
                 '<span class="mm-ds-hexsw" style="background:' +
                   U.esc(c.swatch || '#cccccc') + '" aria-hidden="true"></span>' +
@@ -512,7 +507,7 @@ window.MM = window.MM || {};
       '</div>' +
 
       '<div class="mm-mt-f">' +
-        '<span class="mm-mt-flab">Photos of this colour</span>' +
+        '<span class="mm-mt-flab">Photos</span>' +
         (c.images.length
           ? '<div class="mm-ds-shots">' +
               c.images.map(function (u, i) {
@@ -536,7 +531,7 @@ window.MM = window.MM || {};
         '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
           'id="mm-ds-colcancel"' + (busy ? ' disabled' : '') + '>Cancel</button>' +
         '<button type="button" class="mm-btn-sm mm-btn-primary" ' +
-          'id="mm-ds-coladd"' + (busy ? ' disabled' : '') + '>Add colour</button>' +
+          'id="mm-ds-coladd"' + (busy ? ' disabled' : '') + '>Save colour</button>' +
       '</div>' +
     '</div>';
   }
@@ -688,6 +683,7 @@ window.MM = window.MM || {};
         if (!colourDraft) return;
         colourDraft.name = b.getAttribute('data-opt');
         colourDraft.swatch = b.getAttribute('data-sw') || '#cccccc';
+        colourDraft.picked = true;
         render();
         // Back to the photos, which is the only thing left to do.
         var up = document.getElementById('mm-ds-colup');
@@ -707,6 +703,15 @@ window.MM = window.MM || {};
         colourDraft.images.splice(+b.getAttribute('data-rmnew'), 1);
         render();
       });
+    });
+
+    var cchange = el.querySelector('#mm-ds-colchange');
+    if (cchange) cchange.addEventListener('click', function () {
+      if (!colourDraft) return;
+      colourDraft.picked = false;
+      render();
+      var box = document.getElementById('mm-ds-colname');
+      if (box) box.select();
     });
 
     var ccancel = el.querySelector('#mm-ds-colcancel');
