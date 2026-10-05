@@ -133,8 +133,31 @@ window.MM = window.MM || {};
     { name: 'Ida 1', swatch: '#d8c6a8', grp: 'Textured' },
     { name: 'Ida 2', swatch: '#c9a26a', grp: 'Textured' },
     { name: 'Nocce 1', swatch: '#c8a173', grp: 'Textured' },
-    { name: 'Timber', swatch: '#c89a5c', grp: 'Textured' },
-    { name: 'Kona', swatch: '#3b2317', grp: 'Textured' },
+    { name: 'Nocce 3', swatch: '#8a6a4a', grp: 'Textured' },
+    { name: 'Olmo 3', swatch: '#a8875f', grp: 'Textured' },
+    { name: 'Muratti 1', swatch: '#cfc8bd', grp: 'Textured' },
+    { name: 'Muratti 4', swatch: '#4c4a47', grp: 'Textured' },
+
+    // Stains. Real wood, where the grain matters more than the colour --
+    // which is exactly why a photograph is asked for alongside the name.
+    { name: 'Timber', swatch: '#c89a5c', grp: 'Stain' },
+    { name: 'Kona', swatch: '#3b2317', grp: 'Stain' },
+    { name: 'Mocha', swatch: '#6b4a33', grp: 'Stain' },
+    { name: 'Truffle', swatch: '#4e382a', grp: 'Stain' },
+    { name: 'Natural Oak', swatch: '#c9a876', grp: 'Stain' },
+    { name: 'Desert Oak', swatch: '#b89468', grp: 'Stain' },
+    { name: 'Canyon Oak', swatch: '#a8784a', grp: 'Stain' },
+
+    // Paints on the older ranges, still sold.
+    { name: 'Cobblestone', swatch: '#9d9890', grp: 'Paint' },
+    { name: 'Horizon', swatch: '#8f9aa3', grp: 'Paint' },
+
+    // Illume and Ovela name the same two finishes differently from the
+    // Spanish-named ones above; both are listed because both are ordered.
+    { name: 'Bianco Gloss', swatch: '#f5f5f3', grp: 'Gloss' },
+    { name: 'Grigio Gloss', swatch: '#b5b5b2', grp: 'Gloss' },
+    { name: 'Bianco Matte', swatch: '#eeece8', grp: 'Matte' },
+    { name: 'Carbone Matte', swatch: '#3c3c3a', grp: 'Matte' },
   ];
 
   // Every colour on offer: the presets, plus anything typed before. A name
@@ -452,11 +475,27 @@ window.MM = window.MM || {};
             '</div>'
           : '') +
 
-        // Anything not on the list is accepted and offered from then on:
-        // a manufacturer adding a finish next year needs no change here.
+        // Anything not on the list is accepted and offered from then on: a
+        // manufacturer adding a finish next year needs no change here, and
+        // a customer's own Benjamin Moore colour is ordered the same way.
+        //
+        // A new name is the one case that needs a swatch typed, because
+        // there is no preset to take one from. Hex, not RGB: it is what a
+        // paint chart prints and what anyone can copy.
         (typed && !exact
-          ? '<p class="mm-ds-newname">&ldquo;' + U.esc(c.name) +
-            '&rdquo; is new &mdash; it will be added to the list.</p>'
+          ? '<div class="mm-ds-custom">' +
+              '<p class="mm-ds-newname">&ldquo;' + U.esc(c.name) +
+                '&rdquo; is a new colour. Give it a shade so it can be ' +
+                'recognised in a list.</p>' +
+              '<div class="mm-ds-hexrow">' +
+                '<span class="mm-ds-hexsw" style="background:' +
+                  U.esc(c.swatch || '#cccccc') + '" aria-hidden="true"></span>' +
+                '<input class="mm-input mm-ds-hex" id="mm-ds-colhex" ' +
+                  'placeholder="#8d8178" maxlength="7" autocomplete="off" ' +
+                  'value="' + U.esc(c.swatch || '') + '" ' +
+                  'aria-label="Colour as a hex code">' +
+              '</div>' +
+            '</div>'
           : '') +
       '</div>' +
 
@@ -592,7 +631,7 @@ window.MM = window.MM || {};
     el.querySelectorAll('[data-addcol]').forEach(function (b) {
       b.addEventListener('click', function () {
         colourFor = b.getAttribute('data-addcol');
-        colourDraft = { name: '', swatch: '#cccccc', images: [] };
+        colourDraft = { name: '', swatch: '', images: [] };
         render();
         var f = document.getElementById('mm-ds-colname');
         if (f) f.focus();
@@ -612,6 +651,20 @@ window.MM = window.MM || {};
         box.focus();
         try { box.setSelectionRange(at, at); } catch (e) { /* not all inputs */ }
       }
+    });
+
+    // A typed shade. Only ever needed for a name that is not on the list --
+    // every preset brings its own.
+    var chex = el.querySelector('#mm-ds-colhex');
+    if (chex) chex.addEventListener('input', function () {
+      if (!colourDraft) return;
+      var v = String(this.value || '').trim();
+      if (v && v.charAt(0) !== '#') v = '#' + v;
+      colourDraft.swatch = v;
+      // Only the swatch beside it is repainted: a full redraw here would
+      // take the caret out of the box being typed into.
+      var sw = document.querySelector('.mm-ds-hexsw');
+      if (sw && /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v)) sw.style.background = v;
     });
 
     // Picking one from the list fills in its name and its swatch together,

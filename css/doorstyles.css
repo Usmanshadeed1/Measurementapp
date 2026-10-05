@@ -167,3 +167,19 @@
   .mm-ds-col{flex-wrap:wrap}
   .mm-ds-colname{flex:1 1 100%;order:-1}
 }
+
+/* ---- A colour that is not on the list ----
+   A customer's own Benjamin Moore shade, or a finish added after this was
+   written. Hex rather than RGB: it is what a paint chart prints and what
+   anyone can copy without converting anything. */
+.mm-ds-custom{margin-top:10px;padding:10px;border-radius:8px;
+  background:var(--card);border:1px solid var(--border)}
+.mm-ds-custom .mm-ds-newname{margin:0 0 8px}
+
+.mm-ds-hexrow{display:flex;align-items:center;gap:10px}
+.mm-ds-hexsw{flex:0 0 auto;width:34px;height:34px;border-radius:7px;
+  border:1px solid color-mix(in srgb,var(--text2) 40%,transparent);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.mm-ds-hex{flex:1 1 auto;min-width:0;margin-bottom:0;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  text-transform:lowercase}
