@@ -489,7 +489,8 @@ window.MM = window.MM || {};
         // paint chart prints and what anyone can copy.
         (typed && !exact && !settled
           ? '<div class="mm-ds-custom">' +
-              '<p class="mm-ds-newname">New colour &mdash; give it a shade</p>' +
+              '<p class="mm-ds-newname">Use &ldquo;' + U.esc(c.name) +
+                '&rdquo; as a new colour</p>' +
               '<div class="mm-ds-hexrow">' +
                 '<span class="mm-ds-hexsw" style="background:' +
                   U.esc(c.swatch || '#cccccc') + '" aria-hidden="true"></span>' +
@@ -501,6 +502,11 @@ window.MM = window.MM || {};
                   'placeholder="8d8178" maxlength="6" autocomplete="off" ' +
                   'value="' + U.esc(String(c.swatch || '').replace('#', '')) + '" ' +
                   'aria-label="Colour as a hex code">' +
+                // Without this there is no way to say "yes, that one" for a
+                // name of your own, so the list never went away and the
+                // whole thing read as unfinished.
+                '<button type="button" class="mm-btn-sm mm-btn-primary ' +
+                  'mm-ds-usenew" id="mm-ds-usenew">Use it</button>' +
               '</div>' +
             '</div>'
           : '') +
@@ -705,6 +711,16 @@ window.MM = window.MM || {};
       });
     });
 
+    var cuse = el.querySelector('#mm-ds-usenew');
+    if (cuse) cuse.addEventListener('click', function () {
+      if (!colourDraft) return;
+      if (!colourDraft.swatch) colourDraft.swatch = '#cccccc';
+      colourDraft.picked = true;
+      render();
+      var up = document.getElementById('mm-ds-colup');
+      if (up) up.focus();
+    });
+
     var cchange = el.querySelector('#mm-ds-colchange');
     if (cchange) cchange.addEventListener('click', function () {
       if (!colourDraft) return;
@@ -754,6 +770,14 @@ window.MM = window.MM || {};
 
   function addColour() {
     var name = String(colourDraft.name || '').trim();
+    // Saving straight from the search box works too: pressing "Use it"
+    // first is a convenience, not a step that has to be taken.
+    if (name && !colourDraft.swatch) {
+      var match = colourOptions().find(function (o) {
+        return o.name.toLowerCase() === name.toLowerCase();
+      });
+      colourDraft.swatch = (match && match.swatch) || '#cccccc';
+    }
     if (!name) {
       say('Pick a colour or type its name.');
       var f = document.getElementById('mm-ds-colname');
@@ -763,7 +787,7 @@ window.MM = window.MM || {};
     // A colour is its photographs. Without one the AI has only the word,
     // which is not enough for a stain or a gloss.
     if (!colourDraft.images.length) {
-      say('Add at least one photo of this colour.');
+      say('Add at least one photo of ' + name + '.');
       return;
     }
 

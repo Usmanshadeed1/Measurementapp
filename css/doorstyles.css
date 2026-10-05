@@ -213,3 +213,7 @@
   font-family:inherit;font-size:0.8em;font-weight:700;cursor:pointer}
 .mm-ds-change:hover{background:var(--card2)}
 .mm-ds-change:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* Confirming a name of your own. Without it there was no way to say
+   "yes, that one" and the search list never went away. */
+.mm-ds-usenew{flex:0 0 auto;min-height:44px;white-space:nowrap}
