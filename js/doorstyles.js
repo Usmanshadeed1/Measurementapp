@@ -196,26 +196,38 @@ window.MM = window.MM || {};
       '<span class="mm-label">Colours</span>' +
 
       (draft.colors.length
-        ? '<div class="mm-ds-cols">' + draft.colors.map(colorTile).join('') + '</div>'
-        : '<p class="mm-ds-colempty">None yet. Add the colours this door ' +
-          'comes in &mdash; pick them all at once.</p>') +
+        ? '<div class="mm-ds-cols">' + draft.colors.map(colorTile).join('') + '</div>' +
+          (draft.colors.some(function (c) { return !String(c.name || '').trim(); })
+            ? '<p class="mm-ds-colwarn">Type a name under each one.</p>'
+            : '')
+        : '') +
 
       '<div class="mm-btn-row">' +
         '<button type="button" class="mm-btn-sm mm-btn-secondary mm-ds-addcols" ' +
           'id="mm-ds-addcols"' + (busy ? ' disabled' : '') + '>' +
-          '&#128193; Add colour photos</button>' +
+          '&#128193; ' + (draft.colors.length ? 'Add more colours' : 'Add colours') +
+          '</button>' +
       '</div>' +
     '</div>';
   }
 
+  // The photograph, with its name typed under it.
+  //
+  // The name is NOT guessed from the picture, though it easily could be: it
+  // is a product name shown to a paying customer, and a colour read as Dove
+  // when it is Linen puts the wrong product in front of them. Six short
+  // words once per style is worth that certainty.
+  //
+  // The file name pre-fills the box when it happens to be useful. Nobody has
+  // to rename anything for it to work.
   function colorTile(c, i) {
-    return '<div class="mm-ds-col">' +
+    var named = !!String(c.name || '').trim();
+    return '<div class="mm-ds-col' + (named ? '' : ' needs-name') + '">' +
       '<img class="mm-ds-colshot" src="' + U.esc(c.image) + '" alt="">' +
       '<button type="button" class="mm-ds-colrm" data-colrm="' + i + '" ' +
-        'aria-label="Remove ' + U.esc(c.name) + '">&times;</button>' +
-      // Editable, but filled in already: a filename gets the name right
-      // most of the time, and this is only here for when it does not.
+        'aria-label="Remove this colour">&times;</button>' +
       '<input class="mm-input mm-ds-colname" data-ci="' + i + '" ' +
+        'placeholder="Name it" ' +
         'value="' + U.esc(c.name) + '" aria-label="Colour name">' +
     '</div>';
   }
@@ -439,6 +451,19 @@ window.MM = window.MM || {};
       if (f) f.focus();
       return;
     }
+    // A colour with no name cannot be chosen on a job, so it is caught here
+    // rather than saved as "Colour 3".
+    var unnamed = draft.colors.filter(function (c) {
+      return c.image && !String(c.name || '').trim();
+    }).length;
+    if (unnamed) {
+      showError('Name ' + (unnamed === 1 ? 'the colour' : 'all ' + unnamed + ' colours') +
+                ' before saving.');
+      var box = document.querySelector('.mm-ds-col.needs-name .mm-ds-colname');
+      if (box) box.focus();
+      return;
+    }
+
     if (draft.images.length < MIN_SHOTS) {
       showError('Add at least one photo of the door.');
       return;
@@ -448,15 +473,9 @@ window.MM = window.MM || {};
       name: name,
       notes: (draft.notes || '').trim() || null,
       images: draft.images,
-      // A colour is its photograph, so one without an image is not a
-      // colour. A blank name falls back to its position rather than being
-      // refused -- it can be corrected any time.
       colors: draft.colors.filter(function (c) { return !!c.image; })
-        .map(function (c, i) {
-          return {
-            name: String(c.name || '').trim() || ('Colour ' + (i + 1)),
-            image: c.image,
-          };
+        .map(function (c) {
+          return { name: String(c.name || '').trim(), image: c.image };
         }),
     };
 

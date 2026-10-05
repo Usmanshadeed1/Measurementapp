@@ -103,13 +103,22 @@
   border-radius:8px;background:var(--card2);
   border:1px solid var(--border);display:block}
 
-/* The name comes from the file and is corrected here only when it came out
-   wrong, so it reads as a label until it is clicked. */
-.mm-ds-colname{margin-bottom:0;min-height:36px;padding:6px 8px;
+/* The name is typed here. It reads as a label once filled in, and as an
+   empty box until it is -- which is the point: a colour with no name cannot
+   be chosen on a job. */
+.mm-ds-colname{margin-bottom:0;min-height:38px;padding:6px 8px;
   font-size:0.78em;text-align:center;
   background:none;border-color:transparent}
 .mm-ds-colname:hover{border-color:var(--control-border);background:var(--card2)}
 .mm-ds-colname:focus{border-color:var(--accent);background:var(--card2)}
+
+/* Waiting for its name. Marked rather than left to be noticed: six photos
+   uploaded at once is six names to type, and missing one is easy. */
+.mm-ds-col.needs-name .mm-ds-colname{border-color:#f0a02a;
+  background:color-mix(in srgb,#f0a02a 10%,transparent)}
+.mm-ds-col.needs-name .mm-ds-colshot{border-color:#f0a02a}
+.mm-ds-colwarn{margin:0 0 10px;font-size:0.82em;font-weight:700;
+  color:#f0a02a}
 
 .mm-ds-colrm{position:absolute;top:-6px;right:-6px;
   width:26px;height:26px;padding:0;border-radius:50%;
