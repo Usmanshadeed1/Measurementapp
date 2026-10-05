@@ -1,145 +1,138 @@
 /* ==========================================================================
-   Door styles.
+   Door styles, and the colours each one comes in.
 
-   A list where the PICTURE is the point: someone choosing a door recognises
-   it by sight, not by reading "Nexus Linen". So every row leads with the
-   photographs and the name sits beside them.
+   Each style is an accordion. Closed, it shows the door, the name and its
+   colours as little swatches -- enough to recognise it and to see whether
+   it has been set up. Open, everything about it is editable in place.
 
-   The form and the empty state are the templates' own (css/templates.css),
-   so the admin pages read as one set.
+   Six styles with six colours each is a long page any other way.
    ========================================================================== */
 
 .mm-ds-list{display:flex;flex-direction:column;gap:12px}
 
-.mm-ds{display:flex;align-items:flex-start;gap:12px;padding:12px;
-  border:1px solid var(--border);border-radius:12px;background:var(--card);
-  min-width:0}
+.mm-ds{border:1px solid var(--border);border-radius:12px;
+  background:var(--card);overflow:hidden}
+.mm-ds.is-open{border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.mm-ds.is-new{border-color:var(--accent);margin-bottom:14px}
 
-/* The photographs, as a strip. Four at most on the card -- the rest are
-   there, they just do not earn the room. */
-.mm-ds-shots{flex:0 0 auto;display:flex;gap:4px}
-.mm-ds-shot{width:52px;height:52px;object-fit:cover;border-radius:8px;
-  border:1px solid var(--border);background:var(--card2)}
-.mm-ds-noshot{width:52px;height:52px;border-radius:8px;
-  border:1px dashed var(--border);background:var(--card2);
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.68em;color:var(--empty);text-align:center;padding:4px}
+/* ---- The header ---- */
 
-.mm-ds-main{flex:1 1 auto;min-width:0}
-.mm-ds-name{font-weight:700;color:var(--text);overflow-wrap:anywhere}
-.mm-ds-count{margin-top:3px;font-size:0.8em;color:var(--accent);
-  font-weight:700}
-.mm-ds-notes{margin-top:4px;font-size:0.84em;color:var(--text2);
-  line-height:1.45;overflow-wrap:anywhere}
+.mm-ds-hdr{display:flex;align-items:center;gap:12px;width:100%;
+  padding:12px 14px;text-align:left;cursor:pointer;
+  border:none;background:none;color:var(--text);font-family:inherit}
+.mm-ds-hdr:hover{background:var(--card2)}
+.mm-ds-hdr:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 
-.mm-ds-side{flex:0 0 auto;display:flex;flex-direction:column;gap:2px}
-.mm-ds-icon{width:32px;height:32px;padding:0;border:none;border-radius:6px;
-  background:none;color:var(--text2);font-family:inherit;font-size:0.95em;
-  line-height:1;cursor:pointer;opacity:.6}
-.mm-ds:hover .mm-ds-icon{opacity:.9}
-.mm-ds-icon:hover{background:var(--card2);color:var(--accent);opacity:1}
-.mm-ds-del:hover{background:var(--danger-bg);color:var(--danger-text)}
-.mm-ds-icon:focus-visible{opacity:1;
-  outline:3px solid var(--accent);outline-offset:2px}
-@media (hover: none){
-  .mm-ds-icon{opacity:.8}
-}
+.mm-ds-arrow{flex:0 0 auto;font-size:0.8em;color:var(--text2);
+  transition:transform .15s ease}
+.mm-ds.is-open .mm-ds-arrow{transform:rotate(180deg)}
 
-/* ---- The photos while editing ----
-   Bigger here than on the card: this is where someone decides whether the
-   shot was good enough to copy a door from. */
-.mm-ds-edshots{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
-.mm-ds-edshot{position:relative;width:92px;height:92px}
-.mm-ds-edshot img{width:100%;height:100%;object-fit:cover;border-radius:8px;
-  border:1px solid var(--border);background:var(--card2)}
-.mm-ds-rm{position:absolute;top:-6px;right:-6px;
-  width:26px;height:26px;padding:0;border-radius:50%;
-  border:1px solid var(--border);background:var(--card);
-  color:var(--text2);font-size:0.95em;line-height:1;cursor:pointer}
-.mm-ds-rm:hover{background:var(--danger-bg);color:var(--danger-text)}
-.mm-ds-rm:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+/* The door itself, so a style is recognised before its name is read. */
+.mm-ds-face{flex:0 0 auto;width:40px;height:50px;object-fit:cover;
+  border-radius:6px;background:var(--card2);
+  border:1px solid var(--border);display:block}
+.mm-ds-noface{border-style:dashed}
 
-@media (max-width: 620px){
-  .mm-ds{padding:10px;gap:10px}
-  .mm-ds-shots{flex-wrap:wrap;max-width:112px}
-  .mm-ds-side{flex-direction:row}
-}
+.mm-ds-hdrmain{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;
+  gap:2px}
+.mm-ds-name{font-weight:700;overflow-wrap:anywhere}
+.mm-ds-notes{font-size:0.8em;color:var(--text2);line-height:1.35;
+  overflow-wrap:anywhere}
 
-/* ==========================================================================
-   The colours a door style comes in.
+.mm-ds-count{flex:0 0 auto;font-size:0.78em;font-weight:700;
+  color:var(--accent);white-space:nowrap}
+/* A style with no colours cannot be used on a job yet. */
+.mm-ds-count.is-none{color:#f0a02a}
 
-   Each style carries its own: Catalina comes in Black Gloss and Clubhouse
-   Oak, Fusion in Dove and Pitch Black. Each is a PHOTOGRAPH, because a
-   matte white and a gloss white are the same word and different materials,
-   and only the picture carries that.
-   ========================================================================== */
+/* ---- The colours, while closed ---- */
 
-/* ---- On the saved card ---- */
-
-.mm-ds-cardcols{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;
-  align-items:flex-start}
-.mm-ds-cardcol{display:flex;flex-direction:column;align-items:center;gap:3px;
-  width:48px}
-.mm-ds-cardcol img{width:40px;height:50px;object-fit:cover;border-radius:5px;
-  background:var(--card2);display:block;
+.mm-ds-strip{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;
+  padding:0 14px 12px 14px}
+.mm-ds-chip{display:flex;flex-direction:column;align-items:center;gap:3px;
+  width:46px}
+.mm-ds-chip img,.mm-ds-chipsw{width:38px;height:48px;object-fit:cover;
+  border-radius:5px;background:var(--card2);display:block;
   border:1px solid color-mix(in srgb,var(--text2) 28%,transparent)}
-.mm-ds-cardcol span{font-size:0.6em;color:var(--text2);text-align:center;
+.mm-ds-chip span{font-size:0.6em;color:var(--text2);text-align:center;
   line-height:1.25;overflow-wrap:anywhere}
-.mm-ds-cardmore{align-self:center;font-size:0.72em;font-weight:700;
+.mm-ds-chipmore{align-self:center;font-size:0.74em;font-weight:700;
   color:var(--text2)}
 
-/* A style with no colours cannot be used on a job, so it says so. */
-.mm-ds-nocols{margin-top:6px;font-size:0.78em;color:#f0a02a;font-weight:700}
+/* ---- Open ---- */
 
-/* ---- While editing ----
-   A grid of the doors themselves, each with its name under it. Adding them
-   is one button: the empty row to type into was the part nobody could use. */
+.mm-ds-body{padding:0 14px 14px;border-top:1px solid var(--divider)}
+.mm-ds-form{padding-top:14px}
+.mm-ds-form .mm-mt-f{margin-bottom:14px}
+.mm-ds-form .mm-btn-row{margin-top:8px}
 
-.mm-ds-cols{display:grid;gap:10px;margin-bottom:12px;
-  grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.mm-ds-formfoot{display:flex;gap:8px;justify-content:space-between;
+  padding-top:12px;margin-top:4px;border-top:1px solid var(--divider)}
+.mm-ds-formfoot .mm-btn-sm{min-height:44px}
 
-.mm-ds-col{position:relative;display:flex;flex-direction:column;gap:6px}
-.mm-ds-colshot{width:100%;aspect-ratio:4 / 5;object-fit:cover;
+/* ---- Photographs, of the door or of a colour ---- */
+
+.mm-ds-shots{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.mm-ds-shot{position:relative;width:76px}
+.mm-ds-shot img{width:100%;aspect-ratio:4 / 5;object-fit:cover;
   border-radius:8px;background:var(--card2);
   border:1px solid var(--border);display:block}
-
-/* The name is typed here. It reads as a label once filled in, and as an
-   empty box until it is -- which is the point: a colour with no name cannot
-   be chosen on a job. */
-.mm-ds-colname{margin-bottom:0;min-height:38px;padding:6px 8px;
-  font-size:0.78em;text-align:center;
-  background:none;border-color:transparent}
-.mm-ds-colname:hover{border-color:var(--control-border);background:var(--card2)}
-.mm-ds-colname:focus{border-color:var(--accent);background:var(--card2)}
-
-/* Waiting for its name. Marked rather than left to be noticed: six photos
-   uploaded at once is six names to type, and missing one is easy. */
-.mm-ds-col.needs-name .mm-ds-colname{border-color:#f0a02a;
-  background:color-mix(in srgb,#f0a02a 10%,transparent)}
-.mm-ds-col.needs-name .mm-ds-colshot{border-color:#f0a02a}
-.mm-ds-colwarn{margin:0 0 10px;font-size:0.82em;font-weight:700;
-  color:#f0a02a}
-
-.mm-ds-colrm{position:absolute;top:-6px;right:-6px;
-  width:26px;height:26px;padding:0;border-radius:50%;
+.mm-ds-x{position:absolute;top:-6px;right:-6px;
+  width:24px;height:24px;padding:0;border-radius:50%;
   border:1px solid var(--border);background:var(--card);
-  color:var(--text2);font-size:0.95em;line-height:1;cursor:pointer;
-  opacity:0}
-.mm-ds-col:hover .mm-ds-colrm,
-.mm-ds-col:focus-within .mm-ds-colrm{opacity:1}
-.mm-ds-colrm:hover{background:var(--danger-bg);color:var(--danger-text)}
-.mm-ds-colrm:focus-visible{opacity:1;
-  outline:3px solid var(--accent);outline-offset:2px}
-@media (hover: none){
-  .mm-ds-colrm{opacity:1}
-}
+  color:var(--text2);font-size:0.9em;line-height:1;cursor:pointer}
+.mm-ds-x:hover{background:var(--danger-bg);color:var(--danger-text)}
+.mm-ds-x:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-.mm-ds-colempty{margin:0 0 10px;font-size:0.84em;color:var(--text2);
-  line-height:1.5}
-.mm-ds-addcols{width:100%;min-height:46px}
+/* ---- A colour already on this style ---- */
+
+.mm-ds-cols{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+
+.mm-ds-col{display:flex;align-items:center;gap:10px;padding:8px 10px;
+  border:1px solid var(--border);border-radius:10px;background:var(--card2);
+  min-width:0}
+
+.mm-ds-colsw{flex:0 0 auto;width:20px;height:20px;border-radius:50%;
+  border:1px solid color-mix(in srgb,var(--text2) 40%,transparent);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+
+.mm-ds-colname{flex:1 1 auto;min-width:0;font-size:0.88em;font-weight:700;
+  overflow-wrap:anywhere}
+
+.mm-ds-colshots{flex:0 0 auto;display:flex;align-items:center;gap:4px}
+.mm-ds-colshots img{width:28px;height:35px;object-fit:cover;border-radius:4px;
+  background:var(--card);border:1px solid var(--border);display:block}
+.mm-ds-colmore{font-size:0.7em;font-weight:700;color:var(--text2)}
+/* A colour with no photograph cannot show the AI its finish. */
+.mm-ds-colnone{font-size:0.7em;font-weight:700;color:#f0a02a}
+
+.mm-ds-colx{flex:0 0 auto;width:32px;height:32px;padding:0;border:none;
+  border-radius:50%;background:none;color:var(--text2);
+  font-size:1.1em;line-height:1;cursor:pointer}
+.mm-ds-colx:hover{background:var(--danger-bg);color:var(--danger-text)}
+.mm-ds-colx:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* ---- Adding a colour ---- */
+
+.mm-ds-newcol{padding:12px;border-radius:10px;background:var(--card2);
+  border:1px dashed var(--accent)}
+.mm-ds-newcol .mm-mt-f{margin-bottom:12px}
+.mm-ds-newrow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.mm-ds-newrow .mm-mt-f{margin-bottom:0}
+
+/* Browsers style a colour input very differently, so it gets a plain box of
+   its own rather than inheriting the text input's padding. */
+.mm-ds-pick{padding:4px;height:44px;cursor:pointer;margin-bottom:0}
+
+.mm-ds-addcol{width:100%;min-height:44px}
 
 @media (max-width: 620px){
-  .mm-ds-cols{grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
-  .mm-ds-cardcol{width:42px}
-  .mm-ds-cardcol img{width:36px;height:44px}
+  .mm-ds-hdr{padding:10px;gap:10px}
+  .mm-ds-face{width:34px;height:42px}
+  .mm-ds-count{font-size:0.72em}
+  .mm-ds-body{padding:0 10px 12px}
+  .mm-ds-strip{padding:0 10px 10px}
+  .mm-ds-shot{width:68px}
+  .mm-ds-formfoot .mm-btn-sm{flex:1 1 0;min-width:0}
+  .mm-ds-col{flex-wrap:wrap}
+  .mm-ds-colname{flex:1 1 100%;order:-1}
 }
