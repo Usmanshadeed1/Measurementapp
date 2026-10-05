@@ -47,6 +47,116 @@ window.MM = window.MM || {};
 
   function blank() { return { name: '', notes: '', images: [], colors: [] }; }
 
+  // ---- The colours the manufacturer sells ----------------------------------
+  //
+  // Offered as a list rather than typed, so a name is never mistyped and
+  // nobody has to remember what a finish is called. Picking one fills in its
+  // name and its swatch together.
+  //
+  // This is a STARTING LIST, not a limit: anything typed that is not here is
+  // accepted and then offered on every style afterwards. A manufacturer who
+  // adds a finish next year needs no change here.
+  //
+  // Grouped as the manufacturer groups them, because that is how someone
+  // looking for one expects to find it.
+  var PRESETS = [
+    // Paints
+    { name: 'Frost', swatch: '#f2f0ea', grp: 'Paint' },
+    { name: 'Dove', swatch: '#efebe0', grp: 'Paint' },
+    { name: 'Linen', swatch: '#e8e3d5', grp: 'Paint' },
+    { name: 'Cloud White', swatch: '#eeece5', grp: 'Paint' },
+    { name: 'Macadamia Beige', swatch: '#e2d6bd', grp: 'Paint' },
+    { name: 'Oyster', swatch: '#c2ab8f', grp: 'Paint' },
+    { name: 'Repose Gray', swatch: '#cbc7bd', grp: 'Paint' },
+    { name: 'Nickel', swatch: '#b4b5ae', grp: 'Paint' },
+    { name: 'Stone', swatch: '#8d8178', grp: 'Paint' },
+    { name: 'Mint Green', swatch: '#dde3d9', grp: 'Paint' },
+    { name: 'Pistachio Green', swatch: '#b4bda7', grp: 'Paint' },
+    { name: 'Sage Green', swatch: '#b3c4b4', grp: 'Paint' },
+    { name: 'Pewter Green', swatch: '#5f6355', grp: 'Paint' },
+    { name: 'Forest Green', swatch: '#5c6354', grp: 'Paint' },
+    { name: 'Hunter Green', swatch: '#3c4634', grp: 'Paint' },
+    { name: 'Izel Blue', swatch: '#7fa3bb', grp: 'Paint' },
+    { name: 'Denim Blue', swatch: '#4a6e8c', grp: 'Paint' },
+    { name: 'Naval', swatch: '#2f3e52', grp: 'Paint' },
+    { name: 'Indigo', swatch: '#2b3440', grp: 'Paint' },
+    { name: 'Orchid Purple', swatch: '#d9bdd4', grp: 'Paint' },
+    { name: 'Cabernet Red', swatch: '#6d1f2a', grp: 'Paint' },
+    { name: 'Graphite Black', swatch: '#33352f', grp: 'Paint' },
+    { name: 'Pitch Black', swatch: '#1c1c1e', grp: 'Paint' },
+    { name: 'Retreat', swatch: '#6d7466', grp: 'Paint' },
+
+    // Gloss
+    { name: 'Blanco Gloss', swatch: '#f4f4f2', grp: 'Gloss' },
+    { name: 'Cashmere Gloss', swatch: '#cfc4b4', grp: 'Gloss' },
+    { name: 'Gris Nube Gloss', swatch: '#bdbdb8', grp: 'Gloss' },
+    { name: 'Textil Plata Gloss', swatch: '#cbc3b4', grp: 'Gloss' },
+    { name: 'Metallo 1 Gloss', swatch: '#b9bcbe', grp: 'Gloss' },
+    { name: 'Metallo 4 Gloss', swatch: '#3a3c3e', grp: 'Gloss' },
+    { name: 'Euroline Gloss', swatch: '#4a4c4e', grp: 'Gloss' },
+    { name: 'Agua Marina Gloss', swatch: '#a7c6c6', grp: 'Gloss' },
+    { name: 'Azul Indigo Gloss', swatch: '#36506e', grp: 'Gloss' },
+    { name: 'Azul Marino Gloss', swatch: '#232f4e', grp: 'Gloss' },
+    { name: 'Olivo Gloss', swatch: '#7a5230', grp: 'Gloss' },
+    { name: 'Guayana Gloss', swatch: '#3c2419', grp: 'Gloss' },
+    { name: 'Black Gloss', swatch: '#0a0a0a', grp: 'Gloss' },
+
+    // Matte
+    { name: 'Blanco', swatch: '#eceae6', grp: 'Matte' },
+    { name: 'Cashmere', swatch: '#cfc6b7', grp: 'Matte' },
+    { name: 'Basalto', swatch: '#8b7d73', grp: 'Matte' },
+    { name: 'Gris Plomo', swatch: '#4e5052', grp: 'Matte' },
+    { name: 'Antracita', swatch: '#3a3836', grp: 'Matte' },
+    { name: 'Agua Marina', swatch: '#a9c7c6', grp: 'Matte' },
+    { name: 'Azul Indigo', swatch: '#35506d', grp: 'Matte' },
+    { name: 'Azul Marino', swatch: '#232f4e', grp: 'Matte' },
+    { name: 'Verde Salvia', swatch: '#3e4741', grp: 'Matte' },
+    { name: 'Black', swatch: '#131313', grp: 'Matte' },
+
+    // Textured, the wood grains
+    { name: 'Como Ash 1', swatch: '#cbbda6', grp: 'Textured' },
+    { name: 'Como Ash 2', swatch: '#c6b89f', grp: 'Textured' },
+    { name: 'Clubhouse Oak', swatch: '#b8b2ab', grp: 'Textured' },
+    { name: 'Ferrara Oak', swatch: '#cfc0a2', grp: 'Textured' },
+    { name: 'Hickory Rock', swatch: '#6f5d4e', grp: 'Textured' },
+    { name: 'Light Artwood', swatch: '#ded6cb', grp: 'Textured' },
+    { name: 'Natural Elm', swatch: '#c9a673', grp: 'Textured' },
+    { name: 'Silk Flow', swatch: '#ddd8cf', grp: 'Textured' },
+    { name: 'Ice Cream 1', swatch: '#e3dcd2', grp: 'Textured' },
+    { name: 'Rosales 1', swatch: '#ded2c4', grp: 'Textured' },
+    { name: 'Rosales 2', swatch: '#c89b6d', grp: 'Textured' },
+    { name: 'Rosales 3', swatch: '#6b5540', grp: 'Textured' },
+    { name: 'Woodline 1', swatch: '#cfc5b6', grp: 'Textured' },
+    { name: 'Woodline 3', swatch: '#4a3a2e', grp: 'Textured' },
+    { name: 'Woodline 4', swatch: '#c9a87e', grp: 'Textured' },
+    { name: 'Frappe 1', swatch: '#cdc6bd', grp: 'Textured' },
+    { name: 'Ida 1', swatch: '#d8c6a8', grp: 'Textured' },
+    { name: 'Ida 2', swatch: '#c9a26a', grp: 'Textured' },
+    { name: 'Nocce 1', swatch: '#c8a173', grp: 'Textured' },
+    { name: 'Timber', swatch: '#c89a5c', grp: 'Textured' },
+    { name: 'Kona', swatch: '#3b2317', grp: 'Textured' },
+  ];
+
+  // Every colour on offer: the presets, plus anything typed before. A name
+  // used once is then in the list for every style afterwards.
+  function colourOptions() {
+    var out = [];
+    var seen = {};
+
+    PRESETS.forEach(function (c) {
+      seen[c.name.toLowerCase()] = true;
+      out.push(c);
+    });
+
+    knownColours().forEach(function (c) {
+      if (seen[c.name.toLowerCase()]) return;
+      seen[c.name.toLowerCase()] = true;
+      out.push({ name: c.name, swatch: c.swatch || '#cccccc', grp: 'Yours' });
+    });
+
+    return out;
+  }
+
   // ---- Loading -------------------------------------------------------------
 
   function load() {
@@ -76,7 +186,7 @@ window.MM = window.MM || {};
     var seen = {};
     function take(c) {
       var n = String(c.name || '').trim();
-      if (n) seen[n.toLowerCase()] = n;
+      if (n) seen[n.toLowerCase()] = { name: n, swatch: c.swatch || '' };
     }
     rows.forEach(function (s) { (s.colors || []).forEach(take); });
     // Anything typed this session but not saved yet counts too.
@@ -299,28 +409,56 @@ window.MM = window.MM || {};
   // its photographs. The suggestion list is why nothing is typed twice.
   function colourForm() {
     var c = colourDraft;
-    var known = knownColours();
+
+    // The colours on offer, narrowed by whatever has been typed. Shown with
+    // their swatches: a name read off a list is one thing, a name next to
+    // the colour it means is another.
+    var typed = String(c.name || '').trim().toLowerCase();
+    var opts = colourOptions().filter(function (o) {
+      return !typed || o.name.toLowerCase().indexOf(typed) > -1;
+    });
+    var exact = colourOptions().some(function (o) {
+      return o.name.toLowerCase() === typed;
+    });
 
     return '<div class="mm-ds-newcol">' +
-      '<div class="mm-ds-newrow">' +
-        '<label class="mm-mt-f" style="flex:1 1 180px">' +
-          '<span class="mm-mt-flab">Colour</span>' +
-          '<input class="mm-input" id="mm-ds-colname" list="mm-ds-colopts" ' +
-            'placeholder="Pick one, or type a new name" ' +
-            'value="' + U.esc(c.name) + '" autocomplete="off">' +
-        '</label>' +
-        '<label class="mm-mt-f" style="flex:0 0 76px">' +
-          '<span class="mm-mt-flab">Swatch</span>' +
-          '<input class="mm-input mm-ds-pick" type="color" id="mm-ds-colsw" ' +
-            'value="' + U.esc(c.swatch || '#cccccc') + '">' +
-        '</label>' +
-      '</div>' +
+      '<div class="mm-mt-f">' +
+        '<span class="mm-mt-flab">Colour</span>' +
+        '<div class="mm-ds-search">' +
+          (c.name
+            ? '<span class="mm-ds-searchsw" style="background:' +
+              U.esc(c.swatch || '#cccccc') + '" aria-hidden="true"></span>'
+            : '') +
+          '<input class="mm-input" id="mm-ds-colname" autocomplete="off" ' +
+            'placeholder="Search, or type a new name" ' +
+            'value="' + U.esc(c.name) + '">' +
+        '</div>' +
 
-      '<datalist id="mm-ds-colopts">' +
-        known.map(function (n) {
-          return '<option value="' + U.esc(n) + '"></option>';
-        }).join('') +
-      '</datalist>' +
+        // The list narrows as it is typed into, so twenty-three colours is
+        // two keystrokes rather than a scroll.
+        (opts.length
+          ? '<div class="mm-ds-opts">' +
+              opts.slice(0, 40).map(function (o) {
+                return '<button type="button" class="mm-ds-opt' +
+                    (o.name.toLowerCase() === typed ? ' is-on' : '') + '" ' +
+                    'data-opt="' + U.esc(o.name) + '" ' +
+                    'data-sw="' + U.esc(o.swatch) + '">' +
+                  '<span class="mm-ds-optsw" style="background:' +
+                    U.esc(o.swatch) + '"></span>' +
+                  '<span class="mm-ds-optname">' + U.esc(o.name) + '</span>' +
+                  '<span class="mm-ds-optgrp">' + U.esc(o.grp || '') + '</span>' +
+                '</button>';
+              }).join('') +
+            '</div>'
+          : '') +
+
+        // Anything not on the list is accepted and offered from then on:
+        // a manufacturer adding a finish next year needs no change here.
+        (typed && !exact
+          ? '<p class="mm-ds-newname">&ldquo;' + U.esc(c.name) +
+            '&rdquo; is new &mdash; it will be added to the list.</p>'
+          : '') +
+      '</div>' +
 
       '<div class="mm-mt-f">' +
         '<span class="mm-mt-flab">Photos of this colour</span>' +
@@ -463,12 +601,31 @@ window.MM = window.MM || {};
 
     var cname = el.querySelector('#mm-ds-colname');
     if (cname) cname.addEventListener('input', function () {
-      if (colourDraft) colourDraft.name = this.value;
+      if (!colourDraft) return;
+      colourDraft.name = this.value;
+      // Redrawn so the list narrows while it is typed into. The caret is
+      // put back where it was, because a redraw moves it to the end.
+      var at = this.selectionStart;
+      render();
+      var box = document.getElementById('mm-ds-colname');
+      if (box) {
+        box.focus();
+        try { box.setSelectionRange(at, at); } catch (e) { /* not all inputs */ }
+      }
     });
 
-    var csw = el.querySelector('#mm-ds-colsw');
-    if (csw) csw.addEventListener('input', function () {
-      if (colourDraft) colourDraft.swatch = this.value;
+    // Picking one from the list fills in its name and its swatch together,
+    // so a name is never mistyped and the swatch is never wrong for it.
+    el.querySelectorAll('[data-opt]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!colourDraft) return;
+        colourDraft.name = b.getAttribute('data-opt');
+        colourDraft.swatch = b.getAttribute('data-sw') || '#cccccc';
+        render();
+        // Back to the photos, which is the only thing left to do.
+        var up = document.getElementById('mm-ds-colup');
+        if (up) up.focus();
+      });
     });
 
     var cup = el.querySelector('#mm-ds-colup');
