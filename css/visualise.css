@@ -116,22 +116,7 @@
   .mm-vz-outbar .mm-btn-sm,.mm-vz-saved{flex:1 1 100%}
 }
 
-/* How many photographs stand behind a door style. The tile can only show
-   one of them, which made it look as though the rest were ignored. */
-.mm-vz-styn{font-size:0.68em;font-weight:700;color:var(--accent);
-  text-transform:uppercase;letter-spacing:.04em}
 
-/* The photographs that will actually be sent, shown once a door is chosen:
-   what the AI is given should not be a matter of trust. */
-.mm-vz-refs{margin-top:12px;padding-top:12px;
-  border-top:1px solid var(--divider)}
-.mm-vz-reflab{font-size:0.72em;font-weight:700;color:var(--text2);
-  text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
-.mm-vz-refshots{display:flex;flex-wrap:wrap;gap:8px}
-.mm-vz-ref{width:76px;height:76px;object-fit:cover;border-radius:8px;
-  border:1px solid var(--border);background:var(--card2)}
-.mm-vz-refnote{margin-top:8px;font-size:0.8em;color:var(--text2);
-  line-height:1.45}
 
 /* ---- The job's own photos ----
    Offered rather than making someone upload again what they already
