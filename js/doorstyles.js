@@ -447,6 +447,8 @@ window.MM = window.MM || {};
     return '<div class="mm-ds-newcol">' +
       '<div class="mm-mt-f">' +
         '<span class="mm-mt-flab">Colour</span>' +
+        '<p class="mm-ds-searchhint">Search the list, or type any name of ' +
+          'your own.</p>' +
         '<div class="mm-ds-search">' +
           (c.name
             ? '<span class="mm-ds-searchsw" style="background:' +
@@ -459,9 +461,15 @@ window.MM = window.MM || {};
 
         // The list narrows as it is typed into, so twenty-three colours is
         // two keystrokes rather than a scroll.
+        (!opts.length && typed
+          ? '<p class="mm-ds-nomatch">Nothing matches &ldquo;' +
+            U.esc(c.name) + '&rdquo; &mdash; it will be added as a new ' +
+            'colour.</p>'
+          : '') +
+
         (opts.length
           ? '<div class="mm-ds-opts">' +
-              opts.slice(0, 40).map(function (o) {
+              opts.slice(0, 60).map(function (o) {
                 return '<button type="button" class="mm-ds-opt' +
                     (o.name.toLowerCase() === typed ? ' is-on' : '') + '" ' +
                     'data-opt="' + U.esc(o.name) + '" ' +
@@ -490,9 +498,13 @@ window.MM = window.MM || {};
               '<div class="mm-ds-hexrow">' +
                 '<span class="mm-ds-hexsw" style="background:' +
                   U.esc(c.swatch || '#cccccc') + '" aria-hidden="true"></span>' +
+                // The hash is PRINTED rather than typed: it is part of every
+                // hex code there has ever been, so asking for it is asking
+                // for a keystroke that can only be wrong.
+                '<span class="mm-ds-hexhash" aria-hidden="true">#</span>' +
                 '<input class="mm-input mm-ds-hex" id="mm-ds-colhex" ' +
-                  'placeholder="#8d8178" maxlength="7" autocomplete="off" ' +
-                  'value="' + U.esc(c.swatch || '') + '" ' +
+                  'placeholder="8d8178" maxlength="6" autocomplete="off" ' +
+                  'value="' + U.esc(String(c.swatch || '').replace('#', '')) + '" ' +
                   'aria-label="Colour as a hex code">' +
               '</div>' +
             '</div>'
@@ -658,13 +670,15 @@ window.MM = window.MM || {};
     var chex = el.querySelector('#mm-ds-colhex');
     if (chex) chex.addEventListener('input', function () {
       if (!colourDraft) return;
-      var v = String(this.value || '').trim();
-      if (v && v.charAt(0) !== '#') v = '#' + v;
-      colourDraft.swatch = v;
+      // Whatever is typed, with one hash on the front. Pasting a code that
+      // already has one works too.
+      var v = String(this.value || '').trim().replace(/^#+/, '');
+      colourDraft.swatch = v ? '#' + v : '';
       // Only the swatch beside it is repainted: a full redraw here would
       // take the caret out of the box being typed into.
       var sw = document.querySelector('.mm-ds-hexsw');
-      if (sw && /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v)) sw.style.background = v;
+      var full = colourDraft.swatch;
+      if (sw && /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(full)) sw.style.background = full;
     });
 
     // Picking one from the list fills in its name and its swatch together,
@@ -756,7 +770,10 @@ window.MM = window.MM || {};
 
     d.colors.push({
       name: name,
-      swatch: colourDraft.swatch || '',
+      // A shade is worth having but never worth blocking a save for: the
+      // photographs are what the AI is shown, and this is only so the
+      // colour is recognisable in a list.
+      swatch: colourDraft.swatch || '#cccccc',
       images: colourDraft.images.slice(),
     });
     colourFor = null;

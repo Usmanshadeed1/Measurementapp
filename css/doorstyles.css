@@ -183,3 +183,16 @@
 .mm-ds-hex{flex:1 1 auto;min-width:0;margin-bottom:0;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   text-transform:lowercase}
+
+/* The hash is printed rather than typed: it is part of every hex code there
+   has ever been, so asking for it is asking for a keystroke that can only
+   be wrong. */
+.mm-ds-hexrow{position:relative}
+.mm-ds-hexhash{position:absolute;left:52px;color:var(--text2);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  pointer-events:none}
+.mm-ds-hex{padding-left:26px}
+
+.mm-ds-searchhint{margin:0 0 6px;font-size:0.8em;color:var(--text2)}
+.mm-ds-nomatch{margin:8px 0 0;font-size:0.82em;color:var(--accent);
+  font-weight:700}
