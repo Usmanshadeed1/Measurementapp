@@ -211,7 +211,9 @@ window.MM = window.MM || {};
 
   // As many door photographs as are worth sending. More angles of the same
   // door help; a long list starts to crowd out the room.
-  var MAX_REFS = 4;
+  // More angles of the same door do not make the render more faithful; they
+  // make it slower, and a render that times out costs the credits anyway.
+  var MAX_REFS = 2;
 
   // ---- The colour --------------------------------------------------------
   //
@@ -422,7 +424,9 @@ window.MM = window.MM || {};
 
   // Several at a time, kept in the order they were picked. The first is the
   // one the picture is made from, so it is the one to get right.
-  var MAX_SHOTS = 5;
+  // Three angles is plenty to show one room, and every extra picture is
+  // read by the model before it draws anything.
+  var MAX_SHOTS = 3;
 
   function takePhotos(files) {
     var list = Array.prototype.slice.call(files || []);
@@ -451,13 +455,17 @@ window.MM = window.MM || {};
     var s = styles.find(function (x) { return String(x.id) === styleId; });
     if (!shots.length || !s) return;
 
-    // The colour's own photographs lead, because they show the door in the
-    // finish being sold -- shape and colour together. The style's plain
-    // photos follow as backup for a colour that has none.
+    // A colour's photograph shows the door in the finish being sold -- the
+    // shape AND the colour in one picture. So when a colour is chosen, that
+    // is the reference, and the style's plain photos are left out: sending
+    // both gave the model four references to reconcile and a render that
+    // took four minutes and timed out.
+    //
+    // Two at most either way. More angles of the same door do not make it
+    // more faithful, they just make it slower.
     var chosen = colourList().find(function (c) { return c.name === colour; });
-    var refs = ((chosen && chosen.images) || [])
-      .concat(s.images || [])
-      .slice(0, MAX_REFS);
+    var picked = (chosen && chosen.images) || [];
+    var refs = (picked.length ? picked : (s.images || [])).slice(0, MAX_REFS);
     if (!refs.length) { say('That door style has no photos.', true); return; }
 
     busy = true;

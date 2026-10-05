@@ -426,7 +426,13 @@ async function drawWithKie(cfg, prompt, images) {
     }
   }
 
-  throw new Error('It is taking longer than expected. Try again in a moment.');
+  // The provider is still working and the credits are already spent, so
+  // this says what actually helps rather than "try again".
+  throw new Error(
+    'The picture took too long and had to be given up on. Try one room ' +
+    'photo instead of several, or switch to Nano Banana Pro in Settings — ' +
+    'it is faster.'
+  );
 }
 
 // A provider's own words help -- a wrong model and a flat balance read very
