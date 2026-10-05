@@ -181,17 +181,17 @@ function buildImagePrompt(custom, styleName, styleNotes, extra, roomCount, colou
   let style = styleName || 'the reference doors';
   if (styleNotes) style += ' (' + styleNotes + ')';
 
-  // The reference photographs carry the SHAPE -- the panel, the edge, the
-  // profile. The colour is given in words, because one line of text covers
-  // twenty-three paints and photographing every door in every finish does
-  // not. So the two are stated separately and the difference is spelled
-  // out, or the model copies the colour of the sample it was shown.
+  // The reference photographs now show the door IN THE CHOSEN FINISH --
+  // shape and colour together, because each colour carries its own
+  // photographs. So the name is given as confirmation rather than as a
+  // correction: it used to say "paint them X instead of the colour you can
+  // see", which was right when the samples were all white and wrong now.
   const paint = String(colour || '').trim();
   if (paint) {
-    style += ', painted ' + paint +
-      '. Copy the SHAPE of the reference doors exactly -- the panel, the ' +
-      'edge, the profile -- but paint them ' + paint + ' rather than the ' +
-      'colour they are in the reference photographs';
+    style += ' in ' + paint +
+      '. The reference photographs show this exact finish -- copy both the ' +
+      'shape and the colour from them. Do not lighten, darken or correct ' +
+      'the colour, and do not substitute a similar one';
   }
 
   if (body.indexOf('{style}') > -1) body = body.split('{style}').join(style);

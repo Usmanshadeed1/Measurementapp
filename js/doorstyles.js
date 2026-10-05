@@ -39,6 +39,7 @@ window.MM = window.MM || {};
   var adding = false;    // is the new-style form showing
   var newDraft = null;
   var colourFor = null;  // which style is adding a colour: its id, or '+'
+  var editCol = null;    // which saved colour is open for editing: 'id.index'
   var colourDraft = null;
   var busy = false;
   var err = '';
@@ -408,23 +409,60 @@ window.MM = window.MM || {};
 
   function colourRow(id, c, i) {
     var shots = c.images || [];
-    return '<div class="mm-ds-col">' +
-      '<span class="mm-ds-colsw" style="background:' +
-        U.esc(c.swatch || '#999') + '" aria-hidden="true"></span>' +
-      '<span class="mm-ds-colname">' + U.esc(c.name) + '</span>' +
-      '<span class="mm-ds-colshots">' +
-        (shots.length
-          ? shots.slice(0, 4).map(function (u) {
-              return '<img src="' + U.esc(u) + '" alt="">';
-            }).join('') +
-            (shots.length > 4
-              ? '<span class="mm-ds-colmore">+' + (shots.length - 4) + '</span>'
-              : '')
-          : '<span class="mm-ds-colnone">No photo</span>') +
-      '</span>' +
-      '<button type="button" class="mm-ds-colx" ' +
-        'data-rmcol="' + U.esc(id) + '.' + i + '" ' +
-        'aria-label="Remove ' + U.esc(c.name) + '">&times;</button>' +
+    var key = id + '.' + i;
+    // Opened in place, so its photographs can be changed without deleting
+    // the colour and adding it again -- which was the only way before.
+    var isOpen = editCol === key;
+
+    return '<div class="mm-ds-col' + (isOpen ? ' is-editing' : '') + '">' +
+      '<div class="mm-ds-colhead">' +
+        '<span class="mm-ds-colsw" style="background:' +
+          U.esc(c.swatch || '#999') + '" aria-hidden="true"></span>' +
+        '<span class="mm-ds-colname">' + U.esc(c.name) + '</span>' +
+        '<span class="mm-ds-colshots">' +
+          (shots.length
+            ? shots.slice(0, 4).map(function (u) {
+                return '<img src="' + U.esc(u) + '" alt="">';
+              }).join('') +
+              (shots.length > 4
+                ? '<span class="mm-ds-colmore">+' + (shots.length - 4) + '</span>'
+                : '')
+            : '<span class="mm-ds-colnone">No photo</span>') +
+        '</span>' +
+        '<button type="button" class="mm-ds-colicon" ' +
+          'data-editcol="' + U.esc(key) + '" ' +
+          'aria-label="Edit ' + U.esc(c.name) + '">' +
+          (isOpen ? '&#9652;' : '&#9998;') + '</button>' +
+        '<button type="button" class="mm-ds-colicon mm-ds-colx" ' +
+          'data-rmcol="' + U.esc(key) + '" ' +
+          'aria-label="Remove ' + U.esc(c.name) + '">&times;</button>' +
+      '</div>' +
+
+      (isOpen
+        ? '<div class="mm-ds-coledit">' +
+            (shots.length
+              ? '<div class="mm-ds-shots">' +
+                  shots.map(function (u, j) {
+                    return '<span class="mm-ds-shot">' +
+                      '<img src="' + U.esc(u) + '" alt="">' +
+                      '<button type="button" class="mm-ds-x" ' +
+                        'data-rmcolshot="' + U.esc(key) + '.' + j + '" ' +
+                        'aria-label="Remove this photo">&times;</button>' +
+                    '</span>';
+                  }).join('') +
+                '</div>'
+              : '') +
+            '<div class="mm-btn-row">' +
+              '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+                'data-upcolshot="' + U.esc(key) + '"' +
+                (busy ? ' disabled' : '') + '>' +
+                '&#128193; ' + (shots.length ? 'Add more photos' : 'Upload photos') +
+                '</button>' +
+              '<button type="button" class="mm-btn-sm mm-btn-secondary" ' +
+                'data-donecol="1"' + (busy ? ' disabled' : '') + '>Done</button>' +
+            '</div>' +
+          '</div>'
+        : '') +
     '</div>';
   }
 
@@ -597,7 +635,10 @@ window.MM = window.MM || {};
         var id = b.getAttribute('data-toggle');
         open[id] = !open[id];
         // Closing a style puts away any colour form it had open.
-        if (!open[id] && colourFor === id) { colourFor = null; colourDraft = null; }
+        if (!open[id]) {
+          if (colourFor === id) { colourFor = null; colourDraft = null; }
+          if (editCol && editCol.indexOf(id + '.') === 0) editCol = null;
+        }
         render();
       });
     });
@@ -738,10 +779,48 @@ window.MM = window.MM || {};
     var cadd = el.querySelector('#mm-ds-coladd');
     if (cadd) cadd.addEventListener('click', addColour);
 
+    el.querySelectorAll('[data-editcol]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var key = b.getAttribute('data-editcol');
+        editCol = editCol === key ? null : key;
+        render();
+      });
+    });
+
+    var doneCol = el.querySelector('[data-donecol]');
+    if (doneCol) doneCol.addEventListener('click', function () {
+      editCol = null;
+      render();
+    });
+
+    el.querySelectorAll('[data-upcolshot]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var key = b.getAttribute('data-upcolshot');
+        var p = key.split('.');
+        var col = draftFor(p[0]).colors[+p[1]];
+        if (!col) return;
+        if (!col.images) col.images = [];
+        pickFiles(function (files) {
+          uploadInto(files, col.images, '[data-upcolshot="' + key + '"]');
+        });
+      });
+    });
+
+    el.querySelectorAll('[data-rmcolshot]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var p = b.getAttribute('data-rmcolshot').split('.');
+        var col = draftFor(p[0]).colors[+p[1]];
+        if (col && col.images) col.images.splice(+p[2], 1);
+        render();
+      });
+    });
+
     el.querySelectorAll('[data-rmcol]').forEach(function (b) {
       b.addEventListener('click', function () {
         var p = b.getAttribute('data-rmcol').split('.');
         draftFor(p[0]).colors.splice(+p[1], 1);
+        // The one being edited has just moved or gone.
+        editCol = null;
         render();
       });
     });

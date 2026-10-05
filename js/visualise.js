@@ -224,67 +224,54 @@ window.MM = window.MM || {};
   // door help; a long list starts to crowd out the room.
   var MAX_REFS = 4;
 
-  // ---- The paint colours -----------------------------------------------
+  // ---- The colour --------------------------------------------------------
   //
-  // Written here rather than set up by hand, because they are the same list
-  // for everybody and typing twenty-three names is how names get mistyped.
-  // The NAME is what the AI is told -- "paint them Pitch Black" -- so it has
-  // to match what the manufacturer calls it.
+  // The colours of the STYLE that was chosen, not one shared palette:
+  // Catalina comes in Black Gloss and Clubhouse Oak, Fusion in Dove and
+  // Pitch Black. They are set up per style on the Door Styles page.
   //
-  // The swatch is only so the list is recognisable on screen. The door's own
-  // photographs carry the shape; this carries the colour.
-  //
-  // Paints only. A stain or a gloss is a material rather than a colour, and
-  // a word does not produce wood grain -- those need a photograph of their
-  // own, which is a thing to add if it is ever actually asked for.
-  var COLOURS = [
-    { name: 'Frost', swatch: '#f2f0ea' },
-    { name: 'Dove', swatch: '#efebe0' },
-    { name: 'Linen', swatch: '#e8e3d5' },
-    { name: 'Cloud White', swatch: '#eeece5' },
-    { name: 'Macadamia Beige', swatch: '#e2d6bd' },
-    { name: 'Oyster', swatch: '#c2ab8f' },
-    { name: 'Repose Gray', swatch: '#cbc7bd' },
-    { name: 'Nickel', swatch: '#b4b5ae' },
-    { name: 'Stone', swatch: '#8d8178' },
-    { name: 'Mint Green', swatch: '#dde3d9' },
-    { name: 'Pistachio Green', swatch: '#b4bda7' },
-    { name: 'Sage Green', swatch: '#b3c4b4' },
-    { name: 'Pewter Green', swatch: '#5f6355' },
-    { name: 'Forest Green', swatch: '#5c6354' },
-    { name: 'Hunter Green', swatch: '#3c4634' },
-    { name: 'Izel Blue', swatch: '#7fa3bb' },
-    { name: 'Denim Blue', swatch: '#4a6e8c' },
-    { name: 'Naval', swatch: '#2f3e52' },
-    { name: 'Indigo', swatch: '#2b3440' },
-    { name: 'Orchid Purple', swatch: '#d9bdd4' },
-    { name: 'Cabernet Red', swatch: '#6d1f2a' },
-    { name: 'Graphite Black', swatch: '#33352f' },
-    { name: 'Pitch Black', swatch: '#1c1c1e' },
-  ];
+  // Each one carries its own photographs, and those go to the AI alongside
+  // the door's. A name alone cannot describe a gloss or a wood grain; the
+  // picture can.
 
-  // Which colour is chosen, if any. Empty means "leave the doors the colour
-  // the reference photographs show", which is a real answer: someone fitting
-  // Nexus Linen wants it linen.
+  // Which colour is chosen, by name. Empty means "as the door photos show",
+  // which is a real answer rather than an absence of one.
   var colour = '';
 
+  function colourList() {
+    var s = styles.find(function (x) { return String(x.id) === styleId; });
+    return (s && s.colors) || [];
+  }
+
   function stepColour() {
+    var cols = colourList();
+
+    // Nothing to choose from until a style is picked, and nothing worth
+    // showing for a style that has none.
+    if (!styleId) return '';
+    if (!cols.length) {
+      return '<div class="mm-vz-step">' +
+        '<div class="mm-vz-head"><span class="mm-vz-n">3</span>' +
+          '<span class="mm-vz-title">Colour</span></div>' +
+        '<p class="mm-vz-hint">This style has no colours yet. Add them on ' +
+          'the <strong>Door Styles</strong> page.</p>' +
+      '</div>';
+    }
+
     return '<div class="mm-vz-step">' +
       '<div class="mm-vz-head"><span class="mm-vz-n">3</span>' +
         '<span class="mm-vz-title">Colour</span></div>' +
       '<div class="mm-vz-cols">' +
-        '<button type="button" class="mm-vz-col mm-vz-colnone' +
-            (colour ? '' : ' is-on') + '" data-col=""' +
-            (busy ? ' disabled' : '') + '>' +
-          '<span class="mm-vz-colname">As the photo</span>' +
-        '</button>' +
-        COLOURS.map(function (c) {
+        cols.map(function (c) {
+          var shot = (c.images || [])[0];
           return '<button type="button" class="mm-vz-col' +
               (c.name === colour ? ' is-on' : '') + '" ' +
               'data-col="' + U.esc(c.name) + '"' +
               (busy ? ' disabled' : '') + '>' +
-            '<span class="mm-vz-colsw" style="background:' +
-              U.esc(c.swatch) + '" aria-hidden="true"></span>' +
+            (shot
+              ? '<img class="mm-vz-colshot" src="' + U.esc(shot) + '" alt="">'
+              : '<span class="mm-vz-colsw" style="background:' +
+                U.esc(c.swatch || '#999') + '" aria-hidden="true"></span>') +
             '<span class="mm-vz-colname">' + U.esc(c.name) + '</span>' +
           '</button>';
         }).join('') +
@@ -499,7 +486,13 @@ window.MM = window.MM || {};
     var s = styles.find(function (x) { return String(x.id) === styleId; });
     if (!shots.length || !s) return;
 
-    var refs = (s.images || []).slice(0, MAX_REFS);
+    // The colour's own photographs lead, because they show the door in the
+    // finish being sold -- shape and colour together. The style's plain
+    // photos follow as backup for a colour that has none.
+    var chosen = colourList().find(function (c) { return c.name === colour; });
+    var refs = ((chosen && chosen.images) || [])
+      .concat(s.images || [])
+      .slice(0, MAX_REFS);
     if (!refs.length) { say('That door style has no photos.', true); return; }
 
     busy = true;
@@ -706,6 +699,9 @@ window.MM = window.MM || {};
     el.querySelectorAll('[data-style]').forEach(function (b) {
       b.addEventListener('click', function () {
         styleId = b.getAttribute('data-style');
+        // Each style has its own colours, so one chosen for another style
+        // means nothing here.
+        colour = '';
         render();
       });
     });

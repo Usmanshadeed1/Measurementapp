@@ -87,9 +87,27 @@
 
 .mm-ds-cols{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
 
-.mm-ds-col{display:flex;align-items:center;gap:10px;padding:8px 10px;
-  border:1px solid var(--border);border-radius:10px;background:var(--card2);
+.mm-ds-col{border:1px solid var(--border);border-radius:10px;
+  background:var(--card2);min-width:0}
+.mm-ds-col.is-editing{border-color:var(--accent)}
+.mm-ds-colhead{display:flex;align-items:center;gap:10px;padding:8px 10px;
   min-width:0}
+
+/* Opened in place, so photographs can be changed without deleting the
+   colour and adding it again. */
+.mm-ds-coledit{padding:0 10px 10px;border-top:1px solid var(--divider);
+  margin-top:2px;padding-top:10px}
+
+.mm-ds-colicon{flex:0 0 auto;width:32px;height:32px;padding:0;border:none;
+  border-radius:50%;background:none;color:var(--text2);
+  font-family:inherit;font-size:0.95em;line-height:1;cursor:pointer;opacity:.6}
+.mm-ds-col:hover .mm-ds-colicon{opacity:.95}
+.mm-ds-colicon:hover{background:var(--card);color:var(--accent);opacity:1}
+.mm-ds-colicon:focus-visible{opacity:1;
+  outline:3px solid var(--accent);outline-offset:2px}
+@media (hover: none){
+  .mm-ds-colicon{opacity:.8}
+}
 
 .mm-ds-colsw{flex:0 0 auto;width:20px;height:20px;border-radius:50%;
   border:1px solid color-mix(in srgb,var(--text2) 40%,transparent);
@@ -105,11 +123,7 @@
 /* A colour with no photograph cannot show the AI its finish. */
 .mm-ds-colnone{font-size:0.7em;font-weight:700;color:#f0a02a}
 
-.mm-ds-colx{flex:0 0 auto;width:32px;height:32px;padding:0;border:none;
-  border-radius:50%;background:none;color:var(--text2);
-  font-size:1.1em;line-height:1;cursor:pointer}
 .mm-ds-colx:hover{background:var(--danger-bg);color:var(--danger-text)}
-.mm-ds-colx:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 /* ---- Adding a colour ---- */
 
@@ -164,7 +178,7 @@
   .mm-ds-strip{padding:0 10px 10px}
   .mm-ds-shot{width:68px}
   .mm-ds-formfoot .mm-btn-sm{flex:1 1 0;min-width:0}
-  .mm-ds-col{flex-wrap:wrap}
+  .mm-ds-colhead{flex-wrap:wrap}
   .mm-ds-colname{flex:1 1 100%;order:-1}
 }
 
