@@ -161,21 +161,27 @@ function buildImagePrompt(custom, styleName, styleNotes, extra, roomCount, colou
   // knows which of the images are the room and which are the doors. Several
   // angles of one kitchen give it more to keep unchanged.
   var n = roomCount || 1;
+
+  // The door photographs are described as they really are. They used to be
+  // called "close-ups of the door", but a finish photographed by the
+  // manufacturer is usually a whole showroom kitchen -- and telling the
+  // model "close-up" while handing it a second kitchen left it working out
+  // which room was the customer's. That was slow, and it is how a showroom
+  // ends up in the result.
+  var refs = '\n\nEVERY IMAGE AFTER THAT shows the cabinet door to fit, in ' +
+    'the finish to use. It may be a close-up of one door, or a showroom ' +
+    'kitchen fitted with it. Either way take ONLY the cabinet doors from ' +
+    'it -- their panel, edge, colour and finish. Its room, layout, ' +
+    'worktops, floor and lighting are NOT the customer\'s and must not ' +
+    'appear in your result.';
+
   var rooms = n > 1
     ? 'IMAGES 1 to ' + n + ' are photographs of ONE real room in a ' +
       'customer\'s home, taken from different angles. Your result must be ' +
       'IMAGE 1, edited. The others are only there to show you more of the ' +
-      'same room; never mix them together into one picture.' +
-      '\n\nEVERY IMAGE AFTER THAT is a close-up of the cabinet door to fit. ' +
-      'Those are product photographs, not rooms. Nothing in them — no ' +
-      'background, no surroundings — appears in your result. Only the door ' +
-      'itself is copied.'
+      'same room; never mix them together into one picture.' + refs
     : 'IMAGE 1 is a photograph of a real room in a customer\'s home. Your ' +
-      'result is that photograph, edited.' +
-      '\n\nEVERY IMAGE AFTER IT is a close-up of the cabinet door to fit. ' +
-      'Those are product photographs, not rooms. Nothing in them — no ' +
-      'background, no surroundings — appears in your result. Only the door ' +
-      'itself is copied.';
+      'result is that photograph, edited.' + refs.replace('AFTER THAT', 'AFTER IT');
   body = body.split('{rooms}').join(rooms);
 
   let style = styleName || 'the reference doors';
@@ -380,59 +386,48 @@ async function drawWithKie(cfg, prompt, images) {
   const taskId = (started.data && started.data.taskId) || started.taskId;
   if (!taskId) throw new Error(readError(startText));
 
-  // Asked for repeatedly until the picture is ready.
-  //
-  // Vercel kills a function at 300 seconds, so this stops at 240 and says
-  // so: being cut off mid-request gives a blank page with no explanation,
-  // and the picture has usually been paid for by then either way.
-  //
-  // The first check comes quickly and they slow down after that. A fast
-  // model is finished in a few seconds, and waiting three of them to ask is
-  // three seconds of someone standing in a customer's kitchen watching a
-  // button say "Working on it".
-  const until = Date.now() + 240000;
-  let wait = 1200;
-  while (Date.now() < until) {
-    await new Promise((done) => setTimeout(done, wait));
-    if (wait < 4000) wait += 400;
+  // Handed straight back. The browser does the waiting, a few seconds at a
+  // time, rather than this function: a request that waits for the picture
+  // is killed by Vercel at five minutes, and a slow render was being thrown
+  // away AFTER the provider had already charged for it.
+  return { taskId };
+}
 
-    const look = await fetch(
-      'https://api.kie.ai/api/v1/jobs/recordInfo?taskId=' +
-        encodeURIComponent(taskId),
-      { headers: { Authorization: 'Bearer ' + cfg.key } }
-    );
-    const lookText = await look.text();
-    if (!look.ok) continue;
+// One look at a render that is under way. Quick, so it can be asked as
+// often as needed with no time limit to run into.
+async function checkKie(cfg, taskId) {
+  const look = await fetch(
+    'https://api.kie.ai/api/v1/jobs/recordInfo?taskId=' +
+      encodeURIComponent(taskId),
+    { headers: { Authorization: 'Bearer ' + cfg.key } }
+  );
+  const lookText = await look.text();
+  // A hiccup on their side is not a failed render: say "still working" and
+  // let the next check find out.
+  if (!look.ok) return { working: true };
 
-    let info;
-    try { info = JSON.parse(lookText); } catch (e) { continue; }
+  let info;
+  try { info = JSON.parse(lookText); } catch (e) { return { working: true }; }
 
-    const d = info.data || {};
-    const state = String(d.state || d.status || '').toLowerCase();
+  const d = info.data || {};
+  const state = String(d.state || d.status || '').toLowerCase();
 
-    if (state === 'success') {
-      let urlsOut = [];
-      try {
-        const j = typeof d.resultJson === 'string'
-          ? JSON.parse(d.resultJson) : (d.resultJson || {});
-        urlsOut = j.resultUrls || j.result_urls || [];
-      } catch (e) { urlsOut = []; }
-      if (!urlsOut.length) throw new Error('The provider returned no picture.');
-      return { images: urlsOut, note: '' };
-    }
-
-    if (state === 'fail' || state === 'failed') {
-      throw new Error(d.failMsg || d.failmsg || 'The provider could not draw it.');
-    }
+  if (state === 'success') {
+    let urlsOut = [];
+    try {
+      const j = typeof d.resultJson === 'string'
+        ? JSON.parse(d.resultJson) : (d.resultJson || {});
+      urlsOut = j.resultUrls || j.result_urls || [];
+    } catch (e) { urlsOut = []; }
+    if (!urlsOut.length) throw new Error('The provider returned no picture.');
+    return { images: urlsOut };
   }
 
-  // The provider is still working and the credits are already spent, so
-  // this says what actually helps rather than "try again".
-  throw new Error(
-    'The picture took too long and had to be given up on. Try one room ' +
-    'photo instead of several, or switch to Nano Banana Pro in Settings — ' +
-    'it is faster.'
-  );
+  if (state === 'fail' || state === 'failed') {
+    throw new Error(d.failMsg || d.failmsg || 'The provider could not draw it.');
+  }
+
+  return { working: true };
 }
 
 // A provider's own words help -- a wrong model and a flat balance read very
@@ -761,6 +756,24 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // One look at a render under way. The browser asks this every few
+    // seconds until the picture is there.
+    if (req.method === 'POST' && action === 'visualise-check') {
+      const cfg = await readImageConfig();
+      if (!cfg || !cfg.key) {
+        return res.status(400).json({ error: 'Visualising is not set up.' });
+      }
+      const taskId = String(body.taskId || '').trim().slice(0, 120);
+      if (!taskId) return res.status(400).json({ error: 'No task to check.' });
+
+      try {
+        const out = await checkKie(cfg, taskId);
+        return res.status(200).json(out);
+      } catch (e) {
+        return res.status(400).json({ error: e.message });
+      }
+    }
+
     if (req.method === 'POST' && action === 'visualise') {
       const cfg = await readImageConfig();
       if (!cfg || !cfg.key) {
@@ -800,9 +813,14 @@ export default async function handler(req, res) {
       const images = rooms.concat(refs).slice(0, 10);
 
       try {
-        const out = who === 'kie'
-          ? await drawWithKie(cfg, prompt, images)
-          : await drawWithGemini(cfg, prompt, images);
+        // Kie answers with a job number, and the browser checks back for the
+        // picture -- see checkKie. Google answers with the picture itself.
+        if (who === 'kie') {
+          const started = await drawWithKie(cfg, prompt, images);
+          return res.status(200).json({ taskId: started.taskId });
+        }
+
+        const out = await drawWithGemini(cfg, prompt, images);
 
         if (!out.images.length) {
           // A refusal explains itself in the text, and that explanation is

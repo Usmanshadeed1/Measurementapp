@@ -492,14 +492,11 @@ window.MM = window.MM || {};
           }),
         });
       })
-      .then(function (r) {
-        return r.text().then(function (t) {
-          var d;
-          try { d = t ? JSON.parse(t) : {}; } catch (e) { d = {}; }
-          if (!r.ok) throw new Error(d.error || 'The AI did not answer.');
-          return d;
-        });
-      })
+      .then(readAnswer)
+      // A provider that queues the work answers with a job number rather
+      // than a picture; wait for it here. Google answers with the picture,
+      // and that passes straight through.
+      .then(function (d) { return d.taskId ? waitFor(d.taskId) : d; })
       .then(function (d) {
         results = (d.images || []).map(function (u) {
           return { url: u, saved: false };
@@ -522,6 +519,55 @@ window.MM = window.MM || {};
         busy = false;
         say(e.message, true);
       });
+  }
+
+  function readAnswer(r) {
+    return r.text().then(function (t) {
+      var d;
+      try { d = t ? JSON.parse(t) : {}; } catch (e) { d = {}; }
+      if (!r.ok) throw new Error(d.error || 'The AI did not answer.');
+      return d;
+    });
+  }
+
+  // Waiting for a queued picture, a few seconds at a time.
+  //
+  // This used to happen on the server, inside the one request that started
+  // the work -- and Vercel ends any request at five minutes. A render that
+  // ran long was thrown away there, AFTER the provider had already charged
+  // for it. Asking from here, each check is over in a moment, so there is
+  // no ceiling to hit and nothing paid for is ever lost.
+  //
+  // The limit below is about people, not machines: past ten minutes it is
+  // fair to say something has gone wrong.
+  var GIVE_UP_AFTER = 10 * 60 * 1000;
+
+  function waitFor(taskId) {
+    var until = Date.now() + GIVE_UP_AFTER;
+    var gap = 2000;
+
+    function look() {
+      if (Date.now() > until) {
+        throw new Error('This one is taking far longer than usual. It may ' +
+          'still finish — check the provider’s logs before trying again, ' +
+          'so it is not paid for twice.');
+      }
+      return new Promise(function (done) { setTimeout(done, gap); })
+        .then(function () {
+          // Quick at first, when a fast model is likely to be done, then
+          // easing off so a slow one is not asked a hundred times.
+          if (gap < 5000) gap += 500;
+          return fetch('/api/ai?action=visualise-check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId: taskId }),
+          });
+        })
+        .then(readAnswer)
+        .then(function (d) { return d.working ? look() : d; });
+    }
+
+    return look();
   }
 
   // The room photos and the door photos, in whatever form the chosen
