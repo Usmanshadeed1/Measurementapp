@@ -298,6 +298,12 @@ texting and email all live. Explained under "Calling and messaging".
 
 **Room measurement** — the original tool, unchanged.
 
+**Leads from the Google Sheet** (live 5 Oct 2026) — not part of the app.
+A Google Apps Script in the marketing team's sheet uses Groq AI to clean
+each new row, then sends it to a GHL Inbound Webhook workflow. That creates
+the contact, and WF-1 creates the job. See
+[tools/sheet-sync/README.md](tools/sheet-sync/README.md).
+
 ## Calling and messaging
 
 **Why the app does not place calls itself.** GoHighLevel has no API for

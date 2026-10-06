@@ -130,6 +130,24 @@ statuses and created the task; the dashboard reflected it on refresh.
 
 ---
 
+## Sheet leads — Google Sheet → GHL ✅ LIVE 5 Oct 2026
+
+**Trigger:** Inbound Webhook (premium), fed by a Google Apps Script inside
+the marketing team's leads sheet.
+
+**Action:** Create/Update Contact. Fields are mapped from *Inbound Webhook
+Trigger*. No emails or other actions, at the client's request.
+
+A new contact then fires **WF-1** as usual, which creates the job. An existing
+contact (same phone/email) is updated instead, so no job is created.
+
+The script uses **Groq AI** (Maximus Digital Marketing account key) to clean
+messy rows. It only sends rows marked Ready, and only while cell O1 on the
+Clean tab says ON. Full details:
+[tools/sheet-sync/README.md](../../tools/sheet-sync/README.md).
+
+---
+
 ## Date-driven progress (Aug 2026 direction change)
 
 The client clarified he does **not** want to work in GoHighLevel: *"I'm not
