@@ -307,7 +307,8 @@ window.MM = window.MM || {};
   var shownId = null;
 
   // The heading over the list, with the way to add another job for this
-  // customer. Admins only, like + New, which opens the same form.
+  // customer. Admins only, like + New, which opens the same form -- so a job
+  // made here is named and addressed exactly like one made from the dashboard.
   function jobsHeader(count, withAdd) {
     return '<div class="section-header">' +
       '<span class="section-title">Jobs</span>' +
