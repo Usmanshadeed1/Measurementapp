@@ -472,7 +472,7 @@
 }
 
 /* A customer's job count and + Add job, kept together on the right of the
-   Jobs heading rather than spread across it. */
+   Jobs heading rather than spread across it -- on the contact page. */
 .mm-cj-side{display:flex;align-items:center;gap:10px;margin-left:auto}
 
 /* The stage badge in the Job details header is the control for changing it.
