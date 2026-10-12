@@ -241,6 +241,7 @@ window.MM = window.MM || {};
   }
 
   function renderContactDetail(c) {
+    shownId = c.id;
     var name = U.titleCase(c.contactName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name) || 'Unnamed Contact';
     document.getElementById('mm-contact-title').textContent = name;
 
@@ -288,7 +289,7 @@ window.MM = window.MM || {};
       (details || '<div class="mm-empty">No details on file.</div>');
     el.classList.add('mm-steps-card');
 
-    renderJobs(c.id);
+    renderJobs(c);
     if (window.MM.wireJobPanels) window.MM.wireJobPanels('#screen-contact');
   }
 
@@ -301,7 +302,45 @@ window.MM = window.MM || {};
   var onOpenJob = null;
   var onDeleted = null;
 
-  function renderJobs(contactId) {
+  // Which customer is on screen, so a reload due after a job is created does
+  // not land on a different customer opened in the meantime.
+  var shownId = null;
+
+  // The heading over the list, with the way to add another job for this
+  // customer. Admins only, like + New, which opens the same form.
+  function jobsHeader(count, withAdd) {
+    return '<div class="section-header">' +
+      '<span class="section-title">Jobs</span>' +
+      '<span class="mm-cj-side">' +
+        (count ? '<span class="mm-mygroup-count">' + count + '</span>' : '') +
+        (withAdd && auth.isAdmin()
+          ? '<button type="button" class="mm-btn-sm mm-btn-primary" id="mm-cj-add">+ Add job</button>'
+          : '') +
+      '</span>' +
+    '</div>';
+  }
+
+  function wireAddJob(c) {
+    var btn = document.getElementById('mm-cj-add');
+    if (!btn || !window.MM.newjob) return;
+    btn.addEventListener('click', function () {
+      window.MM.newjob.openFor(c, function () {
+        // GoHighLevel's search lags a write by a second or two; a list
+        // reloaded at once would not show the job just made.
+        var el = document.getElementById('mm-contact-jobs');
+        if (el) {
+          el.innerHTML = jobsHeader(0, false) + '<div class="mm-loading">' +
+            '<span class="mm-spinner" aria-hidden="true"></span>' +
+            '<span>Saving the new job&hellip;</span></div>';
+        }
+        setTimeout(function () {
+          if (shownId === c.id) renderJobs(c);
+        }, 2500);
+      });
+    });
+  }
+
+  function renderJobs(c) {
     var el = document.getElementById('mm-contact-jobs');
     if (!el) return;
     el.innerHTML = '<div class="mm-empty">Loading jobs...</div>';
@@ -310,13 +349,13 @@ window.MM = window.MM || {};
     api.fetchAllOpportunities()
       .then(function (ops) {
         var mine = (ops || []).filter(function (o) {
-          return o.pipelineId === api.SALES_PIPELINE_ID && o.contactId === contactId;
+          return o.pipelineId === api.SALES_PIPELINE_ID && o.contactId === c.id;
         });
 
         if (!mine.length) {
-          el.innerHTML =
-            '<div class="section-header"><span class="section-title">Jobs</span></div>' +
+          el.innerHTML = jobsHeader(0, true) +
             '<p class="mm-task-empty">This customer has no jobs yet.</p>';
+          wireAddJob(c);
           return;
         }
 
@@ -324,11 +363,7 @@ window.MM = window.MM || {};
         // current one, not the kitchen they had done three years ago.
         mine.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
 
-        el.innerHTML =
-          '<div class="section-header">' +
-            '<span class="section-title">Jobs</span>' +
-            '<span class="mm-mygroup-count">' + mine.length + '</span>' +
-          '</div>' +
+        el.innerHTML = jobsHeader(mine.length, true) +
           mine.map(function (o) {
             var stage = window.MM.dashboard.stageNameFor(o);
             return '<button type="button" class="mm-myjob" data-job="' + U.esc(o.id) + '">' +
@@ -346,10 +381,12 @@ window.MM = window.MM || {};
             if (o && onOpenJob) onOpenJob(o);
           });
         });
+        wireAddJob(c);
       })
       .catch(function (e) {
-        el.innerHTML = '<div class="section-header"><span class="section-title">Jobs</span></div>' +
+        el.innerHTML = jobsHeader(0, true) +
                        '<div class="mm-empty">' + U.esc(e.message) + '</div>';
+        wireAddJob(c);
       });
   }
 

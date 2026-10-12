@@ -16,6 +16,9 @@ window.MM = window.MM || {};
   var contacts = [];
   var picked = null;
   var onCreated = null;
+  // Set by openFor(): the contact page refreshes its own job list rather than
+  // the dashboard. Cleared on every open, so it never leaks into the next one.
+  var afterThis = null;
 
   function nameOf(c) {
     return U.titleCase(c.contactName ||
@@ -56,6 +59,7 @@ window.MM = window.MM || {};
 
   function open() {
     picked = null;
+    afterThis = null;
     document.getElementById('mm-nj-error').textContent = '';
     document.getElementById('mm-nj-search').value = '';
     ['mm-nj-address', 'mm-nj-city', 'mm-nj-state', 'mm-nj-postal']
@@ -67,6 +71,15 @@ window.MM = window.MM || {};
 
     search('');
     document.getElementById('mm-nj-search').focus();
+  }
+
+  // The same form, opened from a customer's own page: they are already known,
+  // so it starts at the address step. "Change" still works, because open()
+  // has loaded the customer list behind it.
+  function openFor(c, after) {
+    open();
+    afterThis = after || null;
+    choose(c);
   }
 
   function close() {
@@ -194,7 +207,8 @@ window.MM = window.MM || {};
 
         close();
         btn.disabled = false; btn.textContent = 'Create job';
-        if (onCreated) onCreated(opp);
+        var done = afterThis || onCreated;
+        if (done) done(opp);
       })
       .catch(function (e) {
         btn.disabled = false; btn.textContent = 'Create job';
@@ -226,5 +240,5 @@ window.MM = window.MM || {};
     });
   }
 
-  window.MM.newjob = { init: init, open: open };
+  window.MM.newjob = { init: init, open: open, openFor: openFor };
 })();
