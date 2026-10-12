@@ -73,8 +73,8 @@ window.MM = window.MM || {};
     document.getElementById('mm-nj-search').focus();
   }
 
-  // The same form, opened from a customer's own page: they are already known,
-  // so it starts at the address step. "Change" still works, because open()
+  // The same form, opened from a customer's own page (+ Add job): they are
+  // already known, so it starts at the address step. "Change" still works, because open()
   // has loaded the customer list behind it.
   function openFor(c, after) {
     open();
