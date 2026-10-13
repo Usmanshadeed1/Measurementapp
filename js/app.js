@@ -139,7 +139,8 @@
     var own = jobAddress(o);
     if (own) {
       return '<div class="mm-field-display"><div class="flabel">Address</div>' +
-        '<div class="fvalue">' + U.esc(own) + '</div></div>';
+        '<div class="fvalue" id="mm-job-addr" data-job="' + U.esc(o.id) + '">' +
+          U.esc(own) + '</div></div>';
     }
     // Only what the slim contact actually carries. When it has no address
     // parts the dash stands, and the edit form offers the full one.
@@ -160,6 +161,33 @@
   //
   // Same rule the dashboard uses, so one job never reads two ways.
   function jobAddress(o) { return api.jobAddressLine(o); }
+
+  // Jobs made by the GoHighLevel workflow carry only the street; the town,
+  // state and zip are on the customer. When the customer's street is the
+  // job's street, it is the same property, so their town and zip complete
+  // the line. A different street is another property, and is left alone
+  // rather than given the wrong town. Read only: nothing is saved anywhere.
+  function completeJobAddress(o, c) {
+    var p = api.jobAddressParts(o);
+    if (p.city || p.state || p.postal || !c || !c.id) return;
+    var street = api.jobStreet(o);
+    if (!street) return;
+
+    var same = function (a, b) {
+      var k = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+      return k(a) && k(a) === k(b);
+    };
+
+    api.getContact(c.id).then(function (full) {
+      if (!full || !same(full.address1, street)) return;
+      var tail = [full.state, full.postalCode].filter(Boolean).join(' ');
+      if (!full.city && !tail) return;
+      var el = document.getElementById('mm-job-addr');
+      // The person may have opened another job while this was loading.
+      if (!el || el.getAttribute('data-job') !== o.id) return;
+      el.textContent = [street, full.city, tail].filter(Boolean).join(', ');
+    }).catch(function () { /* the street alone stays, as before */ });
+  }
 
   // ===== JOB =====
   // ---- Collapsible job panels ---------------------------------------------
@@ -335,6 +363,7 @@
           '</div></div>' : '') +
       addressLine(o, c) +
       '<div class="mm-field-display"><div class="flabel">Job ID</div><div class="fvalue mono">' + U.esc(o.id) + '</div></div>';
+    completeJobAddress(o, c);
 
     var editBtn = document.getElementById('mm-job-edit-btn');
     if (editBtn) editBtn.addEventListener('click', function (e) {
