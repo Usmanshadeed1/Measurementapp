@@ -138,9 +138,15 @@
   function addressLine(o, c) {
     var own = jobAddress(o);
     if (own) {
+      // Already known: the full line straight away. Still being read: the
+      // street is held invisible, keeping its space, so the line appears once
+      // complete instead of changing in front of the person.
+      var known = fullJobAddress(o, cachedContact(c && c.id));
+      var waiting = !known && needsCompleting(o, c);
       return '<div class="mm-field-display"><div class="flabel">Address</div>' +
-        '<div class="fvalue" id="mm-job-addr" data-job="' + U.esc(o.id) + '">' +
-          U.esc(own) + '</div></div>';
+        '<div class="fvalue" id="mm-job-addr" data-job="' + U.esc(o.id) + '"' +
+          (waiting ? ' style="visibility:hidden"' : '') + '>' +
+          U.esc(known || own) + '</div></div>';
     }
     // Only what the slim contact actually carries. When it has no address
     // parts the dash stands, and the edit form offers the full one.
@@ -167,26 +173,53 @@
   // job's street, it is the same property, so their town and zip complete
   // the line. A different street is another property, and is left alone
   // rather than given the wrong town. Read only: nothing is saved anywhere.
-  function completeJobAddress(o, c) {
+  // Customers already read in full, by id, so reopening a job is instant.
+  // Kept five minutes, so an address changed elsewhere is not shown stale
+  // for long; an edit made from the job itself clears it at once.
+  var fullContacts = {};
+  var CONTACT_KEEP_MS = 5 * 60 * 1000;
+  function cachedContact(id) {
+    var hit = id && fullContacts[id];
+    return hit && Date.now() - hit.at < CONTACT_KEEP_MS ? hit.c : null;
+  }
+
+  function needsCompleting(o, c) {
     var p = api.jobAddressParts(o);
-    if (p.city || p.state || p.postal || !c || !c.id) return;
+    return !(p.city || p.state || p.postal) && !!(c && c.id) && !!api.jobStreet(o);
+  }
+
+  // The job's street with the customer's town, state and zip -- or '' when
+  // the customer lives on a different street, or has no town or zip.
+  function fullJobAddress(o, full) {
+    if (!full || !needsCompleting(o, full)) return '';
+    var k = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
     var street = api.jobStreet(o);
-    if (!street) return;
+    if (!k(street) || k(full.address1) !== k(street)) return '';
+    var tail = [full.state, full.postalCode].filter(Boolean).join(' ');
+    if (!full.city && !tail) return '';
+    return [street, full.city, tail].filter(Boolean).join(', ');
+  }
 
-    var same = function (a, b) {
-      var k = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
-      return k(a) && k(a) === k(b);
-    };
+  function completeJobAddress(o, c) {
+    if (!needsCompleting(o, c) || cachedContact(c.id)) return;
 
-    api.getContact(c.id).then(function (full) {
-      if (!full || !same(full.address1, street)) return;
-      var tail = [full.state, full.postalCode].filter(Boolean).join(' ');
-      if (!full.city && !tail) return;
+    var shown = false;
+    function show(text) {
+      if (shown) return;
+      shown = true;
       var el = document.getElementById('mm-job-addr');
       // The person may have opened another job while this was loading.
       if (!el || el.getAttribute('data-job') !== o.id) return;
-      el.textContent = [street, full.city, tail].filter(Boolean).join(', ');
-    }).catch(function () { /* the street alone stays, as before */ });
+      if (text) el.textContent = text;
+      el.style.visibility = '';
+    }
+    // GoHighLevel being slow never leaves the line blank: the street shows.
+    setTimeout(function () { show(''); }, 2000);
+
+    api.getContact(c.id).then(function (full) {
+      if (full) fullContacts[c.id] = { c: full, at: Date.now() };
+      show(fullJobAddress(o, full));
+    }).catch(function () { show(''); });
   }
 
   // ===== JOB =====
@@ -387,6 +420,7 @@
               o.customFields = freshJob.customFields;
             }
             if (freshContact) o.contact = freshContact;
+            if (c.id) delete fullContacts[c.id];
             // Redrawn in place. No third argument: editing a job is not a
             // place you can navigate back to, and naming one here used to
             // send the back arrow to a screen that does not exist -- which
