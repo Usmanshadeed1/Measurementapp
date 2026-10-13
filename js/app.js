@@ -648,6 +648,10 @@
     var p = { firstName: first };
     var last = document.getElementById('mm-ct-last').value.trim(); if (last) p.lastName = last;
     var email = document.getElementById('mm-ct-email').value.trim(); if (email) p.email = email;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      alert('That email doesn\'t look right. It should be like name@gmail.com.');
+      return;
+    }
     var phone = document.getElementById('mm-ct-phone').value.trim(); if (phone) p.phone = phone;
     var business = document.getElementById('mm-ct-business').value.trim(); if (business) p.companyName = business;
     var address = document.getElementById('mm-ct-address').value.trim(); if (address) p.address1 = address;
@@ -665,10 +669,30 @@
       // button confirms only once the contact is actually visible.
       C.contactAdded(created || p, function () { U.fbk(btn, 'Save Contact'); });
     }).catch(function (e) {
-      alert(e.message);
+      alert(contactSaveError(e));
       btn.textContent = 'Save Contact'; btn.disabled = false;
     });
   });
+
+  // GoHighLevel answers with raw JSON. The one case that comes up is a
+  // customer who is already in the account, so that gets a plain sentence
+  // naming them; anything else shows GHL's own message without the JSON.
+  function contactSaveError(e) {
+    var raw = (e && e.message) || '';
+    var body = null;
+    try { body = JSON.parse(raw.slice(raw.indexOf('{'))); } catch (x) { /* not JSON */ }
+    if (!body) return raw || 'Could not save the contact.';
+
+    var meta = body.meta || {};
+    if (/duplicat/i.test(String(body.message))) {
+      var field = meta.matchingField === 'phone' ? 'phone number' : 'email';
+      return 'This ' + field + ' is already used by ' +
+        (meta.contactName ? U.titleCase(meta.contactName) : 'another contact') +
+        '. Search for them in Contacts instead.';
+    }
+    var msg = Array.isArray(body.message) ? body.message.join(', ') : body.message;
+    return 'Could not save the contact: ' + (msg || raw);
+  }
 
   // ===== IMPORT CONTACTS (CSV) =====
   var importWizard = IMP.build(document.getElementById('mm-import-body'));
