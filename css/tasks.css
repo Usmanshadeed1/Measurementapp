@@ -250,6 +250,9 @@ input[type="time"]::-webkit-calendar-picker-indicator{
 /* The box takes the full width with the button under it, on every screen:
    beside a tall box the button sat stranded at the top. */
 .mm-note-add{display:flex;flex-direction:column;gap:16px;align-items:flex-end}
+/* The open panel shows its children as plain blocks, which would undo the
+   layout above; this file loads after that rule, so it wins. */
+.mm-steps-card.is-open > .mm-note-add{display:flex}
 .mm-note-add textarea{width:100%;margin-bottom:0}
 .mm-note-add .mm-btn-sm{flex:0 0 auto;white-space:nowrap}
 
