@@ -28,6 +28,18 @@ window.MM = window.MM || {};
   var filters = { worker: '', job: '', stage: '', status: 'all', kind: 'all' };
   var searchTerm = '';
 
+  // The List opens on unfinished work, as the Tasks page does; the calendar
+  // views show everything. Only until someone picks a status themselves --
+  // after that their choice stands in every view.
+  var statusTouched = false;
+  function restingStatus() { return view === 'list' ? 'open' : 'all'; }
+  function applyRestingStatus() {
+    if (statusTouched) return;
+    filters.status = restingStatus();
+    var sel = document.getElementById('mm-sc-status');
+    if (sel) sel.value = filters.status;
+  }
+
   // An optional date window. Both null means show everything, which is the
   // default: the Day/Week/Month views already narrow by date on their own.
   var rangeFrom = null, rangeTo = null;
@@ -278,7 +290,13 @@ window.MM = window.MM || {};
         !window.MM.ghltasks.isAssignedTo(item.who, filters.worker)) return false;
     // To do / Done / Overdue describe a task. A visit has no such state, so
     // it steps aside rather than claiming one it does not have.
-    if (item.isVisit) return filters.status === 'all';
+    // Under "To do" a visit still to happen counts as work ahead; one already
+    // past does not. Design work waiting to start is always still to do.
+    if (item.isVisit) {
+      if (filters.status === 'all') return true;
+      if (filters.status === 'open') return !!item.isDesign || item.end >= today();
+      return false;
+    }
     if (filters.status === 'done') return !!item.done;
     if (filters.status === 'open') return !item.done;
     if (filters.status === 'late') return !item.done && item.end < today();
@@ -379,7 +397,7 @@ window.MM = window.MM || {};
     if (filters.worker) n++;
     if (filters.job) n++;
     if (filters.stage) n++;
-    if (filters.status && filters.status !== 'all') n++;
+    if (filters.status && filters.status !== restingStatus()) n++;
     if (filters.kind && filters.kind !== 'all') n++;
     if (searchTerm) n++;
     if (rangeFrom || rangeTo) n++;
@@ -623,23 +641,36 @@ window.MM = window.MM || {};
     var rows = spans().slice().sort(function (a, b) { return a.start - b.start; });
     if (!rows.length) return emptyState();
 
-    var out = '', last = '';
+    // One section per date, opening and closing like the Tasks page. They
+    // start closed, and stay as the person left them across redraws.
+    var groups = [], byKey = {};
     rows.forEach(function (r) {
       var k = key(r.start);
-      if (k !== last) {
-        last = k;
-        out += '<div class="mm-sc-lhead">' +
-          '<span class="mm-sc-ldate">' +
-            r.start.toLocaleDateString(undefined,
-              { weekday: 'short', month: 'short', day: 'numeric' }) +
-          '</span>' +
-          '<span class="mm-sc-lrel">' + relative(r.start) + '</span>' +
-        '</div>';
-      }
-      out += listCard(r);
+      if (!byKey[k]) { byKey[k] = { k: k, d: r.start, rows: [] }; groups.push(byKey[k]); }
+      byKey[k].rows.push(r);
     });
-    return '<div class="mm-sc-list">' + out + '</div>';
+
+    return '<div class="mm-sc-list">' + groups.map(function (g) {
+      var late = g.d < today() && g.rows.some(function (r) { return !r.done; });
+      return '<details class="mm-td mm-sc-lday' + (late ? ' is-late' : '') + '" data-lday="' + g.k + '"' +
+          (openListDays[g.k] ? ' open' : '') + '>' +
+        '<summary class="mm-td-head">' + LIST_ARROW +
+          '<span class="mm-td-date">' + U.esc(g.d.toLocaleDateString(undefined,
+            { weekday: 'short', month: 'short', day: 'numeric' })) + '</span>' +
+          '<span class="mm-td-rel">' + relative(g.d) + '</span>' +
+          '<span class="mm-mygroup-count">' + g.rows.length + '</span>' +
+        '</summary>' +
+        '<div class="mm-td-body mm-sc-ldaybody">' + g.rows.map(listCard).join('') + '</div>' +
+      '</details>';
+    }).join('') + '</div>';
   }
+
+  var openListDays = {};
+  // The same drawn arrow as the Tasks page; a text triangle renders too small.
+  var LIST_ARROW = '<span class="mm-tj-arrow" aria-hidden="true">' +
+    '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<polyline points="6 9 12 15 18 9"></polyline></svg></span>';
 
   // A task in the list is worked on in place, as on the Tasks page: tick it
   // done, tick its checklist, edit it. Visits and design work are not tasks
@@ -711,6 +742,10 @@ window.MM = window.MM || {};
   // The same writes the Tasks page makes, against the same task in the job.
   // The task's id is "jobId:position", which is what the writers need.
   function bindList(el) {
+    el.querySelectorAll('details[data-lday]').forEach(function (x) {
+      x.addEventListener('toggle', function () { openListDays[x.getAttribute('data-lday')] = x.open; });
+    });
+
     el.querySelectorAll('[data-tick]').forEach(function (b) {
       b.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -872,6 +907,7 @@ window.MM = window.MM || {};
     document.querySelectorAll('.mm-sched-view').forEach(function (b) {
       b.addEventListener('click', function () {
         view = b.getAttribute('data-view');
+        applyRestingStatus();
         render();
       });
     });
@@ -917,7 +953,7 @@ window.MM = window.MM || {};
       filters.stage = this.value; render();
     });
     document.getElementById('mm-sc-status').addEventListener('change', function () {
-      filters.status = this.value; render();
+      filters.status = this.value; statusTouched = true; render();
     });
     document.getElementById('mm-sc-kind').addEventListener('change', function () {
       filters.kind = this.value; render();
@@ -947,7 +983,8 @@ window.MM = window.MM || {};
     }
 
     document.getElementById('mm-sc-clear').addEventListener('click', function () {
-      filters = { worker: '', job: '', stage: '', status: 'all', kind: 'all' };
+      statusTouched = false;
+      filters = { worker: '', job: '', stage: '', status: restingStatus(), kind: 'all' };
       searchTerm = '';
       document.getElementById('mm-sc-search').value = '';
       document.getElementById('mm-sc-hits').hidden = true;
@@ -957,7 +994,7 @@ window.MM = window.MM || {};
       document.getElementById('mm-sc-worker').value = '';
       document.getElementById('mm-sc-job').value = '';
       document.getElementById('mm-sc-stage').value = '';
-      document.getElementById('mm-sc-status').value = 'all';
+      document.getElementById('mm-sc-status').value = filters.status;
       document.getElementById('mm-sc-kind').value = 'all';
       cursor = today();
       render();

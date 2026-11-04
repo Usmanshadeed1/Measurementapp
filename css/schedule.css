@@ -219,6 +219,9 @@
 /* A task in the list is the Tasks page card, worked on in place. The list's
    own gap spaces them, and overdue work keeps the calendar's red edge. */
 .mm-sc-list .mm-sc-ltask{margin-bottom:0}
+/* Inside an open date, the cards are spaced by the body itself. */
+.mm-sc-ldaybody{display:flex;flex-direction:column;gap:8px;padding-bottom:10px}
+.mm-sc-lday{margin-bottom:0}
 .mm-sc-ltask.is-late{border-left-color:var(--sc-late)}
 .mm-sc-ltask .mm-mytask-main{min-width:0}
 .mm-sc-ltask .mm-ev-who,.mm-sc-ltask .mm-ev-when{margin-top:4px}
