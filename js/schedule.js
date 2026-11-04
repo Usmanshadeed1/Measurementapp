@@ -498,7 +498,12 @@ window.MM = window.MM || {};
       : (item.done ? '\u2713 ' : '') + item.title;
     // Who is on it, so a day can be read for who is where -- in every view.
     var who = workersOf(item);
-    return '<button type="button" class="' + cls + '" data-open="' + U.esc(item.jobId || '') + '">' +
+    // A task opens the task itself, to be worked on without leaving the
+    // calendar. A visit or design work is not a task, so it opens its job.
+    var target = item.raw
+      ? 'data-task="' + U.esc(item.raw.id) + '"'
+      : 'data-open="' + U.esc(item.jobId || '') + '"';
+    return '<button type="button" class="' + cls + '" ' + target + '>' +
       '<span class="mm-ev-title">' + U.esc(title) + '</span>' +
       (sub ? '<span class="mm-ev-job">' + U.esc(sub) + '</span>' : '') +
       (who ? '<span class="mm-ev-who">' + U.esc(who) + '</span>' : '') +
@@ -660,7 +665,7 @@ window.MM = window.MM || {};
           '<span class="mm-td-rel">' + relative(g.d) + '</span>' +
           '<span class="mm-mygroup-count">' + g.rows.length + '</span>' +
         '</summary>' +
-        '<div class="mm-td-body mm-sc-ldaybody">' + g.rows.map(listCard).join('') + '</div>' +
+        '<div class="mm-td-body mm-sc-ldaybody">' + g.rows.map(function (r) { return listCard(r); }).join('') + '</div>' +
       '</details>';
     }).join('') + '</div>';
   }
@@ -675,7 +680,8 @@ window.MM = window.MM || {};
   // A task in the list is worked on in place, as on the Tasks page: tick it
   // done, tick its checklist, edit it. Visits and design work are not tasks
   // and keep their plain chip.
-  function listCard(item) {
+  function listCard(item, opts) {
+    opts = opts || {};
     var t = item.raw;
     if (!t) return chip(item, { note: dayNote(item, item.start) });
 
@@ -683,7 +689,9 @@ window.MM = window.MM || {};
     var admin = auth.isAdmin();
     var sub = jobSub(item);
     var who = workersOf(item);
-    var note = dayNote(item, item.start);
+    // On its own (the task popup) a task shows its whole span of dates; in
+    // the list, under a date, it shows where that date falls in the span.
+    var note = opts.range ? spanText(item) : dayNote(item, item.start);
     var items = t.items || [];
     var ticked = items.filter(function (x) { return x.done; }).length;
 
@@ -727,8 +735,8 @@ window.MM = window.MM || {};
     return tasks.find(function (t) { return t.id === id; });
   }
 
-  function showListError(msg) {
-    var el = document.getElementById('mm-sc-body');
+  function showListError(msg, host) {
+    var el = host || document.getElementById('mm-sc-body');
     var p = el && el.querySelector('.mm-sc-lerr');
     if (!p && el) {
       p = document.createElement('p');
@@ -741,7 +749,8 @@ window.MM = window.MM || {};
 
   // The same writes the Tasks page makes, against the same task in the job.
   // The task's id is "jobId:position", which is what the writers need.
-  function bindList(el) {
+  function bindList(el, after) {
+    after = after || render;
     el.querySelectorAll('details[data-lday]').forEach(function (x) {
       x.addEventListener('toggle', function () { openListDays[x.getAttribute('data-lday')] = x.open; });
     });
@@ -760,11 +769,11 @@ window.MM = window.MM || {};
               (undo ? 'Reopened "' : 'Finished "') + t.title + '"',
               { jobId: t.jobId, jobName: t.jobName });
             t.status = undo ? 'todo' : 'done';
-            render();
+            after();
           })
           .catch(function (err) {
             b.disabled = false;
-            showListError('Could not save: ' + err.message);
+            showListError('Could not save: ' + err.message, el);
           });
       });
     });
@@ -785,11 +794,11 @@ window.MM = window.MM || {};
               (want ? 'Ticked off "' : 'Reopened "') + t.items[j].title + '" in ' + t.title,
               { jobId: t.jobId, jobName: t.jobName });
             t.items[j].done = want;
-            render();
+            after();
           })
           .catch(function (err) {
             b.disabled = false;
-            showListError('Could not save: ' + err.message);
+            showListError('Could not save: ' + err.message, el);
           });
       });
     });
@@ -799,7 +808,7 @@ window.MM = window.MM || {};
         e.stopPropagation();
         var t = taskById(b.getAttribute('data-edit'));
         if (t && window.MM.mytasks && window.MM.mytasks.editTask) {
-          window.MM.mytasks.editTask(t, render);
+          window.MM.mytasks.editTask(t, after);
         }
       });
     });
@@ -835,6 +844,35 @@ window.MM = window.MM || {};
 
     bind(body);
     document.getElementById('mm-modal-schedday').classList.add('open');
+  }
+
+  // One task, opened from a chip in Day, Week or Month: the same card as the
+  // List, so it can be ticked, its checklist worked through, or edited, and
+  // closing it leaves the calendar exactly where it was.
+  function openTask(id) {
+    var t = taskById(id);
+    var item = t && toSpan(t);
+    if (!item) return;
+    document.getElementById('mm-sc-poptitle').textContent = 'Task';
+    document.getElementById('mm-sc-popcount').textContent = '';
+
+    var body = document.getElementById('mm-sc-popbody');
+    body.innerHTML = listCard(item, { range: true });
+    bind(body);
+    bindList(body, function () {
+      render();
+      // Still open: show the change in the popup as well.
+      if (document.getElementById('mm-modal-schedday').classList.contains('open')) openTask(id);
+    });
+    document.getElementById('mm-modal-schedday').classList.add('open');
+  }
+
+  // "Mon, Nov 3 – Fri, Nov 14", or the one date.
+  function spanText(item) {
+    var f = function (d) {
+      return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    };
+    return sameDay(item.start, item.end) ? f(item.start) : f(item.start) + ' – ' + f(item.end);
   }
 
   function closeDay() {
@@ -877,6 +915,12 @@ window.MM = window.MM || {};
         if (!o) return;
         closeDay();
         if (onOpenJob) onOpenJob(o);
+      });
+    });
+    el.querySelectorAll('[data-task]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openTask(b.getAttribute('data-task'));
       });
     });
     el.querySelectorAll('[data-day]').forEach(function (b) {
