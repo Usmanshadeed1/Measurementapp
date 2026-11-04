@@ -30,9 +30,9 @@ window.MM = window.MM || {};
   // default: the Day/Week/Month views already narrow by date on their own.
   var rangeFrom = null, rangeTo = null;
 
-  // How many chips fit before a cell needs a "+n more". Week columns are tall,
-  // month cells are not.
-  var WEEK_MAX = 4, MONTH_MAX = 3;
+  // Every item on a day is shown: the client would rather scroll a long day
+  // than open a "+n more". No limit, so "+n more" never appears.
+  var WEEK_MAX = Infinity, MONTH_MAX = Infinity;
 
   // ---- Dates ---------------------------------------------------------------
   // Day maths runs on local midnight. Task dates are plain YYYY-MM-DD strings
