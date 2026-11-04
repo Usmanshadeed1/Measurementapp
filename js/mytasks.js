@@ -222,6 +222,13 @@ window.MM = window.MM || {};
   // the list, and that must not snap every section shut.
   var openJobs = {}, openDates = {};
 
+  // A drawn chevron rather than a text triangle, which rendered too small to
+  // see. Points down when open; the stylesheet turns it right when closed.
+  var ARROW = '<span class="mm-tj-arrow" aria-hidden="true">' +
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<polyline points="6 9 12 15 18 9"></polyline></svg></span>';
+
   function groupByJob(list) {
     var byJob = {}, order = [];
     list.forEach(function (t) {
@@ -270,7 +277,7 @@ window.MM = window.MM || {};
     return '<details class="mm-tj' + (late ? ' is-late' : '') + '" data-job="' + U.esc(g.id) + '"' +
         (openJobs[g.id] ? ' open' : '') + '>' +
       '<summary class="mm-tj-head">' +
-        '<span class="mm-tj-arrow" aria-hidden="true">&#9662;</span>' +
+        ARROW +
         '<span class="mm-tj-name">' + U.esc(g.name) +
           (street ? '<span class="mm-tj-street">' + U.esc(street) + '</span>' : '') +
         '</span>' +
@@ -295,7 +302,7 @@ window.MM = window.MM || {};
     return '<details class="mm-td' + (late ? ' is-late' : '') + '" data-date="' + U.esc(k) + '"' +
         (openDates[k] ? ' open' : '') + '>' +
       '<summary class="mm-td-head">' +
-        '<span class="mm-tj-arrow" aria-hidden="true">&#9662;</span>' +
+        ARROW +
         '<span class="mm-td-date">' + U.esc(d ? fmt(d) : 'No date set') + '</span>' +
         (rel ? '<span class="mm-td-rel">' + U.esc(rel) + '</span>' : '') +
         '<span class="mm-mygroup-count">' + list.length + '</span>' +

@@ -30,7 +30,11 @@
 .mm-tj-head::-webkit-details-marker,.mm-td-head::-webkit-details-marker{display:none}
 .mm-tj-head{padding:14px 16px;min-height:56px}
 .mm-tj-head:focus-visible,.mm-td-head:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;border-radius:10px}
-.mm-tj-arrow{flex:0 0 auto;color:var(--accent);font-size:0.8em;transition:transform .15s}
+.mm-tj-arrow{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;border-radius:8px;color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 14%,transparent);transition:transform .15s}
+.mm-td .mm-tj-arrow{width:26px;height:26px}
+.mm-td .mm-tj-arrow svg{width:17px;height:17px}
 details:not([open]) > summary > .mm-tj-arrow{transform:rotate(-90deg)}
 .mm-tj-name{flex:1 1 auto;min-width:0;font-weight:800;color:var(--text)}
 .mm-tj-street{font-weight:600;color:var(--text2)}
