@@ -87,6 +87,11 @@
   line-height:1.5}
 .mm-rs-error:empty{display:none}
 
+/* Room Notes: tall enough to read a site note without scrolling, scrolling
+   inside once it is longer, and draggable taller but never wider. */
+.mm-rn-text{width:100%;min-height:200px;max-height:480px;overflow-y:auto;
+  resize:vertical;line-height:1.55;margin-bottom:12px}
+
 /* ---- Phone --------------------------------------------------------------- */
 
 @media (max-width: 620px){

@@ -509,24 +509,28 @@
       U.fld('Room Name', '<input class="mm-input f-name" placeholder="e.g. Kitchen">') +
       U.fld('Ceiling Height (in)', '<input class="mm-input f-ceiling" type="number" placeholder="e.g. 96">') +
       U.fld('Flooring Type', '<input class="mm-input f-floor" placeholder="e.g. Tile, Hardwood">') +
-      U.fld('Notes', '<textarea class="mm-input f-notes"></textarea>') +
       '<div class="acc-save-row"><button class="mm-btn mm-btn-primary f-save" style="margin-bottom:0">Save Room</button>' +
       '<button class="mm-btn mm-btn-danger f-del" style="margin-bottom:0;width:auto;padding:14px 20px">Delete Room</button></div>';
-    U.sv(infoBody, 'f-name', U.pv(r, 'name')); U.sv(infoBody, 'f-ceiling', U.pv(r, 'ceiling_height')); U.sv(infoBody, 'f-floor', U.pv(r, 'flooring_type')); U.sv(infoBody, 'f-notes', U.pv(r, 'notes'));
+    U.sv(infoBody, 'f-name', U.pv(r, 'name')); U.sv(infoBody, 'f-ceiling', U.pv(r, 'ceiling_height')); U.sv(infoBody, 'f-floor', U.pv(r, 'flooring_type'));
     var c = U.pv(r, 'ceiling_height');
-    var builtInfo = U.makeAcc(false, true, U.pv(r, 'name') ? U.pv(r, 'name') : 'Room Info', c ? 'Ceiling: ' + c + '"' : '', infoBody);
+    // Titled for what is inside it: the room's name is already the screen's
+    // heading, and the notes now have their own panel below.
+    var infoTitle = function (name) { return (name ? name + ' / ' : '') + 'Ceiling & Flooring'; };
+    var builtInfo = U.makeAcc(false, true, infoTitle(U.pv(r, 'name')), c ? 'Ceiling: ' + c + '"' : '', infoBody);
     el.appendChild(builtInfo.acc);
 
     var sb = infoBody.querySelector('.f-save'), db = infoBody.querySelector('.f-del');
     sb.addEventListener('click', function () {
       var n = U.gv(infoBody, 'f-name'); if (!n) { alert('Name required.'); return; }
-      var p = { name: n }, cc = infoBody.querySelector('.f-ceiling').value, f = U.gv(infoBody, 'f-floor'), nt = U.gv(infoBody, 'f-notes');
-      if (cc) p.ceiling_height = parseFloat(cc); if (f) p.flooring_type = f; if (nt) p.notes = nt;
+      // Notes are saved from the Room Notes panel, never from here, so saving
+      // the name or ceiling cannot touch them.
+      var p = { name: n }, cc = infoBody.querySelector('.f-ceiling').value, f = U.gv(infoBody, 'f-floor');
+      if (cc) p.ceiling_height = parseFloat(cc); if (f) p.flooring_type = f;
       sb.textContent = 'Saving...'; sb.disabled = true;
       api.updateRec('custom_objects.room', r.id, p).then(function () {
         Object.assign(r.properties || (r.properties = {}), p);
         document.getElementById('mm-room-title').textContent = n;
-        builtInfo.hdr.querySelector('.mm-acc-title').textContent = n;
+        builtInfo.hdr.querySelector('.mm-acc-title').textContent = infoTitle(n);
         builtInfo.hdr.querySelector('.mm-acc-sub').textContent = cc ? 'Ceiling: ' + cc + '"' : '';
         U.fbk(sb, 'Save Room');
       }).catch(function (e) { alert(e.message); sb.textContent = 'Save Room'; sb.disabled = false; });
@@ -537,8 +541,50 @@
       api.deleteRec('custom_objects.room', r.id).then(function () { showScreen('job'); loadRooms(); }).catch(function (e) { alert(e.message); db.disabled = false; });
     });
 
+    renderRoomNotes(r);
     window.MM.roomsize.showForRoom(r);
     loadWalls(); loadIslands(); loadLights(); loadRoomMedia();
+  }
+
+  // Room Notes: the room's existing Notes field, in a panel of its own like
+  // Room Size, so a long note has room to be read. Same field as before, so
+  // every note already written shows here unchanged.
+  //
+  // An empty box is never saved: clearing the box by accident must not wipe
+  // notes someone wrote on site.
+  function renderRoomNotes(r) {
+    var el = document.getElementById('mm-room-notes');
+    if (!el) return;
+    el.innerHTML =
+      '<div class="mm-steps-head"><span class="mm-steps-title">Room Notes</span></div>' +
+      '<div class="mm-rs-body">' +
+        '<textarea class="mm-input mm-rn-text" placeholder="Notes about this room..."></textarea>' +
+        '<div class="mm-rs-actions">' +
+          '<button type="button" class="mm-btn-sm mm-btn-primary mm-rn-save">Save Notes</button>' +
+        '</div>' +
+        '<p class="mm-rs-error" role="alert"></p>' +
+      '</div>';
+
+    var box = el.querySelector('.mm-rn-text');
+    var btn = el.querySelector('.mm-rn-save');
+    var err = el.querySelector('.mm-rs-error');
+    box.value = U.pv(r, 'notes') || '';
+
+    btn.addEventListener('click', function () {
+      var nt = box.value.trim();
+      err.textContent = '';
+      if (!nt) { err.textContent = 'Type a note first.'; return; }
+      btn.textContent = 'Saving...'; btn.disabled = true;
+      api.updateRec('custom_objects.room', r.id, { notes: nt }).then(function () {
+        (r.properties || (r.properties = {})).notes = nt;
+        U.fbk(btn, 'Save Notes');
+      }).catch(function (e) {
+        err.textContent = 'Could not save: ' + e.message;
+        btn.textContent = 'Save Notes'; btn.disabled = false;
+      });
+    });
+
+    if (window.MM.wireJobPanels) window.MM.wireJobPanels('#screen-room');
   }
 
   // ===== ROOM SUB-LOADERS =====
