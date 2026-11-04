@@ -1,10 +1,9 @@
 // js/mytasks.js
-// A worker's home screen: the tasks assigned to them, and nothing else.
+// The Tasks page: every task, grouped by job and then by date.
 //
-// Grouped by when they are due rather than by job, because the question a
-// worker opens the app to answer is "what am I doing today", not "how is job
-// 14 progressing". The job name and address ride along on each row so they
-// know where to turn up.
+// Grouped by job because that is how the client reads the work -- "what is
+// left on this job" -- with the dates inside, earliest first, so each job
+// still reads in the order it will happen.
 window.MM = window.MM || {};
 
 (function () {
@@ -13,8 +12,9 @@ window.MM = window.MM || {};
   var rows = [];
   var jobsById = {};   // every job the tasks came from, for opening one
 
-  // What is narrowing the list. Empty means everything.
-  var filters = { worker: '', job: '', show: 'all', search: '', when: '' };
+  // What is narrowing the list. Unfinished work is the default view -- what
+  // the client asked to land on; finished tasks are one filter away.
+  var filters = { worker: '', job: '', show: 'open', search: '', when: '' };
   var workerDefaulted = false;   // a worker is filtered to themselves once
 
   function db(method, path, body) { return auth.dbFetch(method, path, body); }
@@ -48,22 +48,6 @@ window.MM = window.MM || {};
       : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }
 
-  // Buckets in the order a person cares about them.
-  var BUCKETS = [
-    { id: 'late',  title: 'Overdue',
-      test: function (t) { var d = daysTo(taskDay(t)); return !(t.status === 'done') && d !== null && d < 0; } },
-    { id: 'today', title: 'Due today',
-      test: function (t) { return !(t.status === 'done') && daysTo(taskDay(t)) === 0; } },
-    { id: 'soon',  title: 'Coming up',
-      test: function (t) { var d = daysTo(taskDay(t)); return !(t.status === 'done') && d !== null && d > 0 && d <= 7; } },
-    // Later on, or no date at all: both are "not this week", and splitting
-    // them would leave two groups nobody reads differently.
-    { id: 'later', title: 'Later',
-      test: function (t) { var d = daysTo(taskDay(t)); return !(t.status === 'done') && (d === null || d > 7); } },
-    // Finished work stays on screen: a worker who ticked the wrong task needs
-    // a way back, and seeing what they got through is worth something.
-    { id: 'done',  title: 'Finished', test: function (t) { return !!(t.status === 'done'); } },
-  ];
 
   var myJobs = [];
 
@@ -200,8 +184,8 @@ window.MM = window.MM || {};
     if (filters.job) n++;
     if (filters.search) n++;
     if (filters.when) n++;
-    // Everything is the resting state, not a choice someone made.
-    if (filters.show !== 'all') n++;
+    // Not done yet is the resting state, not a choice someone made.
+    if (filters.show !== 'open') n++;
     return n;
   }
 
@@ -223,22 +207,110 @@ window.MM = window.MM || {};
       return;
     }
 
-    var used = {};
-    el.innerHTML = BUCKETS.map(function (b) {
-      var mine = shown.filter(function (t) { return !used[t.id] && b.test(t); });
-      mine.forEach(function (t) { used[t.id] = true; });
-      if (!mine.length) return '';
-      mine.sort(function (a, z) { return String(a.end_date || '') < String(z.end_date || '') ? -1 : 1; });
-      return '<section class="mm-mygroup mm-mygroup-' + b.id + '">' +
-        '<div class="mm-mygroup-head">' +
-          '<h3 class="mm-mygroup-title">' + U.esc(b.title) + '</h3>' +
-          '<span class="mm-mygroup-count">' + mine.length + '</span>' +
-        '</div>' +
-        mine.map(taskCard).join('') +
-      '</section>';
-    }).join('');
-
+    el.innerHTML = groupByJob(shown).map(jobGroup).join('');
+    bindGroups(el);
     bind(el);
+  }
+
+  // ---- Grouped by job, then by date -------------------------------------
+  //
+  // The client's ask: each job is a section, and inside it the tasks sit
+  // under their dates, earliest first. Both levels open and close. They
+  // start closed, so the page opens as a short list of jobs.
+  //
+  // What is open is remembered while the page is up: ticking a task redraws
+  // the list, and that must not snap every section shut.
+  var openJobs = {}, openDates = {};
+
+  function groupByJob(list) {
+    var byJob = {}, order = [];
+    list.forEach(function (t) {
+      var k = t.jobId || 'none';
+      if (!byJob[k]) { byJob[k] = { id: k, name: t.jobName || 'No job', tasks: [] }; order.push(byJob[k]); }
+      byJob[k].tasks.push(t);
+    });
+    // The job needing attention soonest comes first: the earliest date among
+    // its unfinished tasks. Jobs with nothing dated go last, then by name.
+    order.forEach(function (g) {
+      var open = g.tasks.filter(function (t) { return t.status !== 'done' && taskDay(t); });
+      g.first = open.map(taskDay).sort()[0] || '';
+    });
+    order.sort(function (a, b) {
+      if (a.first !== b.first) {
+        if (!a.first) return 1;
+        if (!b.first) return -1;
+        return a.first < b.first ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return order;
+  }
+
+  function jobGroup(g) {
+    var o = jobsById[g.id];
+    var street = o ? window.MM.api.jobStreet(o) : '';
+    var late = g.tasks.some(function (t) {
+      var d = daysTo(taskDay(t)); return t.status !== 'done' && d !== null && d < 0;
+    });
+
+    // Dates in order, earliest first; tasks with no date at the end.
+    var byDate = {}, dates = [];
+    g.tasks.forEach(function (t) {
+      var d = String(taskDay(t) || '').slice(0, 10);
+      if (!byDate[d]) { byDate[d] = []; dates.push(d); }
+      byDate[d].push(t);
+    });
+    dates.sort(function (a, b) {
+      if (!a) return 1;
+      if (!b) return -1;
+      return a < b ? -1 : 1;
+    });
+
+    var canOpen = o && window.MM.jobaccess.canOpen(g.id);
+    return '<details class="mm-tj' + (late ? ' is-late' : '') + '" data-job="' + U.esc(g.id) + '"' +
+        (openJobs[g.id] ? ' open' : '') + '>' +
+      '<summary class="mm-tj-head">' +
+        '<span class="mm-tj-arrow" aria-hidden="true">&#9662;</span>' +
+        '<span class="mm-tj-name">' + U.esc(g.name) +
+          (street ? '<span class="mm-tj-street">' + U.esc(street) + '</span>' : '') +
+        '</span>' +
+        '<span class="mm-mygroup-count">' + g.tasks.length + '</span>' +
+      '</summary>' +
+      '<div class="mm-tj-body">' +
+        (canOpen
+          ? '<button type="button" class="mm-tj-open" data-openjob="' + U.esc(g.id) + '">Open job &rsaquo;</button>'
+          : '') +
+        dates.map(function (d) { return dateGroup(g.id, d, byDate[d]); }).join('') +
+      '</div>' +
+    '</details>';
+  }
+
+  function dateGroup(jobId, d, list) {
+    var k = jobId + '|' + d;
+    var n = daysTo(d);
+    var rel = n === null ? ''
+      : n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : n === -1 ? 'Yesterday'
+      : n < 0 ? Math.abs(n) + ' days ago' : 'In ' + n + ' days';
+    var late = n !== null && n < 0 && list.some(function (t) { return t.status !== 'done'; });
+    return '<details class="mm-td' + (late ? ' is-late' : '') + '" data-date="' + U.esc(k) + '"' +
+        (openDates[k] ? ' open' : '') + '>' +
+      '<summary class="mm-td-head">' +
+        '<span class="mm-tj-arrow" aria-hidden="true">&#9662;</span>' +
+        '<span class="mm-td-date">' + U.esc(d ? fmt(d) : 'No date set') + '</span>' +
+        (rel ? '<span class="mm-td-rel">' + U.esc(rel) + '</span>' : '') +
+        '<span class="mm-mygroup-count">' + list.length + '</span>' +
+      '</summary>' +
+      '<div class="mm-td-body">' + list.map(taskCard).join('') + '</div>' +
+    '</details>';
+  }
+
+  function bindGroups(el) {
+    el.querySelectorAll('details.mm-tj').forEach(function (x) {
+      x.addEventListener('toggle', function () { openJobs[x.getAttribute('data-job')] = x.open; });
+    });
+    el.querySelectorAll('details.mm-td').forEach(function (x) {
+      x.addEventListener('toggle', function () { openDates[x.getAttribute('data-date')] = x.open; });
+    });
   }
 
   // The number of filters narrowing the list, shown on the button. A closed
@@ -557,7 +629,7 @@ window.MM = window.MM || {};
 
     var clear = document.getElementById('mm-my-clear');
     if (clear) clear.addEventListener('click', function () {
-      filters = { worker: '', job: '', show: 'all', search: '', when: '' };
+      filters = { worker: '', job: '', show: 'open', search: '', when: '' };
       if (search) search.value = '';
       fillFilterOptions();
       render();
