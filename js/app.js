@@ -597,7 +597,10 @@
       });
     });
 
-    if (window.MM.wireJobPanels) window.MM.wireJobPanels('#screen-room');
+    // Always closed when a room is opened, as the notes were before they had
+    // a panel of their own: the last open/closed choice is not carried over.
+    panelOpen['mm-room-notes'] = false;
+    wirePanels('#screen-room');
   }
 
   // ===== ROOM SUB-LOADERS =====
