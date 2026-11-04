@@ -440,6 +440,7 @@ window.MM = window.MM || {};
 
     bind(el);
     if (view === 'week') trackWeekScroll(el);
+    if (view === 'list') bindList(el);
   }
 
   function title() {
@@ -635,9 +636,138 @@ window.MM = window.MM || {};
           '<span class="mm-sc-lrel">' + relative(r.start) + '</span>' +
         '</div>';
       }
-      out += chip(r, { note: dayNote(r, r.start) });
+      out += listCard(r);
     });
     return '<div class="mm-sc-list">' + out + '</div>';
+  }
+
+  // A task in the list is worked on in place, as on the Tasks page: tick it
+  // done, tick its checklist, edit it. Visits and design work are not tasks
+  // and keep their plain chip.
+  function listCard(item) {
+    var t = item.raw;
+    if (!t) return chip(item, { note: dayNote(item, item.start) });
+
+    var done = t.status === 'done';
+    var admin = auth.isAdmin();
+    var sub = jobSub(item);
+    var who = workersOf(item);
+    var note = dayNote(item, item.start);
+    var items = t.items || [];
+    var ticked = items.filter(function (x) { return x.done; }).length;
+
+    return '<div class="mm-mytask mm-sc-ltask' + (done ? ' is-done' : (isLate(item) ? ' is-late' : '')) + '">' +
+      '<button type="button" class="mm-task-tick" data-tick="' + U.esc(t.id) + '" ' +
+        'aria-label="' + (done ? 'Reopen ' : 'Mark ') + U.esc(t.title) + (done ? '' : ' done') + '">' +
+        (done ? '&#10003;' : '') + '</button>' +
+      '<div class="mm-mytask-main">' +
+        (admin
+          ? '<button type="button" class="mm-mytask-title mm-mytask-edit" data-edit="' + U.esc(t.id) + '">' +
+              U.esc(t.title) + '</button>'
+          : '<div class="mm-mytask-title">' + U.esc(t.title) + '</div>') +
+        (sub
+          ? '<button type="button" class="mm-sc-ljob" data-open="' + U.esc(item.jobId || '') + '">' +
+              U.esc(sub) + '</button>'
+          : '') +
+        (who ? '<span class="mm-ev-who">' + U.esc(who) + '</span>' : '') +
+        (note ? '<span class="mm-ev-when">' + U.esc(note) + '</span>' : '') +
+        (items.length
+          ? '<div class="mm-mytask-items">' +
+              '<div class="mm-mytask-itemhead">' + ticked + ' of ' + items.length + '</div>' +
+              items.map(function (it, j) {
+                return '<button type="button" class="mm-mytask-item' + (it.done ? ' is-done' : '') + '" ' +
+                    'data-sub="' + U.esc(t.id) + '.' + j + '">' +
+                  '<span class="mm-mytask-tick">' + (it.done ? '&#10003;' : '') + '</span>' +
+                  U.esc(it.title) + '</button>';
+              }).join('') +
+            '</div>'
+          : '') +
+      '</div>' +
+      (admin
+        ? '<div class="mm-mytask-side">' +
+            '<button type="button" class="mm-mytask-pencil" data-edit="' + U.esc(t.id) + '" ' +
+              'aria-label="Edit ' + U.esc(t.title) + '">&#9998;</button>' +
+          '</div>'
+        : '') +
+    '</div>';
+  }
+
+  function taskById(id) {
+    return tasks.find(function (t) { return t.id === id; });
+  }
+
+  function showListError(msg) {
+    var el = document.getElementById('mm-sc-body');
+    var p = el && el.querySelector('.mm-sc-lerr');
+    if (!p && el) {
+      p = document.createElement('p');
+      p.className = 'mm-task-error mm-sc-lerr';
+      p.setAttribute('role', 'alert');
+      el.insertBefore(p, el.firstChild);
+    }
+    if (p) p.textContent = msg;
+  }
+
+  // The same writes the Tasks page makes, against the same task in the job.
+  // The task's id is "jobId:position", which is what the writers need.
+  function bindList(el) {
+    el.querySelectorAll('[data-tick]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var t = taskById(b.getAttribute('data-tick'));
+        if (!t) return;
+        var undo = t.status === 'done';
+        var id = String(t.id).split(':');
+        b.disabled = true;
+        window.MM.ghltasks.setStatusOnJob(id[0], +id[1], undo ? 'todo' : 'done')
+          .then(function () {
+            window.MM.activity.log(undo ? 'task_undone' : 'task_done',
+              (undo ? 'Reopened "' : 'Finished "') + t.title + '"',
+              { jobId: t.jobId, jobName: t.jobName });
+            t.status = undo ? 'todo' : 'done';
+            render();
+          })
+          .catch(function (err) {
+            b.disabled = false;
+            showListError('Could not save: ' + err.message);
+          });
+      });
+    });
+
+    el.querySelectorAll('[data-sub]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var parts = b.getAttribute('data-sub').split('.');
+        var t = taskById(parts[0]);
+        var j = +parts[1];
+        if (!t || !t.items || !t.items[j]) return;
+        var want = !t.items[j].done;
+        var id = String(t.id).split(':');
+        b.disabled = true;
+        window.MM.ghltasks.setItemOnJob(id[0], +id[1], j, want)
+          .then(function () {
+            window.MM.activity.log(want ? 'task_done' : 'task_undone',
+              (want ? 'Ticked off "' : 'Reopened "') + t.items[j].title + '" in ' + t.title,
+              { jobId: t.jobId, jobName: t.jobName });
+            t.items[j].done = want;
+            render();
+          })
+          .catch(function (err) {
+            b.disabled = false;
+            showListError('Could not save: ' + err.message);
+          });
+      });
+    });
+
+    el.querySelectorAll('[data-edit]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var t = taskById(b.getAttribute('data-edit'));
+        if (t && window.MM.mytasks && window.MM.mytasks.editTask) {
+          window.MM.mytasks.editTask(t, render);
+        }
+      });
+    });
   }
 
   function relative(d) {

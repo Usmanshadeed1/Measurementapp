@@ -419,9 +419,13 @@ window.MM = window.MM || {};
   }
 
   var editing = null;
+  // Set when another screen opens this editor (the Calendar), so that screen
+  // redraws itself after a save instead of this page.
+  var afterSave = null;
 
-  function openEdit(t) {
+  function openEdit(t, after) {
     editing = t;
+    afterSave = after || null;
     document.getElementById('mm-mte-job').textContent = t.jobName || '';
     document.getElementById('mm-mte-title').value = t.title || '';
     document.getElementById('mm-mte-start').value = t.start || '';
@@ -437,6 +441,7 @@ window.MM = window.MM || {};
   function closeEdit() {
     document.getElementById('mm-modal-mytaskedit').classList.remove('open');
     editing = null;
+    afterSave = null;
   }
 
   function saveEdit() {
@@ -472,8 +477,9 @@ window.MM = window.MM || {};
         window.MM.activity.log('note', 'Edited task "' + title + '"',
           { jobId: t.jobId, jobName: t.jobName });
         t.title = title; t.start = start; t.end = end;
+        var done = afterSave;
         closeEdit();
-        render();
+        if (done) done(); else render();
       })
       .catch(function (e) {
         btn.disabled = false;
@@ -660,5 +666,7 @@ window.MM = window.MM || {};
     init: init,
     load: load,
     onOpenJob: function (fn) { onOpenJob = fn; },
+    // The same task editor, for the Calendar's list.
+    editTask: openEdit,
   };
 })();

@@ -215,6 +215,19 @@
 /* ---- List --------------------------------------------------------------- */
 
 .mm-sc-list{display:flex;flex-direction:column;gap:6px}
+
+/* A task in the list is the Tasks page card, worked on in place. The list's
+   own gap spaces them, and overdue work keeps the calendar's red edge. */
+.mm-sc-list .mm-sc-ltask{margin-bottom:0}
+.mm-sc-ltask.is-late{border-left-color:var(--sc-late)}
+.mm-sc-ltask .mm-mytask-main{min-width:0}
+.mm-sc-ltask .mm-ev-who,.mm-sc-ltask .mm-ev-when{margin-top:4px}
+/* The job, as a link to it -- the one way into the job from here. */
+.mm-sc-ljob{display:block;max-width:100%;margin-top:4px;padding:0;background:none;
+  border:none;font-family:inherit;font-size:0.86em;color:var(--text2);text-align:left;
+  cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mm-sc-ljob:hover{color:var(--accent);text-decoration:underline}
+.mm-sc-ljob:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
 .mm-sc-lhead{display:flex;align-items:baseline;gap:10px;margin-top:16px;
   padding-bottom:6px;border-bottom:1px solid var(--divider)}
 .mm-sc-lhead:first-child{margin-top:0}
