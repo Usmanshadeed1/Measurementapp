@@ -220,8 +220,11 @@
    its name. */
 .mm-bd-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;
   border:1px solid var(--border);border-radius:12px;background:var(--card)}
-.mm-bd{display:grid;grid-template-columns:200px repeat(7,minmax(150px,1fr));
-  min-width:max-content}
+/* Seven equal days that share the width. The minimum is set outright: sized
+   to their content, the columns grew to the longest title on one line and
+   pushed the week off the screen. Narrower than the minimum, it scrolls. */
+.mm-bd{display:grid;grid-template-columns:190px repeat(7,minmax(0,1fr));
+  min-width:1180px}
 .mm-bd-corner,.mm-bd-day{position:sticky;top:0;z-index:1;background:var(--card2);
   border-bottom:1px solid var(--border)}
 .mm-bd-corner{left:0;z-index:2;display:flex;align-items:center;padding:10px 12px;
@@ -244,7 +247,8 @@
   border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
 .mm-bd-cell.is-today{background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .mm-bd-cell .mm-ev{padding:7px 9px;min-height:0}
-.mm-bd-cell .mm-ev-title{white-space:normal;line-height:1.3}
+.mm-bd-cell .mm-ev-title{white-space:normal;line-height:1.3;overflow-wrap:anywhere}
+.mm-bd-cell .mm-ev-who{white-space:normal;overflow-wrap:anywhere}
 
 /* A worker's tasks for one job, boxed under that job's name. */
 .mm-bd-group{display:flex;flex-direction:column;gap:5px;padding:6px;border-radius:8px;
@@ -253,7 +257,7 @@
   overflow-wrap:anywhere;line-height:1.3}
 
 @media (max-width: 620px){
-  .mm-bd{grid-template-columns:120px repeat(7,minmax(140px,1fr))}
+  .mm-bd{grid-template-columns:120px repeat(7,minmax(0,1fr));min-width:1100px}
   .mm-bd-label{padding:10px 8px}
   .mm-bd-name{font-size:0.9em}
 }
