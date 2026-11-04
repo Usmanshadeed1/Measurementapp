@@ -71,7 +71,7 @@ window.MM = window.MM || {};
 
   function load() {
     var el = document.getElementById('mm-sc-body');
-    el.innerHTML = '<div class="mm-empty">Loading the schedule...</div>';
+    el.innerHTML = '<div class="mm-empty">Loading the calendar...</div>';
 
     return Promise.all([
       window.MM.ghltasks.loadAllJobTasks(),
@@ -451,11 +451,23 @@ window.MM = window.MM || {};
     var title = item.isVisit && item.time
       ? fmtTime(item.time) + ' \u00b7 ' + item.title
       : item.title;
+    // Who is on it, so a day can be read for who is where. Left off the month
+    // grid, whose cells have no room for a third line.
+    var who = opts.noWho ? '' : workersOf(item);
     return '<button type="button" class="' + cls + '" data-open="' + U.esc(item.jobId || '') + '">' +
       '<span class="mm-ev-title">' + U.esc(title) + '</span>' +
       (sub ? '<span class="mm-ev-job">' + U.esc(sub) + '</span>' : '') +
+      (who ? '<span class="mm-ev-who">' + U.esc(who) + '</span>' : '') +
       (opts.note ? '<span class="mm-ev-when">' + U.esc(opts.note) + '</span>' : '') +
     '</button>';
+  }
+
+  // A task's workers are stored as one comma-separated line of names.
+  function workersOf(item) {
+    return String(item.who || '').split(',')
+      .map(function (n) { return n.trim(); })
+      .filter(Boolean)
+      .join(', ');
   }
 
   // 14:00 is what is stored; 2:00 PM is what people say.
@@ -561,7 +573,7 @@ window.MM = window.MM || {};
                 (rows.length > 4 ? '<span class="mm-sc-dotmore">+' + (rows.length - 4) + '</span>' : '') +
               '</div>' +
               '<div class="mm-sc-cellevents">' +
-                rows.slice(0, MONTH_MAX).map(function (x) { return chip(x, {}); }).join('') +
+                rows.slice(0, MONTH_MAX).map(function (x) { return chip(x, { noWho: true }); }).join('') +
                 (rows.length > MONTH_MAX
                   ? '<button type="button" class="mm-sc-more" data-day="' + key(d) + '">+' +
                     (rows.length - MONTH_MAX) + ' more</button>'
