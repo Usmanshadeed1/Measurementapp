@@ -451,9 +451,8 @@ window.MM = window.MM || {};
     var title = item.isVisit && item.time
       ? fmtTime(item.time) + ' \u00b7 ' + item.title
       : item.title;
-    // Who is on it, so a day can be read for who is where. Left off the month
-    // grid, whose cells have no room for a third line.
-    var who = opts.noWho ? '' : workersOf(item);
+    // Who is on it, so a day can be read for who is where -- in every view.
+    var who = workersOf(item);
     return '<button type="button" class="' + cls + '" data-open="' + U.esc(item.jobId || '') + '">' +
       '<span class="mm-ev-title">' + U.esc(title) + '</span>' +
       (sub ? '<span class="mm-ev-job">' + U.esc(sub) + '</span>' : '') +
@@ -573,7 +572,7 @@ window.MM = window.MM || {};
                 (rows.length > 4 ? '<span class="mm-sc-dotmore">+' + (rows.length - 4) + '</span>' : '') +
               '</div>' +
               '<div class="mm-sc-cellevents">' +
-                rows.slice(0, MONTH_MAX).map(function (x) { return chip(x, { noWho: true }); }).join('') +
+                rows.slice(0, MONTH_MAX).map(function (x) { return chip(x, {}); }).join('') +
                 (rows.length > MONTH_MAX
                   ? '<button type="button" class="mm-sc-more" data-day="' + key(d) + '">+' +
                     (rows.length - MONTH_MAX) + ' more</button>'

@@ -197,6 +197,7 @@
 .mm-sc-cellevents .mm-ev{padding:4px 7px;min-height:0;border-radius:6px;gap:0}
 .mm-sc-cellevents .mm-ev-title{font-size:0.75em}
 .mm-sc-cellevents .mm-ev-job{font-size:0.68em}
+.mm-sc-cellevents .mm-ev-who{font-size:0.66em}
 .mm-sc-cellevents .mm-sc-more{min-height:0;padding:3px 7px;font-size:0.72em;
   border-style:none;text-align:left}
 
@@ -285,7 +286,7 @@
   .mm-sc-cellevents{display:flex}
   .mm-sc-dots{display:none}
   .mm-sc-cellevents .mm-ev{padding:3px 4px}
-  .mm-sc-cellevents .mm-ev-title,.mm-sc-cellevents .mm-ev-job{
+  .mm-sc-cellevents .mm-ev-title,.mm-sc-cellevents .mm-ev-job,.mm-sc-cellevents .mm-ev-who{
     white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
   .mm-sc-cellnum{min-width:26px;height:26px;font-size:0.85em}
   .mm-sc-grid,.mm-sc-dowrow{gap:3px}
