@@ -454,6 +454,8 @@ window.MM = window.MM || {};
     if (view === 'day') el.innerHTML = dayView();
     else if (view === 'week') el.innerHTML = weekView();
     else if (view === 'month') el.innerHTML = monthView();
+    else if (view === 'byjob') el.innerHTML = boardView('job');
+    else if (view === 'byworker') el.innerHTML = boardView('worker');
     else el.innerHTML = listView();
 
     bind(el);
@@ -463,7 +465,7 @@ window.MM = window.MM || {};
 
   function title() {
     if (view === 'day') return longDate(cursor);
-    if (view === 'week') {
+    if (view === 'week' || isBoard()) {
       var s = startOfWeek(cursor), e = addDays(s, 6);
       var same = s.getMonth() === e.getMonth();
       return MONTHS[s.getMonth()].slice(0, 3) + ' ' + s.getDate() + ' – ' +
@@ -487,12 +489,13 @@ window.MM = window.MM || {};
 
   function chip(item, opts) {
     opts = opts || {};
+    var noJob = !!opts.noJob;
     // A visit is an appointment somebody has to attend, not work to tick off,
     // so it is coloured apart from the tasks and leads with its time.
     var cls = item.isDesign ? 'mm-ev is-design'
       : item.isVisit ? 'mm-ev is-visit'
       : 'mm-ev' + (item.done ? ' is-done' : (isLate(item) ? ' is-late' : ''));
-    var sub = jobSub(item);
+    var sub = noJob ? '' : jobSub(item);
     var title = item.isVisit && item.time
       ? fmtTime(item.time) + ' \u00b7 ' + item.title
       : (item.done ? '\u2713 ' : '') + item.title;
@@ -638,6 +641,120 @@ window.MM = window.MM || {};
         '</div>' +
         '<div class="mm-sc-grid">' + cells + '</div>' +
       '</div>';
+  }
+
+  // ---- By job / By worker ----------------------------------------------------
+  //
+  // One week as a chart: the days across the top, and down the side either
+  // the jobs or the workers. A day's long mixed list becomes rows, so one
+  // job's work -- or one person's -- reads along a single line.
+  //
+  // A task running several days shows in each day it covers, as in Week.
+  // Every filter applies, because the items come from the same spans().
+
+  function isBoard() { return view === 'byjob' || view === 'byworker'; }
+
+  function boardView(by) {
+    var s = startOfWeek(cursor), t = today();
+    var days = [];
+    for (var i = 0; i < 7; i++) days.push(addDays(s, i));
+    var weekEnd = days[6];
+
+    var items = spans().filter(function (x) { return x.start <= weekEnd && x.end >= s; });
+    if (!items.length) return emptyState();
+
+    var rows = by === 'job' ? rowsByJob(items) : rowsByWorker(items);
+
+    var head = '<div class="mm-bd-corner">' + (by === 'job' ? 'Job' : 'Worker') + '</div>' +
+      days.map(function (d) {
+        return '<button type="button" class="mm-bd-day' + (sameDay(d, t) ? ' is-today' : '') + '" ' +
+            'data-day="' + key(d) + '">' +
+          '<span class="mm-sc-dow">' + DAY_SHORT[d.getDay()] + '</span>' +
+          '<span class="mm-sc-dnum">' + d.getDate() + '</span>' +
+        '</button>';
+      }).join('');
+
+    var body = rows.map(function (r) {
+      return '<div class="mm-bd-label">' +
+          '<span class="mm-bd-name">' + U.esc(r.name) + '</span>' +
+          (r.sub ? '<span class="mm-bd-sub">' + U.esc(r.sub) + '</span>' : '') +
+        '</div>' +
+        days.map(function (d) {
+          var on = r.items.filter(function (x) { return d >= x.start && d <= x.end; });
+          return '<div class="mm-bd-cell' + (sameDay(d, t) ? ' is-today' : '') + '">' +
+            (by === 'job' ? jobCell(on, d) : workerCell(on, d)) + '</div>';
+        }).join('');
+    }).join('');
+
+    return '<p class="mm-sc-swipe mm-bd-swipe">Swipe across to see the whole week &rarr;</p>' +
+      '<div class="mm-bd-scroll"><div class="mm-bd">' + head + body + '</div></div>';
+  }
+
+  // A row per job that has anything this week, A to Z by customer.
+  function rowsByJob(items) {
+    var map = {}, out = [];
+    items.forEach(function (x) {
+      var k = x.jobId || 'none';
+      if (!map[k]) {
+        var o = jobById[x.jobId];
+        map[k] = {
+          name: o ? jobLabel(o) : (x.job || 'No job'),
+          sub: o ? api.jobStreet(o) : '',
+          items: [],
+        };
+        out.push(map[k]);
+      }
+      map[k].items.push(x);
+    });
+    return out.sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+
+  // A row per worker, A to Z. A task shared by two people appears in both
+  // rows. Anything with nobody on it -- visits and design work included --
+  // sits in an Unassigned row at the bottom, so nothing goes missing.
+  function rowsByWorker(items) {
+    var map = {}, out = [], none = null;
+    items.forEach(function (x) {
+      var names = workersOf(x).split(', ').filter(Boolean);
+      if (!names.length) {
+        if (!none) none = { name: 'Unassigned', sub: '', items: [] };
+        none.items.push(x);
+        return;
+      }
+      names.forEach(function (n) {
+        if (!map[n]) { map[n] = { name: n, sub: '', items: [] }; out.push(map[n]); }
+        map[n].items.push(x);
+      });
+    });
+    out.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    if (none) out.push(none);
+    return out;
+  }
+
+  // The row already names the job, so the chips leave it out.
+  function jobCell(on, d) {
+    return on.map(function (x) {
+      return chip(x, { note: dayNote(x, d), noJob: true });
+    }).join('');
+  }
+
+  // A worker on several jobs in one day: their tasks grouped under each job,
+  // so it is plain which work belongs where.
+  function workerCell(on, d) {
+    var groups = [], map = {};
+    on.forEach(function (x) {
+      var k = x.jobId || 'none';
+      if (!map[k]) { map[k] = { name: jobSub(x) || 'No job', items: [] }; groups.push(map[k]); }
+      map[k].items.push(x);
+    });
+    return groups.map(function (g) {
+      return '<div class="mm-bd-group">' +
+        '<div class="mm-bd-gname">' + U.esc(g.name) + '</div>' +
+        g.items.map(function (x) {
+          return chip(x, { note: dayNote(x, d), noJob: true });
+        }).join('') +
+      '</div>';
+    }).join('');
   }
 
   // ---- List ----------------------------------------------------------------
@@ -934,7 +1051,7 @@ window.MM = window.MM || {};
 
   function step(dir) {
     if (view === 'day') cursor = addDays(cursor, dir);
-    else if (view === 'week') cursor = addDays(cursor, dir * 7);
+    else if (view === 'week' || isBoard()) cursor = addDays(cursor, dir * 7);
     else if (view === 'month') cursor = new Date(cursor.getFullYear(), cursor.getMonth() + dir, 1);
     render();
   }

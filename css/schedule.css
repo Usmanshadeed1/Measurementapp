@@ -214,6 +214,50 @@
 
 /* ---- List --------------------------------------------------------------- */
 
+/* ---- By Job / By Worker: one week as a chart ----
+   A label column and seven day columns. Scrolls sideways when the screen is
+   narrower than the chart; the label column stays put so a row never loses
+   its name. */
+.mm-bd-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border:1px solid var(--border);border-radius:12px;background:var(--card)}
+.mm-bd{display:grid;grid-template-columns:200px repeat(7,minmax(150px,1fr));
+  min-width:max-content}
+.mm-bd-corner,.mm-bd-day{position:sticky;top:0;z-index:1;background:var(--card2);
+  border-bottom:1px solid var(--border)}
+.mm-bd-corner{left:0;z-index:2;display:flex;align-items:center;padding:10px 12px;
+  font-size:0.72em;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text2);border-right:1px solid var(--border)}
+.mm-bd-day{display:flex;align-items:baseline;gap:6px;padding:10px 12px;border-top:none;
+  border-left:none;border-right:1px solid var(--border);font-family:inherit;
+  color:var(--text);cursor:pointer;text-align:left}
+.mm-bd-day:hover{background:var(--card)}
+.mm-bd-day:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.mm-bd-day.is-today .mm-sc-dnum{color:var(--accent)}
+.mm-bd-day.is-today{box-shadow:inset 0 -3px 0 var(--accent)}
+
+.mm-bd-label{position:sticky;left:0;z-index:1;display:flex;flex-direction:column;
+  justify-content:flex-start;gap:2px;padding:12px;background:var(--card);
+  border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-width:0}
+.mm-bd-name{font-weight:800;color:var(--text);overflow-wrap:anywhere}
+.mm-bd-sub{font-size:0.8em;color:var(--text2);overflow-wrap:anywhere}
+.mm-bd-cell{display:flex;flex-direction:column;gap:6px;padding:8px;min-width:0;
+  border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.mm-bd-cell.is-today{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.mm-bd-cell .mm-ev{padding:7px 9px;min-height:0}
+.mm-bd-cell .mm-ev-title{white-space:normal;line-height:1.3}
+
+/* A worker's tasks for one job, boxed under that job's name. */
+.mm-bd-group{display:flex;flex-direction:column;gap:5px;padding:6px;border-radius:8px;
+  border:1px dashed var(--control-border)}
+.mm-bd-gname{font-size:0.74em;font-weight:800;color:var(--text2);
+  overflow-wrap:anywhere;line-height:1.3}
+
+@media (max-width: 620px){
+  .mm-bd{grid-template-columns:120px repeat(7,minmax(140px,1fr))}
+  .mm-bd-label{padding:10px 8px}
+  .mm-bd-name{font-size:0.9em}
+}
+
 .mm-sc-list{display:flex;flex-direction:column;gap:6px}
 
 /* A task in the list is the Tasks page card, worked on in place. The list's
@@ -291,8 +335,11 @@
   .mm-sched-bar{gap:8px}
   .mm-sched-nav{flex:1 1 100%}
   .mm-sched-title{flex:1 1 auto;margin-left:2px;font-size:1em;height:auto}
-  .mm-sched-views{width:100%;height:46px}
-  .mm-sched-view{flex:1 1 0;padding:0 6px;font-size:0.92em}
+  /* Six views: two rows of three, each still a full-size tap. */
+  .mm-sched-views{width:100%;height:auto;flex-wrap:wrap}
+  .mm-sched-view{flex:1 1 33.33%;height:46px;padding:0 6px;font-size:0.92em}
+  .mm-sched-view:nth-child(4){border-left:none}
+  .mm-sched-view:nth-child(n+4){border-top:1px solid var(--control-border)}
   .mm-sched-filters .mm-select{min-width:0;flex:1 1 46%}
   .mm-sc-find{flex:1 1 100%;min-width:0}
   .mm-sched-filters .mm-sc-date{min-width:0;flex:1 1 38%}
