@@ -108,8 +108,11 @@
 .mm-ev:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .mm-ev.is-late{border-left-color:var(--sc-late);
   background:color-mix(in srgb,var(--sc-late) 12%,var(--card2))}
-.mm-ev.is-done{opacity:.5}
-.mm-ev.is-done .mm-ev-title{text-decoration:line-through}
+/* Finished work, at full strength so it can still be read: a green edge and
+   a tick say "done", rather than fading it half out of sight. */
+.mm-ev.is-done{border-left-color:var(--success)}
+.mm-ev.is-done .mm-ev-title{text-decoration:line-through;
+  text-decoration-color:var(--text2)}
 .mm-ev-title,.mm-ev-job,.mm-ev-who,.mm-ev-when{overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap;max-width:100%;display:block}
 /* The workers on a task. Accent-coloured so names stand apart from the job

@@ -20,10 +20,12 @@ window.MM = window.MM || {};
   var view = 'week';
   var cursor = startOfDay(new Date());   // the day the view is centred on
   var tasks = [], staff = [], jobs = [];
+  var stages = [];                       // the sales pipeline's stages, in order
+  var jobById = {};
   var loaded = false;
   var onOpenJob = null;
 
-  var filters = { worker: '', job: '', status: 'all', kind: 'all' };
+  var filters = { worker: '', job: '', stage: '', status: 'all', kind: 'all' };
   var searchTerm = '';
 
   // An optional date window. Both null means show everything, which is the
@@ -78,6 +80,9 @@ window.MM = window.MM || {};
       window.MM.workerlist.load().catch(function () { return null; }),
       api.fetchAllOpportunities().catch(function () { return []; }),
       ACCESS.loadMine(),
+      // For the stage filter. Without it the filter is simply empty; the
+      // calendar itself must still load.
+      api.getPipelines().catch(function () { return []; }),
     ])
       .then(function (res) {
         var allTasks = res[0] || [];
@@ -87,6 +92,11 @@ window.MM = window.MM || {};
           return o.pipelineId === api.SALES_PIPELINE_ID;
         });
         jobs = ACCESS.mineOnly(ops);
+        jobById = {};
+        jobs.forEach(function (o) { jobById[o.id] = o; });
+
+        var sales = (res[4] || []).find(function (p) { return p.id === api.SALES_PIPELINE_ID; });
+        stages = (sales && sales.stages) || [];
 
         // A worker must not learn about a job through its tasks.
         var allowed = {};
@@ -146,6 +156,15 @@ window.MM = window.MM || {};
           w.appendChild(o);
         });
       }
+    }
+    // Stages in pipeline order, the order the business moves a job through.
+    var st = document.getElementById('mm-sc-stage');
+    if (st && st.options.length <= 1) {
+      stages.forEach(function (s) {
+        var o = document.createElement('option');
+        o.value = s.id; o.textContent = s.name;
+        st.appendChild(o);
+      });
     }
     var j = document.getElementById('mm-sc-job');
     if (j) {
@@ -249,6 +268,12 @@ window.MM = window.MM || {};
 
   function passes(item) {
     if (filters.job && item.jobId !== filters.job) return false;
+    // The stage of the job the item belongs to, so a stage shows its jobs'
+    // tasks, visits and design work alike.
+    if (filters.stage) {
+      var o = jobById[item.jobId];
+      if (!o || o.pipelineStageId !== filters.stage) return false;
+    }
     if (filters.worker &&
         !window.MM.ghltasks.isAssignedTo(item.who, filters.worker)) return false;
     // To do / Done / Overdue describe a task. A visit has no such state, so
@@ -353,6 +378,7 @@ window.MM = window.MM || {};
     var n = 0;
     if (filters.worker) n++;
     if (filters.job) n++;
+    if (filters.stage) n++;
     if (filters.status && filters.status !== 'all') n++;
     if (filters.kind && filters.kind !== 'all') n++;
     if (searchTerm) n++;
@@ -450,7 +476,7 @@ window.MM = window.MM || {};
     var sub = jobSub(item);
     var title = item.isVisit && item.time
       ? fmtTime(item.time) + ' \u00b7 ' + item.title
-      : item.title;
+      : (item.done ? '\u2713 ' : '') + item.title;
     // Who is on it, so a day can be read for who is where -- in every view.
     var who = workersOf(item);
     return '<button type="button" class="' + cls + '" data-open="' + U.esc(item.jobId || '') + '">' +
@@ -757,6 +783,9 @@ window.MM = window.MM || {};
     document.getElementById('mm-sc-job').addEventListener('change', function () {
       filters.job = this.value; render();
     });
+    document.getElementById('mm-sc-stage').addEventListener('change', function () {
+      filters.stage = this.value; render();
+    });
     document.getElementById('mm-sc-status').addEventListener('change', function () {
       filters.status = this.value; render();
     });
@@ -788,7 +817,7 @@ window.MM = window.MM || {};
     }
 
     document.getElementById('mm-sc-clear').addEventListener('click', function () {
-      filters = { worker: '', job: '', status: 'all', kind: 'all' };
+      filters = { worker: '', job: '', stage: '', status: 'all', kind: 'all' };
       searchTerm = '';
       document.getElementById('mm-sc-search').value = '';
       document.getElementById('mm-sc-hits').hidden = true;
@@ -797,6 +826,7 @@ window.MM = window.MM || {};
       document.getElementById('mm-sc-to').value = '';
       document.getElementById('mm-sc-worker').value = '';
       document.getElementById('mm-sc-job').value = '';
+      document.getElementById('mm-sc-stage').value = '';
       document.getElementById('mm-sc-status').value = 'all';
       document.getElementById('mm-sc-kind').value = 'all';
       cursor = today();
