@@ -88,9 +88,14 @@
 .mm-rs-error:empty{display:none}
 
 /* Room Notes: tall enough to read a site note without scrolling, scrolling
-   inside once it is longer, and draggable taller but never wider. */
-.mm-rn-text{width:100%;min-height:200px;max-height:480px;overflow-y:auto;
+   inside once it is longer, and draggable taller but never wider.
+   Written as textarea.mm-rn-text so it outranks the general textarea.mm-input
+   rule, which would otherwise hold it at 90px. */
+textarea.mm-rn-text{width:100%;min-height:220px;max-height:520px;overflow-y:auto;
   resize:vertical;line-height:1.55;margin-bottom:12px}
+@media (max-width: 620px){
+  textarea.mm-rn-text{min-height:260px;max-height:60vh}
+}
 
 /* ---- Phone --------------------------------------------------------------- */
 

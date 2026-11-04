@@ -570,6 +570,19 @@
     var err = el.querySelector('.mm-rs-error');
     box.value = U.pv(r, 'notes') || '';
 
+    // The box grows with the note, so a note is read whole rather than
+    // through a slot; the CSS caps it, and past that it scrolls.
+    function fit() {
+      if (!box.offsetParent) return;          // panel closed: nothing to measure
+      box.style.height = 'auto';
+      box.style.height = (box.scrollHeight + 2) + 'px';
+    }
+    box.addEventListener('input', fit);
+    el.addEventListener('click', function (e) {
+      if (e.target.closest('.mm-steps-head')) setTimeout(fit, 0);
+    });
+    setTimeout(fit, 0);
+
     btn.addEventListener('click', function () {
       var nt = box.value.trim();
       err.textContent = '';
