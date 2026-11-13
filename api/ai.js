@@ -1,15 +1,18 @@
 // api/ai.js
-// Suggesting the contents of a material list.
+// The app's text AI, used for two things:
 //
-// The ONLY thing this is used for. It is given a few words describing a kind
-// of job -- "kitchen remodel with island" -- and returns a list of materials
-// to start from. A person then edits that list and saves it themselves.
+// 1. Suggesting the contents of a material list. It is given a few words
+//    describing a kind of job -- "kitchen remodel with island" -- and returns
+//    a list of materials to start from. Nothing else is sent for this.
 //
-// What is sent to the AI provider is exactly that description and nothing
-// else. No contact, no job, no opportunity, no measurement, no address, no
-// price, no supplier. There is no code path from the customer data to here:
-// the browser sends a sentence someone typed into a box, and a list of item
-// names comes back.
+// 2. Reading a lead message. Someone pastes a message announcing a new lead
+//    into the Add Contact form, and the name, phone, email and address are
+//    read out of it. That message -- and only that message -- is sent to the
+//    provider. It fills the form; it saves nothing. A person checks the form
+//    and presses Save themselves.
+//
+// Nothing is read from GoHighLevel and sent here. Only text a person typed or
+// pasted into the app reaches the provider.
 //
 // The API KEY never reaches the browser. It is stored in app_settings and
 // read here with the service key, the same way the Drive token is -- see
@@ -27,6 +30,9 @@ const SETTING_KEY = 'ai_config';
 // suggestions can run on any provider -- sharing one setting meant choosing
 // a platform for one broke the other.
 const IMAGE_KEY = 'ai_image_config';
+// Reading a lead message uses the same provider, model and key as the
+// suggestions, but its OWN wording, so editing one cannot break the other.
+const LEAD_KEY = 'ai_lead_prompt';
 
 const PROVIDERS = {
   gemini: {
@@ -575,6 +581,107 @@ function parseItems(text) {
   }).filter(Boolean).slice(0, 60);
 }
 
+// ---- Reading a lead message ------------------------------------------------
+//
+// Lead messages arrive in any wording -- a lead service's alert, a text, an
+// email forwarded on. Fixed rules would read one format and miss the next,
+// so the model reads it, and the browser then checks what came back (the
+// phone has ten digits, the email looks real) before anyone saves anything.
+//
+// The wording is editable in Settings, like the suggestions'. The FORMAT is
+// not: it is what this file's parser depends on.
+
+const LEAD_PROMPT_DEFAULT = [
+  'This is a message announcing a new homeowner lead for a kitchen and',
+  'bathroom remodeling company in New Jersey. It could be in any format: an',
+  'alert from a lead service, a text message, or a forwarded email.',
+  '',
+  'The message:',
+  '{message}',
+  '',
+  'Find the homeowner\'s details in it.',
+  '- Leave a field empty if it is not in the message. Never invent anything.',
+  '- Only the homeowner. Ignore the lead service\'s own name, phone and email.',
+  '- Split the name into first and last name. A single word is a first name.',
+  '- street: house number and street only.',
+  '- state: two letters, e.g. NJ. zip: five digits.',
+].join('\n');
+
+const LEAD_FORMAT_RULES = [
+  '',
+  'Reply with ONLY a JSON object. No explanation, no markdown fence.',
+  '{"first_name":"","last_name":"","phone":"","email":"","street":"",',
+  ' "city":"","state":"","zip":""}',
+].join('\n');
+
+const LEAD_FIELDS = ['first_name', 'last_name', 'phone', 'email',
+                     'street', 'city', 'state', 'zip'];
+
+async function readLeadPrompt() {
+  const rows = await db('GET', '/app_settings?key=eq.' + LEAD_KEY + '&select=value');
+  return (rows && rows.length && rows[0].value) || '';
+}
+
+async function writeLeadPrompt(text) {
+  const rows = await db('GET', '/app_settings?key=eq.' + LEAD_KEY + '&select=key');
+  if (rows && rows.length) {
+    return db('PATCH', '/app_settings?key=eq.' + LEAD_KEY, { value: text });
+  }
+  return db('POST', '/app_settings', { key: LEAD_KEY, value: text });
+}
+
+function buildLeadPrompt(message, custom) {
+  let body = String(custom || '').trim() || LEAD_PROMPT_DEFAULT;
+  // A wording that forgets where the message goes would ask about nothing,
+  // so the message is appended rather than dropped.
+  if (body.indexOf('{message}') > -1) {
+    body = body.split('{message}').join(message);
+  } else {
+    body += '\n\nThe message:\n' + message;
+  }
+  return body + '\n' + LEAD_FORMAT_RULES;
+}
+
+// The fields asked for, as plain short strings. Anything else the model adds
+// is dropped, so nothing unexpected can reach the form.
+function parseLead(text) {
+  let s = String(text || '').trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) s = fence[1].trim();
+  const a = s.indexOf('{');
+  const b = s.lastIndexOf('}');
+  if (a === -1 || b < a) return null;
+
+  let raw;
+  try { raw = JSON.parse(s.slice(a, b + 1)); } catch (e) { return null; }
+  if (!raw || typeof raw !== 'object') return null;
+
+  const out = {};
+  LEAD_FIELDS.forEach((k) => {
+    out[k] = String(raw[k] == null ? '' : raw[k]).replace(/[\r\n]+/g, ' ').trim().slice(0, 120);
+  });
+  return out;
+}
+
+// One request to whichever provider is set up, returning the text it said.
+// The provider's own error words come back, trimmed, never with the key.
+async function askText(cfg, prompt) {
+  const p = PROVIDERS[cfg.provider];
+  if (!p) throw new Error('That platform is not supported.');
+  const r = await fetch(p.url(cfg.model, cfg.key), {
+    method: 'POST',
+    headers: p.headers(cfg.key),
+    body: JSON.stringify(p.body(cfg.model, prompt)),
+  });
+  const text = await r.text();
+  if (!r.ok) throw new Error(readError(text));
+  let data;
+  try { data = JSON.parse(text); } catch (e) {
+    throw new Error('The AI sent something unreadable.');
+  }
+  return p.text(data);
+}
+
 // ---- The handler ---------------------------------------------------------
 
 // The body arrives as a stream: this runs behind a rewrite, so req.body is
@@ -704,6 +811,52 @@ export default async function handler(req, res) {
       }
 
       return res.status(200).json({ items });
+    }
+
+    // ---- Reading a lead message: shares the key, has its own wording ----
+
+    if (req.method === 'GET' && action === 'lead-status') {
+      const cfg = await readConfig();
+      return res.status(200).json({
+        configured: !!(cfg && cfg.key),
+        prompt: await readLeadPrompt(),
+        defaultPrompt: LEAD_PROMPT_DEFAULT,
+        formatRules: LEAD_FORMAT_RULES.trim(),
+      });
+    }
+
+    if (req.method === 'POST' && action === 'lead-save') {
+      // Blank means "use the built-in wording", which is how Reset works.
+      const prompt = String(body.prompt || '').trim().slice(0, 4000);
+      await writeLeadPrompt(prompt);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (req.method === 'POST' && action === 'read-lead') {
+      const cfg = await readConfig();
+      if (!cfg || !cfg.key) {
+        return res.status(400).json({
+          error: 'No AI has been set up yet. Add it in Settings, under AI suggestions.',
+        });
+      }
+      // The pasted message, capped. A lead alert is a few lines; this is far
+      // more than one needs and stops a pasted novel reaching the provider.
+      const message = String(body.message || '').trim().slice(0, 4000);
+      if (!message) return res.status(400).json({ error: 'Paste the message first.' });
+
+      let text;
+      try {
+        text = await askText(cfg, buildLeadPrompt(message, await readLeadPrompt()));
+      } catch (e) {
+        return res.status(400).json({ error: String(e.message || e).slice(0, 300) });
+      }
+      const lead = parseLead(text);
+      if (!lead) {
+        return res.status(502).json({
+          error: 'The AI did not send back the details. Try again, or fill the form in by hand.',
+        });
+      }
+      return res.status(200).json({ lead });
     }
 
     // ---- Visualising: its own key, model and wording ----

@@ -85,10 +85,12 @@ window.MM = window.MM || {};
           'id="mm-set-msg" role="alert">' + U.esc(msg || '') + '</p>' +
       '</div>' +
       aiCard() +
+      leadCard() +
       imgCard();
 
     bind(el);
     bindAi(el);
+    bindLead(el);
     bindImg(el);
   }
 
@@ -357,10 +359,11 @@ window.MM = window.MM || {};
     return '<div class="mm-set">' +
       '<div class="mm-set-head">AI suggestions</div>' +
       '<p class="mm-set-note">' +
-        'Used in one place: the <strong>Suggest items</strong> button when ' +
-        'building a material list. It is sent a few words such as ' +
-        '&ldquo;kitchen remodel with island&rdquo; and sends back a list to ' +
-        'edit. No job, customer or measurement is ever sent to it.' +
+        'Used in two places: the <strong>Suggest items</strong> button when ' +
+        'building a material list, which sends a few words such as ' +
+        '&ldquo;kitchen remodel with island&rdquo;; and <strong>Paste a lead ' +
+        'message</strong> in Add Contact, which sends the message pasted ' +
+        'there. Nothing else is ever sent to it.' +
       '</p>' +
 
       '<div class="mm-set-state' + (on ? ' is-on' : '') + '">' +
@@ -508,6 +511,98 @@ window.MM = window.MM || {};
     });
   }
 
+  // ---- Reading a lead message ----------------------------------------------
+  //
+  // The same AI as the suggestions above -- same platform, model and key --
+  // with its own wording, so changing one never breaks the other.
+
+  var lead = null;        // the last answer from /api/ai?action=lead-status
+  var leadPrompt = null;  // null = show what is saved
+  var leadBusy = false;
+  var leadMsg = '';
+  var leadErr = false;
+
+  function leadCard() {
+    var s = lead || {};
+    return '<div class="mm-set">' +
+      '<div class="mm-set-head">Reading a lead message</div>' +
+      '<p class="mm-set-note">' +
+        'Used by <strong>Paste a lead message</strong> in the Add Contact ' +
+        'form. It reads the name, phone, email and address out of the ' +
+        'message and fills the form in. Nothing is saved until Save Contact ' +
+        'is pressed.' +
+      '</p>' +
+      '<div class="mm-set-state' + (s.configured ? ' is-on' : '') + '">' +
+        (s.configured
+          ? 'Uses the AI set up above.'
+          : 'Set up the AI above first.') +
+      '</div>' +
+
+      '<div class="mm-mt-f" style="margin-bottom:10px">' +
+        '<span class="mm-mt-flab">What to ask the AI</span>' +
+        '<textarea class="mm-input mm-ai-prompt" id="mm-lead-prompt" rows="12">' +
+          U.esc(leadPrompt !== null ? leadPrompt
+                                    : (s.prompt || s.defaultPrompt || '')) +
+        '</textarea>' +
+        '<p class="mm-set-hint">' +
+          '<code>{message}</code> is where the pasted message is put.' +
+        '</p>' +
+        (s.formatRules
+          ? '<details class="mm-ai-fixed"><summary>Always added at the end' +
+              '</summary><pre>' + U.esc(s.formatRules) + '</pre>' +
+              '<p class="mm-set-hint">This part is fixed. It is what lets the ' +
+                'app put each detail in the right box.</p></details>'
+          : '') +
+      '</div>' +
+
+      '<div class="mm-btn-row">' +
+        '<button class="mm-btn-sm mm-btn-secondary" id="mm-lead-reset"' +
+          (leadBusy ? ' disabled' : '') + '>Reset wording</button>' +
+        '<button class="mm-btn-sm mm-btn-primary" id="mm-lead-save"' +
+          (leadBusy ? ' disabled' : '') + '>' +
+          (leadBusy ? 'Working...' : 'Save') + '</button>' +
+      '</div>' +
+
+      '<p class="mm-task-error' + (leadErr ? '' : ' mm-set-ok') + '" ' +
+        'id="mm-lead-msg" role="alert">' + U.esc(leadMsg || '') + '</p>' +
+    '</div>';
+  }
+
+  function leadSay(m, bad) { leadMsg = m || ''; leadErr = !!bad; render(''); }
+
+  function bindLead(el) {
+    var pbox = el.querySelector('#mm-lead-prompt');
+    if (pbox) pbox.addEventListener('input', function () { leadPrompt = this.value; });
+
+    var reset = el.querySelector('#mm-lead-reset');
+    if (reset) reset.addEventListener('click', function () {
+      leadPrompt = (lead && lead.defaultPrompt) || '';
+      leadSay('Wording reset. Press Save to keep it.');
+    });
+
+    var save = el.querySelector('#mm-lead-save');
+    if (save) save.addEventListener('click', function () {
+      var prompt = el.querySelector('#mm-lead-prompt').value || '';
+      // The built-in wording saved unchanged stores nothing, so a later
+      // improvement to it is picked up rather than frozen here.
+      var def = (lead && lead.defaultPrompt) || '';
+      if (prompt.trim() === def.trim()) prompt = '';
+      leadBusy = true; leadSay('');
+      aiFetch('lead-save', { prompt: prompt })
+        .then(function () { leadPrompt = null; return leadRefresh('Saved.'); })
+        .catch(function (e) {
+          leadBusy = false;
+          leadSay('Could not save: ' + e.message, true);
+        });
+    });
+  }
+
+  function leadRefresh(msg) {
+    return aiFetch('lead-status')
+      .then(function (d) { lead = d; leadBusy = false; leadSay(msg || ''); })
+      .catch(function () { leadBusy = false; leadSay(msg || ''); });
+  }
+
   function aiRefresh(msg) {
     return aiFetch('status')
       .then(function (d) {
@@ -599,6 +694,7 @@ window.MM = window.MM || {};
     // Both cards are drawn together, so both states are read before the
     // first render rather than the page redrawing under the reader.
     aiMsg = ''; aiErr = false; aiPrompt = null;
+    leadMsg = ''; leadErr = false; leadPrompt = null;
     imgMsg = ''; imgErr = false; imgPrompt = null;
     // All three cards are drawn together, so every state is read before the
     // first render rather than the page rearranging under the reader.
@@ -607,6 +703,8 @@ window.MM = window.MM || {};
         .catch(function () { ai = null; }),
       aiFetch('image-status').then(function (d) { img = d; })
         .catch(function () { img = null; }),
+      aiFetch('lead-status').then(function (d) { lead = d; })
+        .catch(function () { lead = null; }),
     ]).then(function () { return refresh(); });
   }
 

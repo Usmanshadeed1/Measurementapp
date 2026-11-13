@@ -30,6 +30,7 @@
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/deletething.css">
 <link rel="stylesheet" href="css/chat.css">
+<link rel="stylesheet" href="css/leadpaste.css">
 </head>
 <body>
 
@@ -799,6 +800,13 @@
 <div class="mm-modal-overlay" id="mm-modal-contact">
   <div class="mm-modal" role="dialog" aria-modal="true" aria-labelledby="mm-contact-modal-title">
     <div class="mm-modal-title" id="mm-contact-modal-title">Add Contact</div>
+    <div class="mm-lead-paste">
+      <label class="mm-label" for="mm-ct-lead-text">Paste a lead message</label>
+      <textarea class="mm-input mm-lead-text" id="mm-ct-lead-text" rows="4"
+                placeholder="Paste the whole message here, then press Fill in the form."></textarea>
+      <button type="button" class="mm-btn-sm mm-btn-primary" id="mm-ct-lead-fill">Fill in the form</button>
+      <p class="mm-lead-msg" id="mm-ct-lead-msg" role="status"></p>
+    </div>
     <div class="mm-field-group"><label class="mm-label" for="mm-ct-first">First Name *</label><input class="mm-input" id="mm-ct-first" placeholder="Enter first name"></div>
     <div class="mm-field-group"><label class="mm-label" for="mm-ct-last">Last Name</label><input class="mm-input" id="mm-ct-last" placeholder="Enter last name"></div>
     <div class="mm-field-group"><label class="mm-label" for="mm-ct-email">Email</label><input class="mm-input" type="email" id="mm-ct-email" placeholder="Enter email address"></div>
@@ -1022,6 +1030,7 @@
 <script src="js/chat.js"></script>
 <script src="js/deletething.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/leadpaste.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

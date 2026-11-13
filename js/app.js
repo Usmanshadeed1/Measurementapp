@@ -753,6 +753,7 @@
     selectedTags = [];
     updateTagSummary();
     closeTagPanel();
+    if (window.MM.leadpaste) window.MM.leadpaste.reset();
     openModal('mm-modal-contact');
     tagSelectPanel.innerHTML = '<div class="mm-empty">Loading tags...</div>';
     api.getTags().then(function (tags) {

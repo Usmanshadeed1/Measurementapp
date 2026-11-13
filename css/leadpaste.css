@@ -1,0 +1,22 @@
+/* ==========================================================================
+   PASTE A LEAD MESSAGE — at the top of the Add Contact form
+   Set apart from the fields below it, because it is a way of filling them
+   in rather than one of them.
+   ========================================================================== */
+.mm-lead-paste{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;
+  padding:14px;border-radius:12px;border:1px dashed var(--accent);
+  background:color-mix(in srgb,var(--accent) 7%,var(--card))}
+.mm-lead-paste .mm-label{margin-bottom:0}
+textarea.mm-lead-text{min-height:110px;max-height:300px;margin-bottom:0;
+  resize:vertical;line-height:1.5}
+.mm-lead-paste .mm-btn-sm{align-self:flex-end}
+
+.mm-lead-msg{margin:0;font-size:0.88em;font-weight:700;line-height:1.45}
+.mm-lead-msg:empty{display:none}
+.mm-lead-msg.is-ok{color:var(--success)}
+.mm-lead-msg.is-warn{color:#e8a33d}
+.mm-lead-msg.is-bad{color:var(--danger-text)}
+
+@media (max-width: 620px){
+  .mm-lead-paste .mm-btn-sm{align-self:stretch}
+}
